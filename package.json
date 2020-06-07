@@ -1,0 +1,13 @@
+{
+  "name": "Vortex-Bundler",
+  "version": "0.0.0",
+  "main": "index.js",
+  "author": "Alex Topper",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "acorn": "^7.2.0",
+    "resolve": "^1.17.0",
+    "typescript": "^3.9.5"
+  }
+}
