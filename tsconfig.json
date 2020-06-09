@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "outDir": "./lib/",
+        "module": "commonjs",
+        "noImplicitAny": true,
+        "target": "es6"
+    },
+    "include": [
+        "ts/**/*"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+
+}
