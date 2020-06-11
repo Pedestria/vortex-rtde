@@ -4,6 +4,9 @@
   "main": "index.js",
   "author": "Alex Topper",
   "license": "MIT",
+  "scripts": {
+    "cleanup": "prettier --write dep-graph.json"
+  },
   "private": true,
   "dependencies": {
     "@babel/generator": "^7.10.2",
@@ -24,7 +27,13 @@
     "fs-extra": "^9.0.1",
     "glob": "^7.1.6",
     "ora": "^4.0.4",
+    "prettier": "^2.0.5",
     "resolve": "^1.17.0",
+    "terser": "^4.7.0",
     "typescript": "^3.9.5"
+  },
+  "devDependencies": {
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
   }
 }

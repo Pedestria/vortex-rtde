@@ -1,37 +1,49 @@
+import Module from "./Module.js";
+import Dependency from './Dependency'
+
 export class VortexGraph {
 
     Graph = {
-        Application:Array<Dependency>
+        Star:Array<Dependency>
     };
 
-    constructor(){
-       
+    constructor(){}
+
+    add(Dependency:Dependency){
+        this.Graph.Star.push(Dependency);
     }
 
-    newDependency(name:string, acquiredModules:Array<String>,superDependency?:string){
-        let Dependency:Dependency = {
-            name,
-            acquiredModules,
-            superDependency?
-        };
-        
-        Dependency.name = name
-        Dependency.acquiredModules = acquiredModules
-        Dependency.superDependency = superDependency
+    searchFor(Dependency:Dependency) : boolean {
+        for (let dep of this.Graph.Star){
+            if(Dependency.name == dep.name) {
+                return true
+            }
+        }
+        return false
+    }
+    update(newDependency:Dependency){
+        for (let dep of this.Graph.Star){
+            if(dep.name == newDependency.name) {
+                for(let newMod of newDependency.acquiredModules){
+                    if(dep.testForModule(newMod) == false){
+                        dep.acquiredModules.push(newMod)
+                    }
+                }
+                for(let newSupDep of newDependency.superDependencies){
+                    if(dep.testForSuperDependency(newSupDep) == false){
+                        dep.superDependencies.push(newSupDep)
+                    }
+                }
+            }
+        }
+    }
 
-        this.Graph.Application.push(Dependency);
+    remove(Dependency:Dependency){
+        let index = this.Graph.Star.indexOf(Dependency)
+        this.Graph.Star.splice(index)
     }
 
     display(): Array<Dependency> {
-
-        return this.Graph.Application
-
+        return this.Graph.Star
     }
-}
-
-
-interface Dependency {
-    name:string,
-    acquiredModules:Array<String>,
-    superDependency?:string
 }

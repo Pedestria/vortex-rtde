@@ -6,7 +6,7 @@ import * as Logger from './Log'
 function Bundle (productionMode:boolean){
 
     let isProduction:boolean = productionMode;
-    
+
     if (isProduction){
         process.env.NODE_ENV = 'production'
     }
@@ -15,7 +15,7 @@ function Bundle (productionMode:boolean){
     }
     //Logger.Log();
 
-    VortexSearch.FindModulesAndDependencies('test.js');
+    VortexSearch.GraphStar('./test.js');
 }
 
 

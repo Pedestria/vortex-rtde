@@ -3,7 +3,7 @@
         "outDir": "./lib/",
         "module": "commonjs",
         "noImplicitAny": true,
-        "target": "es6"
+        "target": "esnext"
     },
     "include": [
         "ts/**/*"

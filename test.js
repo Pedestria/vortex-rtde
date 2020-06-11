@@ -4,6 +4,8 @@ import {Poopcorn} from './PoopCorn.js';
 
 const {Murp, Lape, aha} = require('durmstrangoo');
 
+import React, {Component,lazy} from 'react';
+
 //const helloR = require('./hello.js');
 //module.exports = require('poolopin')
 
