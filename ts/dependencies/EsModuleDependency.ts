@@ -3,9 +3,10 @@ import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
 import Module, { ModuleTypes } from '../Module'
 import chalk = require("chalk");
+import ModuleDependency from "./ModuleDependency.js";
 
-export default class EsModuleDependency extends Dependency {
-    constructor(name:string,acquiredModules:Array<Module>,initSuperDependency?:String){
+export default class EsModuleDependency extends ModuleDependency {
+    constructor(name:string,acquiredModules:Array<Module>,initSuperDependency?:string){
         super(name,acquiredModules,initSuperDependency)
     }
 
@@ -43,7 +44,7 @@ export default class EsModuleDependency extends Dependency {
                 }
         }
 
-        let testDep = new Dependency('buffer',modBuffer)
+        let testDep = new ModuleDependency('buffer',modBuffer)
 
         //let confModImp = []
         //let confModExp = []

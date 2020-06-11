@@ -1,4 +1,4 @@
-import * as VortexSearch from './Find'
+import * as Chassis from './StarGraph'
 import * as chalk from 'chalk'
 import * as Logger from './Log'
 
@@ -15,7 +15,7 @@ function Bundle (productionMode:boolean){
     }
     //Logger.Log();
 
-    VortexSearch.GraphStar('./test.js');
+    Chassis.StarGraph('./test.js');
 }
 
 

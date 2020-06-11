@@ -3,7 +3,7 @@ import { VortexGraph } from './Graph.js'
 import * as EsModuleGrapher from './graphers/EsModuleGrapher'
 
 
-export function GraphStar(entry:string) {
+export function StarGraph(entry:string) {
 
     const node_modules:string = 'node_modules'
 
@@ -25,11 +25,8 @@ export function GraphStar(entry:string) {
         //console.log(modules)
         //console.log(dependencies)
         //console.log(Graph.display())
-        fs.writeJson(fileLoc,Graph, err => {
-            if (err) return console.error(err)
-            console.log('Wrote App Graph to ' + fileLoc)
-          })
         //resolveDependencies(dependencies,node_modules)
+        return Graph
 }
 
 

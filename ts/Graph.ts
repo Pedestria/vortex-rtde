@@ -1,5 +1,6 @@
 import Module from "./Module.js";
 import Dependency from './Dependency'
+import ModuleDependency from "./dependencies/ModuleDependency.js";
 
 export class VortexGraph {
 
@@ -23,17 +24,8 @@ export class VortexGraph {
     }
     update(newDependency:Dependency){
         for (let dep of this.Graph.Star){
-            if(dep.name == newDependency.name) {
-                for(let newMod of newDependency.acquiredModules){
-                    if(dep.testForModule(newMod) == false){
-                        dep.acquiredModules.push(newMod)
-                    }
-                }
-                for(let newSupDep of newDependency.superDependencies){
-                    if(dep.testForSuperDependency(newSupDep) == false){
-                        dep.superDependencies.push(newSupDep)
-                    }
-                }
+            if(newDependency instanceof ModuleDependency && dep instanceof ModuleDependency){
+                ModuleDependencyUpdater(newDependency,dep)
             }
         }
     }
@@ -45,5 +37,20 @@ export class VortexGraph {
 
     display(): Array<Dependency> {
         return this.Graph.Star
+    }
+}
+
+function ModuleDependencyUpdater(newDependency:ModuleDependency,dep:ModuleDependency){
+    if(dep.name == newDependency.name) {
+        for(let newMod of newDependency.acquiredModules){
+            if(dep.testForModule(newMod) == false){
+                dep.acquiredModules.push(newMod)
+            }
+        }
+        for(let newSupDep of newDependency.superDependencies){
+            if(dep.testForSuperDependency(newSupDep) == false){
+                dep.superDependencies.push(newSupDep)
+            }
+        }
     }
 }
