@@ -5,12 +5,14 @@ import Module, { ModuleTypes } from "../Module.js";
 //import Dependency from "../Dependency.js";
 import EsModuleDependency from '../dependencies/EsModuleDependency'
 import chalk = require("chalk");
+import path = require('path')
+import { LocalizedResolve } from "../Resolve.js";
 
 export function SearchAndGraph(file:string,Graph:VortexGraph){
 
     const buffer = fs.readFileSync(file,'utf-8').toString();
 
-    let regexp = new RegExp('.js')
+    let regexp = new RegExp('./')
 
     const jsCode = Babel.parse(buffer,{"sourceType":"module"}).program.body
 
@@ -30,10 +32,15 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                     modules.push(mod)
                 }
             }
-            let dep = new EsModuleDependency(node.source.value,modules,file)
+            let depName = LocalizedResolve(file,node.source.value)
+            if(node.source.value.match(regexp) == null){
+                depName = node.source.value
+            }
+            let dep = new EsModuleDependency(depName,modules,file)
+            let filename = node.source.value
 
             if (node.source.value.match(regexp) !== null){
-                dep.verifyImportedModules(node.source.value)
+                dep.verifyImportedModules(LocalizedResolve(file,filename))
             }
 
             if (Graph.searchFor(dep)){

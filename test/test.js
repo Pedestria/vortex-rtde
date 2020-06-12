@@ -1,8 +1,12 @@
 //import Poop from 'poop'; 
-import {Poopcorn} from './PoopCorn.js';
+//import {Poopcorn} from './test2.js'
 
 
-const {Murp, Lape, aha} = require('durmstrangoo');
+//const {Murp, Lape, aha} = require('durmstrangoo');
+
+const {poopal} = require('./aha/test2.js')
+
+require('./func.js')()
 
 import React, {Component,lazy} from 'react';
 

@@ -2,29 +2,23 @@
     "Graph": {
         "Star": [
             {
-                "name": "./PoopCorn.js",
-                "superDependencies": ["./test.js"],
-                "acquiredModules": [{ "name": "Poopcorn", "type": 0 }]
-            },
-            {
                 "name": "react",
-                "superDependencies": ["./test.js", "./PoopCorn.js"],
+                "superDependencies": ["./test/test.js"],
                 "acquiredModules": [
                     { "name": "React", "type": 1 },
                     { "name": "Component", "type": 0 },
-                    { "name": "lazy", "type": 0 },
-                    { "name": "Fragment", "type": 0 }
+                    { "name": "lazy", "type": 0 }
                 ]
             },
             {
-                "name": "./mama.js",
-                "superDependencies": ["./PoopCorn.js"],
-                "acquiredModules": [{ "name": "HiThere", "type": 0 }]
+                "name": "./test/aha/test2.js",
+                "superDependencies": ["./test/test.js"],
+                "acquiredModules": [{ "name": "poopal", "type": 2 }]
             },
             {
-                "name": "romance",
-                "superDependencies": ["./mama.js"],
-                "acquiredModules": [{ "name": "RaRaRa", "type": 1 }]
+                "name": "./test/func.js",
+                "superDependencies": ["./test/test.js"],
+                "acquiredModules": [{ "name": "_DefaultFunction_", "type": 4 }]
             }
         ]
     }

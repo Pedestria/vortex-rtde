@@ -1,9 +1,10 @@
-import * as Chassis from './StarGraph'
+import * as StarGraph from './StarGraph'
+import * as fs from 'fs-extra'
 import * as chalk from 'chalk'
 import * as Logger from './Log'
 
 
-function Bundle (productionMode:boolean){
+export function Bundle (productionMode:boolean,entry:string){
 
     let isProduction:boolean = productionMode;
 
@@ -15,8 +16,13 @@ function Bundle (productionMode:boolean){
     }
     //Logger.Log();
 
-    Chassis.StarGraph('./test.js');
+    let Graph = StarGraph.default(entry);
+    console.log(Graph)
+
+    fs.writeJson('./dep-graph.json',Graph, err => {
+        if (err) return console.error(err)
+        console.log('Wrote Star Graph to dep-graph.json ')
+      })
+
+    //console.log(Graph.display());
 }
-
-
-Bundle(false);

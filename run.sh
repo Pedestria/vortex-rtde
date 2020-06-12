@@ -1,3 +1,3 @@
 yarn tsc
-node lib/Main.js
+node lib/CLI.js ./test/test.js
 yarn cleanup

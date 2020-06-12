@@ -17,6 +17,7 @@
     "@types/babel__traverse": "^7.0.12",
     "@types/fs-extra": "^9.0.1",
     "@types/node": "^14.0.11",
+    "@types/resolve": "^1.17.1",
     "acorn": "^7.2.0",
     "acorn-walk": "^7.1.1",
     "chalk": "^4.0.0",

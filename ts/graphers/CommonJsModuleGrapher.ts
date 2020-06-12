@@ -4,6 +4,9 @@ import * as fs from 'fs-extra'
 import Module, { ModuleTypes } from "../Module.js";
 import Dependency from "../Dependency.js";
 import chalk = require("chalk");
+import CjsModuleDependency from "../dependencies/CjsModuleDependency.js";
+import path = require('path')
+import { LocalizedResolve } from "../Resolve.js";
 
 export function SearchAndGraph(file:string,Graph:VortexGraph){
 
@@ -13,8 +16,15 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
 
     const jsCode = Babel.parse(buffer,{"sourceType":"module"}).program.body
 
+    // fs.writeJson('./debug.json',jsCode, err => {
+    //         if (err) return console.error(err)
+    //         console.log('Debug Written')
+    //       })
+
     for (let node of jsCode){
+        //console.log(node)
         if (node.type === 'VariableDeclaration') {
+            //console.log(node)
             let modules = []
             if (node.declarations[0].init.type === 'CallExpression') {
                 if(node.declarations[0].init.callee.name === 'require') {
@@ -27,16 +37,22 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                     else{
                     modules.push(new Module(node.declarations[0].id.name,ModuleTypes.CjsDefaultModule))
                     }
-                    let dep = new Dependency(node.declarations[0].init.arguments[0].value,modules,file)
+                    let depName = LocalizedResolve(file,node.declarations[0].init.arguments[0].value)
+                    if(node.declarations[0].init.arguments[0].value.match(regexp) == null){
+                        depName = node.declarations[0].init.arguments[0].value
+                    }
+                    let dep = new CjsModuleDependency(depName,modules,file)
+                    if (node.declarations[0].init.arguments[0].value.match(regexp) !== null){
+                        let filename = node.declarations[0].init.arguments[0].value
+                        dep.verifyImportedModules(LocalizedResolve(file,filename))
+
+                    }
                     if (Graph.searchFor(dep)){
                         Graph.update(dep)
                     }
                     else{
                         Graph.add(dep);
                     }
-                if (node.declarations[0].init.arguments[0].value.match(regexp) !== null){
-                        VerifyModulesForDependency(node.declarations[0].init.arguments[0].value,modules);
-                }
                 }
             }
         }
@@ -46,7 +62,38 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                 if(node.expression.left.type === 'MemberExpression' && node.expression.right.type === 'CallExpression'){
                     if(node.expression.right.callee.name === 'require') {
                         modules.push(new Module(node.expression.right.arguments[0].value,ModuleTypes.CjsDefaultModule))
-                        let dep = new Dependency('_CURRENT_cjs-exports',modules,file)
+                        let depName = LocalizedResolve(file,node.expression.right.arguments[0].value)
+                        if(node.expression.right.arguments[0].value.match(regexp) == null){
+                            depName = node.expression.right.arguments[0].value
+                        }
+                        let dep = new CjsModuleDependency(depName,modules,file)
+                        if (node.expression.right.arguments[0].value.match(regexp) !== null){
+                            let filename = node.expression.right.arguments[0].value
+                            dep.verifyImportedModules(LocalizedResolve(file,filename))
+                        }
+                        if (Graph.searchFor(dep)){
+                            Graph.update(dep)
+                        }
+                        else{
+                            Graph.add(dep); 
+                        }
+                    }
+                }
+            }
+            if(node.expression.type === 'CallExpression'){
+                if(node.expression.callee.type === 'CallExpression'){
+                    if (node.expression.callee.callee.name === 'require'){
+                        modules.push(new Module('_DefaultFunction_',ModuleTypes.CjsDefaultFunction));
+
+                        let depName = LocalizedResolve(file,node.expression.callee.arguments[0].value)
+                        if(node.expression.callee.arguments[0].value.match(regexp) == null){
+                            depName = node.expression.callee.arguments[0].value
+                        }
+                        let dep = new CjsModuleDependency(depName,modules,file)
+                        if(node.expression.callee.arguments[0].value.match(regexp) !== null){
+                            let filename = node.expression.callee.arguments[0].value
+                            dep.verifyImportedModules(LocalizedResolve(file,filename))
+                        }
                         if (Graph.searchFor(dep)){
                             Graph.update(dep)
                         }
