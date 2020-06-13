@@ -4,7 +4,12 @@ import * as EsModuleGrapher from './graphers/EsModuleGrapher'
 import * as CjsModuleGrapher from './graphers/CommonJsModuleGrapher'
 import * as resolve from 'resolve'
 import path = require('path')
-import { ResolveLibrary } from './Resolve.js'
+import { ResolveLibrary, LocalizedResolve, addJsExtensionIfNecessary } from './Resolve.js'
+import { DefaultQuarkTable } from './QuarkTable.js'
+import Dependency from './Dependency.js'
+import ModuleDependency from './dependencies/ModuleDependency.js'
+
+var isProduction = false
 
 
 export default function StarGraph(entry:string) {
@@ -16,24 +21,31 @@ export default function StarGraph(entry:string) {
     let Graph = new VortexGraph
 
     let fileLoc = './dep-graph.json';
+    let loadedFilesCache:Array<String> = []
 
     GraphDepsAndModsForCurrentFile(entry,Graph);
+    loadedFilesCache.push(entry)
     
     for (let dep of Graph.Graph.Star){
-        let regexp = new RegExp('./')
-
-        if (dep.name.match(regexp) !== null) {
-            //Local File Graphing
-            GraphDepsAndModsForCurrentFile(dep.name,Graph)
+        let str = './'
+        if (loadedFilesCache.includes(dep.name) == false){
+            if (dep.name.includes(str) == true) {
+                //Local File Graphing
+                GraphDepsAndModsForCurrentFile(addJsExtensionIfNecessary(dep.name),Graph)
+                loadedFilesCache.push(dep.name)
+            }
+            else{
+                GraphDepsForLib(dep,Graph)
+                loadedFilesCache.push(dep.name)
+            }
         }
-        else{
-            //Node Lib Graphing
-            GraphDepsAndModsForNodeLib(dep.name,Graph)
-           
-        }
-        
     }
-        //GraphDepsAndModsForNodeLib('react',Graph)
+    //console.log(loadedFilesCache)
+        //console.log(loadedFilesCache)
+        //console.log(resolveLibBundle("lodash",Graph,false))
+        // console.log(resolveLibBundle('react'));
+        //console.log(resolve.sync('aws-sdk'))
+        //console.log(LocalizedResolve('./test/baha.js','../pooper/colop/mama.js'))
         return Graph
 }
 
@@ -44,6 +56,29 @@ function GraphDepsAndModsForCurrentFile(file:string,Graph:VortexGraph){
     CjsModuleGrapher.SearchAndGraph(file,Graph)
 }
 
-function GraphDepsAndModsForNodeLib(nodeLibName:string,Graph:VortexGraph){
-    GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
+function GraphDepsForLib(dep:Dependency,Graph:VortexGraph){
+    if(dep instanceof ModuleDependency){
+        GraphDepsAndModsForCurrentFile(resolveLibBundle(dep.name),Graph)
+    }
+}
+
+function resolveLibBundle(nodeLibName:string){
+    //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
+    let minified = new RegExp('min')
+
+    let bundles = ResolveLibrary(nodeLibName)
+    if(bundles instanceof Array)
+    {
+        for(let lib of bundles){
+            if (lib.match(minified) && isProduction){
+                return lib
+            }
+            else if(lib.match(minified) == null && isProduction == false){
+                return lib
+            }
+        }
+    }
+    else{
+    return bundles
+    }
 }

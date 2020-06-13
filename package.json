@@ -1,7 +1,6 @@
 {
   "name": "Vortex-Bundler",
   "version": "0.0.0",
-  "main": "index.js",
   "author": "Alex Topper",
   "license": "MIT",
   "scripts": {
@@ -9,16 +8,18 @@
   },
   "private": true,
   "dependencies": {
+    "@babel/core": "^7.10.2",
     "@babel/generator": "^7.10.2",
     "@babel/parser": "^7.10.2",
+    "@babel/preset-env": "^7.10.2",
     "@babel/traverse": "^7.10.1",
-    "@types/acorn": "^4.0.5",
+    "@types/babel__core": "^7.1.8",
     "@types/babel__generator": "^7.6.1",
+    "@types/babel__parser": "^7.1.1",
     "@types/babel__traverse": "^7.0.12",
     "@types/fs-extra": "^9.0.1",
     "@types/node": "^14.0.11",
     "@types/resolve": "^1.17.1",
-    "acorn": "^7.2.0",
     "acorn-walk": "^7.1.1",
     "chalk": "^4.0.0",
     "cli-spinners": "^2.3.0",
@@ -34,7 +35,10 @@
     "typescript": "^3.9.5"
   },
   "devDependencies": {
+    "@rollup/plugin-node-resolve": "^8.0.1",
+    "aws-sdk": "^2.695.0",
     "react": "^16.13.1",
-    "react-dom": "^16.13.1"
+    "react-dom": "^16.13.1",
+    "vue": "^2.6.11"
   }
 }

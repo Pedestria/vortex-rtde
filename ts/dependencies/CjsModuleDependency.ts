@@ -6,8 +6,8 @@ import chalk = require("chalk");
 
 export default class CjsModuleDependency extends ModuleDependency{
 
-    constructor(name:string,acquiredModules:Array<Module>,initSuperDependency?:string) {
-        super(name,acquiredModules,initSuperDependency);
+    constructor(name:string,acquiredModules:Array<Module>,initSuperDependency?:string,libLoc?:string) {
+        super(name,acquiredModules,initSuperDependency,libLoc);
     }
 
     verifyImportedModules(file:string){

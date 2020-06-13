@@ -4,16 +4,16 @@ import * as chalk from 'chalk'
 import * as Logger from './Log'
 
 
-export function Bundle (productionMode:boolean,entry:string){
+export function createStarPackage (productionMode:boolean,entry:string){
 
     let isProduction:boolean = productionMode;
 
-    if (isProduction){
-        process.env.NODE_ENV = 'production'
-    }
-    else{
-        process.env.NODE_ENV = 'development'
-    }
+    // if (isProduction){
+    //     process.env.NODE_ENV = 'production'
+    // }
+    // else{
+    //     process.env.NODE_ENV = 'development'
+    // }
     //Logger.Log();
 
     let Graph = StarGraph.default(entry);

@@ -8,7 +8,7 @@ program.version('0.0.1a')
 program
     .command('vortex <entryPoint>')
     .action((entryPoint) => {
-        Vortex.Bundle(false,entryPoint)
+        Vortex.createStarPackage(false,entryPoint)
     })
     .parse(process.argv)
 

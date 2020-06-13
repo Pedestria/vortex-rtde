@@ -4,10 +4,12 @@ import Module from "../Module.js";
 export default class ModuleDependency extends Dependency {
 
     acquiredModules:Array<Module>
+    libLoc:string
 
-    constructor(name:string,acquiredModules:Array<Module>,initSuperDependency?:string){
+    constructor(name:string,acquiredModules:Array<Module>,initSuperDependency?:string,libLoc?:string){
         super(name,initSuperDependency)
         this.acquiredModules = acquiredModules
+        this.libLoc = libLoc
     }
 
     testForModule(module:Module): boolean{

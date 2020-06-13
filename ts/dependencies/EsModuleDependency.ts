@@ -6,8 +6,8 @@ import chalk = require("chalk");
 import ModuleDependency from "./ModuleDependency.js";
 
 export default class EsModuleDependency extends ModuleDependency {
-    constructor(name:string,acquiredModules:Array<Module>,initSuperDependency?:string){
-        super(name,acquiredModules,initSuperDependency)
+    constructor(name:string,acquiredModules:Array<Module>,initSuperDependency?:string,libLoc?:string){
+        super(name,acquiredModules,initSuperDependency,libLoc)
     }
 
     verifyImportedModules(file:string){
