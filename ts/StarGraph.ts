@@ -8,11 +8,16 @@ import { ResolveLibrary, LocalizedResolve, addJsExtensionIfNecessary } from './R
 import { DefaultQuarkTable } from './QuarkTable.js'
 import Dependency from './Dependency.js'
 import ModuleDependency from './dependencies/ModuleDependency.js'
+import * as terser from 'terser'
 
 var isProduction = false
 
-
 export default function StarGraph(entry:string) {
+
+    if(isProduction){
+        fs.emptyDirSync('./cache/files')
+        fs.emptyDirSync('./cache/libs')
+    }
 
     const node_modules:string = 'node_modules'
 
@@ -23,7 +28,7 @@ export default function StarGraph(entry:string) {
     let fileLoc = './dep-graph.json';
     let loadedFilesCache:Array<String> = []
 
-    GraphDepsAndModsForCurrentFile(entry,Graph);
+    GraphDepsAndModsForCurrentFile(addJsExtensionIfNecessary(entry),Graph);
     loadedFilesCache.push(entry)
     
     for (let dep of Graph.Graph.Star){
@@ -62,7 +67,7 @@ function GraphDepsForLib(dep:Dependency,Graph:VortexGraph){
     }
 }
 
-function resolveLibBundle(nodeLibName:string){
+export function resolveLibBundle(nodeLibName:string){
     //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
     let minified = new RegExp('min')
 
@@ -79,6 +84,33 @@ function resolveLibBundle(nodeLibName:string){
         }
     }
     else{
-    return bundles
+        if(isProduction){
+            let fileName = path.basename(bundles,'.js')
+            let finalPath = './cache/libs/' + fileName + '.min.js'
+            if(fs.existsSync(finalPath)){
+                return finalPath
+            }
+            let fileToBeMinified = fs.readFileSync(bundles).toString()
+            let min = terser.minify(fileToBeMinified)
+            fs.writeFileSync(finalPath,min.code)
+            return finalPath
+        }
+        else{
+            return bundles
+        }
     }
+}
+
+// export function minifyIfProduction(file:string){
+//     if(isProduction){ 
+//         let fileName = path.basename(file,'.js')
+//         let finalPath = './cache/files/' + fileName + '.min.js'
+//         let min = terser.minify(fs.readFileSync(file).toString())
+//         fs.ensureDirSync(path.dirname(finalPath))
+//         fs.writeFileSync(finalPath,min.code)
+//         return finalPath
+//     }
+//     else{
+//         return addJsExtensionIfNecessary(file)
+//     }
 }

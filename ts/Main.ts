@@ -2,6 +2,8 @@ import * as StarGraph from './StarGraph'
 import * as fs from 'fs-extra'
 import * as chalk from 'chalk'
 import * as Logger from './Log'
+import { resolveLibBundle } from './StarGraph';
+import * as terser from 'terser'
 
 
 export function createStarPackage (productionMode:boolean,entry:string){
@@ -15,6 +17,7 @@ export function createStarPackage (productionMode:boolean,entry:string){
     //     process.env.NODE_ENV = 'development'
     // }
     //Logger.Log();
+
 
     let Graph = StarGraph.default(entry);
     console.log(Graph)

@@ -35,8 +35,8 @@
     "typescript": "^3.9.5"
   },
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^8.0.1",
     "aws-sdk": "^2.695.0",
+    "lodash": "^4.17.15",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "vue": "^2.6.11"

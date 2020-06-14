@@ -41,6 +41,11 @@
                 "acquiredModules": [{ "name": "HiThere", "type": 0 }]
             },
             {
+                "name": "lodash",
+                "superDependencies": ["./test/aha/test2.js"],
+                "acquiredModules": [{ "name": "_", "type": 1 }]
+            },
+            {
                 "name": "./node_modules/prop-types/lib/ReactPropTypesSecret",
                 "superDependencies": [
                     "./node_modules/prop-types/checkPropTypes.js"
