@@ -3,7 +3,10 @@
         "Star": [
             {
                 "name": "react",
-                "superDependencies": ["./test/test.js", "./test/aha/test2.js"],
+                "superDependencies": [
+                    "./test/test.js",
+                    "./test\\aha\\test2.js"
+                ],
                 "acquiredModules": [
                     { "name": "React", "type": 1 },
                     { "name": "Component", "type": 0 },
@@ -12,47 +15,24 @@
                 ]
             },
             {
-                "name": "./test/aha/test2.js",
+                "name": "./test\\aha\\test2.js",
                 "superDependencies": ["./test/test.js"],
                 "acquiredModules": [{ "name": "poopal", "type": 2 }]
             },
             {
-                "name": "./test/func.js",
+                "name": "./test\\func.js",
                 "superDependencies": ["./test/test.js"],
                 "acquiredModules": [{ "name": "_DefaultFunction_", "type": 4 }]
             },
             {
-                "name": "object-assign",
-                "superDependencies": [
-                    "./node_modules/react/cjs/react.development.js"
-                ],
-                "acquiredModules": [{ "name": "_assign", "type": 3 }]
-            },
-            {
-                "name": "prop-types/checkPropTypes",
-                "superDependencies": [
-                    "./node_modules/react/cjs/react.development.js"
-                ],
-                "acquiredModules": [{ "name": "checkPropTypes", "type": 3 }]
-            },
-            {
-                "name": "./test/mama.js",
-                "superDependencies": ["./test/aha/test2.js"],
+                "name": "./test\\mama.js",
+                "superDependencies": ["./test\\aha\\test2.js"],
                 "acquiredModules": [{ "name": "HiThere", "type": 0 }]
             },
             {
                 "name": "lodash",
-                "superDependencies": ["./test/aha/test2.js"],
+                "superDependencies": ["./test\\aha\\test2.js"],
                 "acquiredModules": [{ "name": "_", "type": 1 }]
-            },
-            {
-                "name": "./node_modules/prop-types/lib/ReactPropTypesSecret",
-                "superDependencies": [
-                    "./node_modules/prop-types/checkPropTypes.js"
-                ],
-                "acquiredModules": [
-                    { "name": "ReactPropTypesSecret", "type": 3 }
-                ]
             }
         ]
     }

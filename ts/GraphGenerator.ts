@@ -8,9 +8,10 @@ import { ResolveLibrary, LocalizedResolve, addJsExtensionIfNecessary } from './R
 import { DefaultQuarkTable } from './QuarkTable.js'
 import Dependency from './Dependency.js'
 import ModuleDependency from './dependencies/ModuleDependency.js'
-import * as terser from 'terser'
+import { isProduction, isLibrary } from './Options.js'
+//import * as terser from 'terser'
 
-var isProduction = false
+
 
 export default function StarGraph(entry:string) {
 
@@ -40,8 +41,10 @@ export default function StarGraph(entry:string) {
                 loadedFilesCache.push(dep.name)
             }
             else{
+                if(isLibrary == false){
                 GraphDepsForLib(dep,Graph)
                 loadedFilesCache.push(dep.name)
+                }
             }
         }
     }
@@ -83,21 +86,21 @@ export function resolveLibBundle(nodeLibName:string){
             }
         }
     }
-    else{
-        if(isProduction){
-            let fileName = path.basename(bundles,'.js')
-            let finalPath = './cache/libs/' + fileName + '.min.js'
-            if(fs.existsSync(finalPath)){
-                return finalPath
-            }
-            let fileToBeMinified = fs.readFileSync(bundles).toString()
-            let min = terser.minify(fileToBeMinified)
-            fs.writeFileSync(finalPath,min.code)
-            return finalPath
-        }
-        else{
+    // else{
+        // if(isProduction){
+        //     let fileName = path.basename(bundles,'.js')
+        //     let finalPath = './cache/libs/' + fileName + '.min.js'
+        //     if(fs.existsSync(finalPath)){
+        //         return finalPath
+        //     }
+        //     let fileToBeMinified = fs.readFileSync(bundles).toString()
+        //     let min = terser.minify(fileToBeMinified)
+        //     fs.writeFileSync(finalPath,min.code)
+        //     return finalPath
+        // }
+        // else{
             return bundles
-        }
+        // }
     }
 }
 

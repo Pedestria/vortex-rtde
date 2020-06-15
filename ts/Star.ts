@@ -1,5 +1,5 @@
 import { VortexGraph } from "./Graph.js";
-import * as StarCreator from './Compiler'
+import Compile from './Compiler'
 
 export default class Star {
     name:string
@@ -11,7 +11,7 @@ export default class Star {
     }
 
     generate(stargraph:VortexGraph){
-        return StarCreator.default(stargraph)
+        return Compile(stargraph)
     }
 
 }

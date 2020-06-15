@@ -1,12 +1,14 @@
-import * as StarGraph from './StarGraph'
+import * as StarGraph from './GraphGenerator'
 import * as fs from 'fs-extra'
 import * as chalk from 'chalk'
 import * as Logger from './Log'
-import { resolveLibBundle } from './StarGraph';
+import { resolveLibBundle } from './GraphGenerator';
 import * as terser from 'terser'
 
 
 export function createStarPackage (productionMode:boolean,entry:string){
+
+  
 
     let isProduction:boolean = productionMode;
 

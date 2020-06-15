@@ -2,16 +2,16 @@ import Module from "./Module.js"
 
 export default class Dependency {
     name:string
-    superDependencies?:Array<String>
+    importLocations:Array<String>
 
-    constructor(name:string,initSuperDependency?:String){
+    constructor(name:string,initInportLocation?:String){
         this.name = name
-        this.superDependencies = []
-        this.superDependencies.push(initSuperDependency)
+        this.importLocations = []
+        this.importLocations.push(initInportLocation)
     }
 
-    testForSuperDependency(superDep:String): boolean{
-        for (let supDp of this.superDependencies){
+    testForImportLocation(superDep:String): boolean{
+        for (let supDp of this.importLocations){
             if(superDep == supDp){
                 return true
             }

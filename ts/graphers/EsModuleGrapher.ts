@@ -8,7 +8,7 @@ import EsModuleDependency from '../dependencies/EsModuleDependency'
 import chalk = require("chalk");
 import path = require('path')
 import { LocalizedResolve, addJsExtensionIfNecessary } from "../Resolve.js";
-import { minifyIfProduction } from "../StarGraph.js";
+import { minifyIfProduction } from "../GraphGenerator.js";
 
 export function SearchAndGraph(file:string,Graph:VortexGraph){
 

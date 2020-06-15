@@ -1,5 +1,7 @@
 import { VortexGraph } from "./Graph.js";
+import * as fs from 'fs-extra'
 
-export default function Create(Graph:VortexGraph){
+
+export default function Compile(Graph:VortexGraph){
 
 }

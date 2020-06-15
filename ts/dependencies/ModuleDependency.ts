@@ -6,8 +6,8 @@ export default class ModuleDependency extends Dependency {
     acquiredModules:Array<Module>
     libLoc:string
 
-    constructor(name:string,acquiredModules:Array<Module>,initSuperDependency?:string,libLoc?:string){
-        super(name,initSuperDependency)
+    constructor(name:string,acquiredModules:Array<Module>,initImportLocation?:string,libLoc?:string){
+        super(name,initImportLocation)
         this.acquiredModules = acquiredModules
         this.libLoc = libLoc
     }
