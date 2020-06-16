@@ -3,36 +3,67 @@
         "Star": [
             {
                 "name": "react",
-                "superDependencies": [
-                    "./test/test.js",
-                    "./test\\aha\\test2.js"
+                "importLocations": [
+                    {
+                        "name": "./test/test.js",
+                        "line": 11,
+                        "modules": [
+                            { "name": "React", "type": 1 },
+                            { "name": "lazy", "type": 0 }
+                        ]
+                    },
+                    {
+                        "name": "./test/aha/test2.js",
+                        "line": 5,
+                        "modules": [
+                            { "name": "React", "type": 1 },
+                            { "name": "Component", "type": 0 },
+                            { "name": "Fragment", "type": 0 }
+                        ]
+                    }
                 ],
-                "acquiredModules": [
-                    { "name": "React", "type": 1 },
-                    { "name": "Component", "type": 0 },
-                    { "name": "lazy", "type": 0 },
-                    { "name": "Fragment", "type": 0 }
+                "libLoc": "./node_modules/react/cjs/react.development.js"
+            },
+            {
+                "name": "./test/aha/test2.js",
+                "importLocations": [
+                    {
+                        "name": "./test/test.js",
+                        "line": 7,
+                        "modules": [{ "name": "poopal", "type": 2 }]
+                    }
                 ]
             },
             {
-                "name": "./test\\aha\\test2.js",
-                "superDependencies": ["./test/test.js"],
-                "acquiredModules": [{ "name": "poopal", "type": 2 }]
+                "name": "./test/func.js",
+                "importLocations": [
+                    {
+                        "name": "./test/test.js",
+                        "line": 9,
+                        "modules": [{ "name": "_DefaultFunction_", "type": 4 }]
+                    }
+                ]
             },
             {
-                "name": "./test\\func.js",
-                "superDependencies": ["./test/test.js"],
-                "acquiredModules": [{ "name": "_DefaultFunction_", "type": 4 }]
-            },
-            {
-                "name": "./test\\mama.js",
-                "superDependencies": ["./test\\aha\\test2.js"],
-                "acquiredModules": [{ "name": "HiThere", "type": 0 }]
+                "name": "./test/mama.js",
+                "importLocations": [
+                    {
+                        "name": "./test/aha/test2.js",
+                        "line": 1,
+                        "modules": [{ "name": "HiThere", "type": 0 }]
+                    }
+                ]
             },
             {
                 "name": "lodash",
-                "superDependencies": ["./test\\aha\\test2.js"],
-                "acquiredModules": [{ "name": "_", "type": 1 }]
+                "importLocations": [
+                    {
+                        "name": "./test/aha/test2.js",
+                        "line": 3,
+                        "modules": [{ "name": "_", "type": 1 }]
+                    }
+                ],
+                "libLoc": "./node_modules/lodash/lodash.js"
             }
         ]
     }

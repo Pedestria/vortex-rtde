@@ -4,6 +4,7 @@ import * as Babel from '@babel/parser'
 import traverse from '@babel/traverse'
 import * as fs from 'fs-extra'
 import {DefaultQuarkTable, QuarkLibEntry} from './QuarkTable'
+import {isProduction} from './Options'
 
 export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:string){
 
@@ -19,6 +20,39 @@ export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:st
 
     return './' + path.join(dirname,localFilePath)
 
+}
+
+export function resolveLibBundle(nodeLibName:string){
+    //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
+    let minified = new RegExp('min')
+
+    let bundles = ResolveLibrary(nodeLibName)
+    if(bundles instanceof Array)
+    {
+        for(let lib of bundles){
+            if (lib.match(minified) && isProduction){
+                return lib
+            }
+            else if(lib.match(minified) == null && isProduction == false){
+                return lib
+            }
+        }
+    }
+    // else{
+        // if(isProduction){
+        //     let fileName = path.basename(bundles,'.js')
+        //     let finalPath = './cache/libs/' + fileName + '.min.js'
+        //     if(fs.existsSync(finalPath)){
+        //         return finalPath
+        //     }
+        //     let fileToBeMinified = fs.readFileSync(bundles).toString()
+        //     let min = terser.minify(fileToBeMinified)
+        //     fs.writeFileSync(finalPath,min.code)
+        //     return finalPath
+        // }
+        // else{
+            return bundles
+        // }
 }
 
 export function ResolveLibrary(packageName:string){

@@ -4,7 +4,7 @@ import * as EsModuleGrapher from './graphers/EsModuleGrapher'
 import * as CjsModuleGrapher from './graphers/CommonJsModuleGrapher'
 import * as resolve from 'resolve'
 import path = require('path')
-import { ResolveLibrary, LocalizedResolve, addJsExtensionIfNecessary } from './Resolve.js'
+import { ResolveLibrary, LocalizedResolve, addJsExtensionIfNecessary, resolveLibBundle } from './Resolve.js'
 import { DefaultQuarkTable } from './QuarkTable.js'
 import Dependency from './Dependency.js'
 import ModuleDependency from './dependencies/ModuleDependency.js'
@@ -37,13 +37,13 @@ export default function StarGraph(entry:string) {
         if (loadedFilesCache.includes(dep.name) == false){
             if (dep.name.includes(str) == true) {
                 //Local File Graphing
-                GraphDepsAndModsForCurrentFile(addJsExtensionIfNecessary(dep.name),Graph)
+                GraphDepsAndModsForCurrentFile(dep.name,Graph)
                 loadedFilesCache.push(dep.name)
             }
             else{
                 if(isLibrary == false){
-                GraphDepsForLib(dep,Graph)
-                loadedFilesCache.push(dep.name)
+                    GraphDepsForLib(dep,Graph)
+                    loadedFilesCache.push(dep.name)
                 }
             }
         }
@@ -70,39 +70,7 @@ function GraphDepsForLib(dep:Dependency,Graph:VortexGraph){
     }
 }
 
-export function resolveLibBundle(nodeLibName:string){
-    //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
-    let minified = new RegExp('min')
 
-    let bundles = ResolveLibrary(nodeLibName)
-    if(bundles instanceof Array)
-    {
-        for(let lib of bundles){
-            if (lib.match(minified) && isProduction){
-                return lib
-            }
-            else if(lib.match(minified) == null && isProduction == false){
-                return lib
-            }
-        }
-    }
-    // else{
-        // if(isProduction){
-        //     let fileName = path.basename(bundles,'.js')
-        //     let finalPath = './cache/libs/' + fileName + '.min.js'
-        //     if(fs.existsSync(finalPath)){
-        //         return finalPath
-        //     }
-        //     let fileToBeMinified = fs.readFileSync(bundles).toString()
-        //     let min = terser.minify(fileToBeMinified)
-        //     fs.writeFileSync(finalPath,min.code)
-        //     return finalPath
-        // }
-        // else{
-            return bundles
-        // }
-    }
-}
 
 // export function minifyIfProduction(file:string){
 //     if(isProduction){ 
@@ -116,4 +84,3 @@ export function resolveLibBundle(nodeLibName:string){
 //     else{
 //         return addJsExtensionIfNecessary(file)
 //     }
-}

@@ -42,14 +42,14 @@ export class VortexGraph {
 
 function ModuleDependencyUpdater(newDependency:ModuleDependency,dep:ModuleDependency){
     if(dep.name == newDependency.name) {
-        for(let newMod of newDependency.acquiredModules){
-            if(dep.testForModule(newMod) == false){
-                dep.acquiredModules.push(newMod)
-            }
-        }
-        for(let newSupDep of newDependency.superDependencies){
-            if(dep.testForSuperDependency(newSupDep) == false){
-                dep.superDependencies.push(newSupDep)
+        // for(let newMod of newDependency.acquiredModules){
+        //     if(dep.testForModule(newMod) == false){
+        //         dep.acquiredModules.push(newMod)
+        //     }
+        // }
+        for(let newImpLoc of newDependency.importLocations){
+            if(dep.testForImportLocation(newImpLoc.name) == false){
+                dep.importLocations.push(newImpLoc)
             }
         }
     }

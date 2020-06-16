@@ -8,13 +8,13 @@ import EsModuleDependency from '../dependencies/EsModuleDependency'
 import chalk = require("chalk");
 import path = require('path')
 import { LocalizedResolve, addJsExtensionIfNecessary } from "../Resolve.js";
-import { minifyIfProduction } from "../GraphGenerator.js";
+//import { minifyIfProduction } from "../GraphGenerator.js";
+import { Transport } from "../Transport.js";
+import MDImportLocation from "../MDImportLocation.js";
 
 export function SearchAndGraph(file:string,Graph:VortexGraph){
 
     const buffer = fs.readFileSync(file,'utf-8').toString();
-
-    let str =  './'
 
     const jsCode = Babel.parse(buffer,{"sourceType":"module"})
 
@@ -25,7 +25,7 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                 //console.log(path.node);
                 for (let ImportType of path.node.specifiers){
                     if (ImportType.type === 'ImportDefaultSpecifier'){
-                        let mod= new Module(ImportType.local.name,ModuleTypes.EsDefaultModule)
+                        let mod= new Module(ImportType.local.name,ModuleTypes.EsDefaultOrNamespaceModule)
                         modules.push(mod)
                     }
                     else if (ImportType.type === 'ImportSpecifier') {
@@ -33,23 +33,9 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                         modules.push(mod)
                     }
                 }
-                let depName = LocalizedResolve(file,path.node.source.value)
-                if(path.node.source.value.includes(str) == false){
-                    depName = path.node.source.value
-                }
-                let dep = new EsModuleDependency(depName,modules,file)
-    
-                if (path.node.source.value.includes(str) == true){
-                    let filename = addJsExtensionIfNecessary(path.node.source.value)
-                    dep.verifyImportedModules(LocalizedResolve(file,filename))
-                }
-    
-                if (Graph.searchFor(dep)){
-                    Graph.update(dep)
-                }
-                else{
-                    Graph.add(dep);
-                }
+                //console.log(modules)
+                let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules)
+                Transport(new EsModuleDependency(path.node.source.value,currentImpLoc),Graph,file,currentImpLoc)
             }
 
         }

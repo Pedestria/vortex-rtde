@@ -8,7 +8,7 @@ const {poopal} = require('./aha/test2.js')
 
 require('./func.js')()
 
-import React, {Component,lazy} from 'react';
+import React, {lazy} from 'react';
 
 //const helloR = require('./hello.js');
 //module.exports = require('poolopin')

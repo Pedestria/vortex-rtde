@@ -1,24 +1,24 @@
 import Dependency from "../Dependency.js";
 import Module from "../Module.js";
+import MDImportLocation from "../MDImportLocation.js";
 
 export default class ModuleDependency extends Dependency {
 
     acquiredModules:Array<Module>
-    libLoc:string
+    libLoc:string|Array<string>
 
-    constructor(name:string,acquiredModules:Array<Module>,initImportLocation?:string,libLoc?:string){
+    constructor(name:string,initImportLocation?:MDImportLocation){
         super(name,initImportLocation)
-        this.acquiredModules = acquiredModules
-        this.libLoc = libLoc
+        //this.acquiredModules = acquiredModules
     }
 
-    testForModule(module:Module): boolean{
-        for (let mod of this.acquiredModules){
-            if(module.name == mod.name){
-                return true
-            }
-        }
-        return false
-    }
+    // testForModule(module:Module): boolean{
+    //     for (let mod of this.acquiredModules){
+    //         if(module.name == mod.name){
+    //             return true
+    //         }
+    //     }
+    //     return false
+    // }
 
 }

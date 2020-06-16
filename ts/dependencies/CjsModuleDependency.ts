@@ -3,14 +3,15 @@ import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
 import Module, { ModuleTypes } from '../Module'
 import chalk = require("chalk");
+import MDImportLocation from "../MDImportLocation.js";
 
 export default class CjsModuleDependency extends ModuleDependency{
 
-    constructor(name:string,acquiredModules:Array<Module>,initSuperDependency?:string,libLoc?:string) {
-        super(name,acquiredModules,initSuperDependency,libLoc);
+    constructor(name:string,initImportLocation?:MDImportLocation) {
+        super(name,initImportLocation);
     }
 
-    verifyImportedModules(file:string){
+    verifyImportedModules(file:string,currentImpLoc:MDImportLocation){
 
         const buffer = fs.readFileSync(file,'utf-8').toString();
 
@@ -38,10 +39,12 @@ export default class CjsModuleDependency extends ModuleDependency{
             }
         }
 
-        let testDep = new ModuleDependency('buffer',modBuffer)
+        let dummyImpLoc = new MDImportLocation('buffer',0,modBuffer)
 
         // let confModImp = []
         // let confModExp = []
+
+        //let index = this.indexOfImportLocation(file)
 
 
         // console.log(confModExp,confModImp)
@@ -51,8 +54,8 @@ export default class CjsModuleDependency extends ModuleDependency{
 
         let NonExtError = new Error(chalk.bgRed('Non Existant Modules Imported from ' + file))
 
-        for(let mod of this.acquiredModules){
-            if(testDep.testForModule(mod) == false){
+        for(let mod of currentImpLoc.modules){
+            if(dummyImpLoc.testForModule(mod) == false){
                 throw NonExtError
             }
         }
