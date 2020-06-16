@@ -19,8 +19,7 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
     const jsCode = Babel.parse(buffer,{"sourceType":"module"})
 
     traverse(jsCode,{
-        enter(path) {
-            if (path.node.type === 'ImportDeclaration'){
+        ImportDeclaration: function(path) {
                 let modules = []
                 //console.log(path.node);
                 for (let ImportType of path.node.specifiers){
@@ -36,8 +35,6 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                 //console.log(modules)
                 let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules)
                 Transport(new EsModuleDependency(path.node.source.value,currentImpLoc),Graph,file,currentImpLoc)
-            }
-
         }
     })
 }

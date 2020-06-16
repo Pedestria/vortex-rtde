@@ -4,6 +4,7 @@ import * as fs from 'fs-extra'
 import Module, { ModuleTypes } from '../Module'
 import chalk = require("chalk");
 import MDImportLocation from "../MDImportLocation.js";
+import { traverse } from "@babel/core";
 
 export default class CjsModuleDependency extends ModuleDependency{
 
@@ -15,31 +16,44 @@ export default class CjsModuleDependency extends ModuleDependency{
 
         const buffer = fs.readFileSync(file,'utf-8').toString();
 
-        const jsCode = Babel.parse(buffer,{"sourceType":"module"}).program.body
+        const jsCode = Babel.parse(buffer,{"sourceType":"module"})
 
-        let modBuffer = []
+        let modBuffer:Array<Module> = []
 
         //console.log("Calling" + file)
 
-        for (let node of jsCode){
-            if(node.type === 'ExpressionStatement'){
-                if(node.expression.type === 'AssignmentExpression'){
-                    if(node.expression.left.type === 'MemberExpression'){
-                        if(node.expression.left.object.name === 'module' && node.expression.left.property.name === 'exports'){
-                            //console.log(node.expression.right)
-                            if(node.expression.right.type === 'FunctionExpression' || node.expression.right.type === 'ArrowFunctionExpression'){
+        traverse(jsCode,{
+            ExpressionStatement: function(path) {
+                if(path.node.expression.type === 'AssignmentExpression'){
+                    if(path.node.expression.left.type === 'MemberExpression'){
+                        if(path.node.expression.left.object.name === 'module' && path.node.expression.left.property.name === 'exports'){
+                            //console.log(path.node.expression.right)
+                            if(path.node.expression.right.type === 'FunctionExpression' || path.node.expression.right.type === 'ArrowFunctionExpression'){
                                 modBuffer.push(new Module('_DefaultFunction_',ModuleTypes.CjsDefaultFunction))
                             }
                             else{
-                                modBuffer.push(new Module(node.expression.right.name,ModuleTypes.CjsModule))
+                                modBuffer.push(new Module(path.node.expression.right.name,ModuleTypes.CjsModule))
                             }
                         } 
+                        if(path.node.expression.left.object.name === 'exports'){
+                           if(path.node.expression.left.property.name === 'default'){
+                               if(path.node.expression.right.type !== 'UnaryExpression'){
+                               modBuffer.push(new Module(path.node.expression.right.name,ModuleTypes.CjsDefaultOrNamespaceModule))
+                               }
+                            }
+                           else{
+                                if(path.node.expression.right.type !== 'UnaryExpression'){
+                                modBuffer.push(new Module(path.node.expression.right.name,ModuleTypes.CjsModule))
+                                }
+                           }
+                        }
                     }
                 }
             }
-        }
+        })
 
         let dummyImpLoc = new MDImportLocation('buffer',0,modBuffer)
+        //console.log(dummyImpLoc)
 
         // let confModImp = []
         // let confModExp = []
@@ -52,13 +66,70 @@ export default class CjsModuleDependency extends ModuleDependency{
         // console.log(this.acquiredModules)
         // console.log(modBuffer)
 
-        let NonExtError = new Error(chalk.bgRed('Non Existant Modules Imported from ' + file))
+        //console.log(currentImpLoc)
+
+
+        let NonExtError = new Error(chalk.redBright('Non Existant Modules Imported from ' + file))
 
         for(let mod of currentImpLoc.modules){
             if(dummyImpLoc.testForModule(mod) == false){
-                throw NonExtError
+               for(let modName of findModulesUnderNamespace(currentImpLoc.name,mod.name)){
+                    if(searchForModuleUnderNamespace(currentImpLoc.name,modName,mod.name) == false){
+                        throw NonExtError
+                    }
+               }
             }
         }
     }
 
+}
+
+function findModulesUnderNamespace(file:string,Namespace:string){
+
+    const buffer = fs.readFileSync(file,'utf-8').toString();
+
+    const jsCode = Babel.parse(buffer,{"sourceType":"module"})
+
+    let modules:Array<string> = []
+
+
+    traverse(jsCode,{
+        MemberExpression : function (path){
+                if(path.node.object.type === 'Identifier'){
+                    var namespace = path.node.object.name
+                }
+                if(path.node.property.type === 'Identifier'){
+                    if(namespace == Namespace){
+                        modules.push(path.node.property.name)
+                    }
+                }
+            }
+        })
+    return modules
+
+}
+
+function searchForModuleUnderNamespace(file:string,Module:string,Namespace:string):boolean{
+
+    const buffer = fs.readFileSync(file,'utf-8').toString();
+
+    const jsCode = Babel.parse(buffer,{"sourceType":"module"})
+
+    let rc = false
+
+    traverse(jsCode,{
+        MemberExpression : function (path) {
+                if(path.node.object.type === 'Identifier'){
+                    var namespace = path.node.object.name
+                }
+                if(path.node.property.type === 'Identifier'){
+                    if(namespace == Namespace){
+                        if(path.node.property.name === Module){
+                            rc = true
+                        }
+                    }
+                }
+            }
+        })
+    return rc
 }

@@ -1,7 +1,7 @@
 import { VortexGraph } from "../Graph.js";
 import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
-import traverse from '@babel/traverse'
+import traverse, { Scope } from '@babel/traverse'
 import Module, { ModuleTypes } from "../Module.js";
 import Dependency from "../Dependency.js";
 import chalk = require("chalk");
@@ -24,8 +24,7 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
     //         console.log('Debug Written')
     //       })
     traverse(jsCode,{
-        enter(path) {
-            if (path.node.type === 'VariableDeclaration') {
+        VariableDeclaration: function(path) {
                 let modules = []
                 if (path.node.declarations[0].init !== null){
                     if (path.node.declarations[0].init.type === 'CallExpression') {
@@ -44,9 +43,10 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                             Transport(new CjsModuleDependency(path.node.declarations[0].init.arguments[0].value,currentImpLoc),Graph,file,currentImpLoc)
                         }
                     }
-                }
-            }
-            if (path.node.type === 'ExpressionStatement') {
+            }}});
+
+        traverse(jsCode,{
+            ExpressionStatement: function(path) {
                 let modules = []
                 if (path.node.expression.type === 'AssignmentExpression') {
                     if(path.node.expression.left.type === 'MemberExpression' && path.node.expression.right.type === 'CallExpression'){
@@ -72,7 +72,6 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                     }
                 }
             }
-        }
-    })
+        })
 
 }

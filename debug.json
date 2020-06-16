@@ -1,0 +1,404 @@
+{
+    "type": "File",
+    "start": 0,
+    "end": 258,
+    "loc": {
+        "start": { "line": 1, "column": 0 },
+        "end": { "line": 17, "column": 22 }
+    },
+    "errors": [],
+    "program": {
+        "type": "Program",
+        "start": 0,
+        "end": 258,
+        "loc": {
+            "start": { "line": 1, "column": 0 },
+            "end": { "line": 17, "column": 22 }
+        },
+        "sourceType": "script",
+        "interpreter": null,
+        "body": [
+            {
+                "type": "VariableDeclaration",
+                "start": 97,
+                "end": 125,
+                "loc": {
+                    "start": { "line": 7, "column": 0 },
+                    "end": { "line": 7, "column": 28 }
+                },
+                "declarations": [
+                    {
+                        "type": "VariableDeclarator",
+                        "start": 103,
+                        "end": 125,
+                        "loc": {
+                            "start": { "line": 7, "column": 6 },
+                            "end": { "line": 7, "column": 28 }
+                        },
+                        "id": {
+                            "type": "Identifier",
+                            "start": 103,
+                            "end": 107,
+                            "loc": {
+                                "start": { "line": 7, "column": 6 },
+                                "end": { "line": 7, "column": 10 },
+                                "identifierName": "haha"
+                            },
+                            "name": "haha"
+                        },
+                        "init": {
+                            "type": "CallExpression",
+                            "start": 110,
+                            "end": 125,
+                            "loc": {
+                                "start": { "line": 7, "column": 13 },
+                                "end": { "line": 7, "column": 28 }
+                            },
+                            "callee": {
+                                "type": "Identifier",
+                                "start": 110,
+                                "end": 117,
+                                "loc": {
+                                    "start": { "line": 7, "column": 13 },
+                                    "end": { "line": 7, "column": 20 },
+                                    "identifierName": "require"
+                                },
+                                "name": "require"
+                            },
+                            "arguments": [
+                                {
+                                    "type": "StringLiteral",
+                                    "start": 118,
+                                    "end": 124,
+                                    "loc": {
+                                        "start": { "line": 7, "column": 21 },
+                                        "end": { "line": 7, "column": 27 }
+                                    },
+                                    "extra": {
+                                        "rawValue": "haha",
+                                        "raw": "'haha'"
+                                    },
+                                    "value": "haha"
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "kind": "const",
+                "leadingComments": [
+                    {
+                        "type": "CommentLine",
+                        "value": " module.exports = () => {",
+                        "start": 0,
+                        "end": 27,
+                        "loc": {
+                            "start": { "line": 1, "column": 0 },
+                            "end": { "line": 1, "column": 27 }
+                        }
+                    },
+                    {
+                        "type": "CommentLine",
+                        "value": "     console.log(\"CjsDefaultFunction\")",
+                        "start": 28,
+                        "end": 68,
+                        "loc": {
+                            "start": { "line": 2, "column": 0 },
+                            "end": { "line": 2, "column": 40 }
+                        }
+                    },
+                    {
+                        "type": "CommentLine",
+                        "value": " }",
+                        "start": 69,
+                        "end": 73,
+                        "loc": {
+                            "start": { "line": 3, "column": 0 },
+                            "end": { "line": 3, "column": 4 }
+                        }
+                    },
+                    {
+                        "type": "CommentLine",
+                        "value": " function mali(){}",
+                        "start": 75,
+                        "end": 95,
+                        "loc": {
+                            "start": { "line": 5, "column": 0 },
+                            "end": { "line": 5, "column": 20 }
+                        }
+                    }
+                ]
+            },
+            {
+                "type": "ExpressionStatement",
+                "start": 127,
+                "end": 138,
+                "loc": {
+                    "start": { "line": 9, "column": 0 },
+                    "end": { "line": 9, "column": 11 }
+                },
+                "expression": {
+                    "type": "CallExpression",
+                    "start": 127,
+                    "end": 138,
+                    "loc": {
+                        "start": { "line": 9, "column": 0 },
+                        "end": { "line": 9, "column": 11 }
+                    },
+                    "callee": {
+                        "type": "MemberExpression",
+                        "start": 127,
+                        "end": 136,
+                        "loc": {
+                            "start": { "line": 9, "column": 0 },
+                            "end": { "line": 9, "column": 9 }
+                        },
+                        "object": {
+                            "type": "Identifier",
+                            "start": 127,
+                            "end": 131,
+                            "loc": {
+                                "start": { "line": 9, "column": 0 },
+                                "end": { "line": 9, "column": 4 },
+                                "identifierName": "haha"
+                            },
+                            "name": "haha"
+                        },
+                        "property": {
+                            "type": "Identifier",
+                            "start": 132,
+                            "end": 136,
+                            "loc": {
+                                "start": { "line": 9, "column": 5 },
+                                "end": { "line": 9, "column": 9 },
+                                "identifierName": "blah"
+                            },
+                            "name": "blah"
+                        },
+                        "computed": false
+                    },
+                    "arguments": []
+                }
+            },
+            {
+                "type": "VariableDeclaration",
+                "start": 140,
+                "end": 167,
+                "loc": {
+                    "start": { "line": 11, "column": 0 },
+                    "end": { "line": 11, "column": 27 }
+                },
+                "declarations": [
+                    {
+                        "type": "VariableDeclarator",
+                        "start": 146,
+                        "end": 167,
+                        "loc": {
+                            "start": { "line": 11, "column": 6 },
+                            "end": { "line": 11, "column": 27 }
+                        },
+                        "id": {
+                            "type": "Identifier",
+                            "start": 146,
+                            "end": 151,
+                            "loc": {
+                                "start": { "line": 11, "column": 6 },
+                                "end": { "line": 11, "column": 11 },
+                                "identifierName": "plooh"
+                            },
+                            "name": "plooh"
+                        },
+                        "init": {
+                            "type": "NewExpression",
+                            "start": 154,
+                            "end": 167,
+                            "loc": {
+                                "start": { "line": 11, "column": 14 },
+                                "end": { "line": 11, "column": 27 }
+                            },
+                            "callee": {
+                                "type": "MemberExpression",
+                                "start": 158,
+                                "end": 167,
+                                "loc": {
+                                    "start": { "line": 11, "column": 18 },
+                                    "end": { "line": 11, "column": 27 }
+                                },
+                                "object": {
+                                    "type": "Identifier",
+                                    "start": 158,
+                                    "end": 162,
+                                    "loc": {
+                                        "start": { "line": 11, "column": 18 },
+                                        "end": { "line": 11, "column": 22 },
+                                        "identifierName": "haha"
+                                    },
+                                    "name": "haha"
+                                },
+                                "property": {
+                                    "type": "Identifier",
+                                    "start": 163,
+                                    "end": 167,
+                                    "loc": {
+                                        "start": { "line": 11, "column": 23 },
+                                        "end": { "line": 11, "column": 27 },
+                                        "identifierName": "mama"
+                                    },
+                                    "name": "mama"
+                                },
+                                "computed": false
+                            },
+                            "arguments": []
+                        }
+                    }
+                ],
+                "kind": "const"
+            },
+            {
+                "type": "ExpressionStatement",
+                "start": 169,
+                "end": 182,
+                "loc": {
+                    "start": { "line": 13, "column": 0 },
+                    "end": { "line": 13, "column": 13 }
+                },
+                "expression": {
+                    "type": "MemberExpression",
+                    "start": 169,
+                    "end": 182,
+                    "loc": {
+                        "start": { "line": 13, "column": 0 },
+                        "end": { "line": 13, "column": 13 }
+                    },
+                    "object": {
+                        "type": "Identifier",
+                        "start": 169,
+                        "end": 173,
+                        "loc": {
+                            "start": { "line": 13, "column": 0 },
+                            "end": { "line": 13, "column": 4 },
+                            "identifierName": "haha"
+                        },
+                        "name": "haha"
+                    },
+                    "property": {
+                        "type": "Identifier",
+                        "start": 174,
+                        "end": 182,
+                        "loc": {
+                            "start": { "line": 13, "column": 5 },
+                            "end": { "line": 13, "column": 13 },
+                            "identifierName": "variable"
+                        },
+                        "name": "variable"
+                    },
+                    "computed": false
+                },
+                "trailingComments": [
+                    {
+                        "type": "CommentLine",
+                        "value": " exports.default = mali",
+                        "start": 184,
+                        "end": 209,
+                        "loc": {
+                            "start": { "line": 15, "column": 0 },
+                            "end": { "line": 15, "column": 25 }
+                        }
+                    },
+                    {
+                        "type": "CommentLine",
+                        "value": " exports.mali = void 0;",
+                        "start": 210,
+                        "end": 235,
+                        "loc": {
+                            "start": { "line": 16, "column": 0 },
+                            "end": { "line": 16, "column": 25 }
+                        }
+                    },
+                    {
+                        "type": "CommentLine",
+                        "value": " exports.mali = mali",
+                        "start": 236,
+                        "end": 258,
+                        "loc": {
+                            "start": { "line": 17, "column": 0 },
+                            "end": { "line": 17, "column": 22 }
+                        }
+                    }
+                ]
+            }
+        ],
+        "directives": []
+    },
+    "comments": [
+        {
+            "type": "CommentLine",
+            "value": " module.exports = () => {",
+            "start": 0,
+            "end": 27,
+            "loc": {
+                "start": { "line": 1, "column": 0 },
+                "end": { "line": 1, "column": 27 }
+            }
+        },
+        {
+            "type": "CommentLine",
+            "value": "     console.log(\"CjsDefaultFunction\")",
+            "start": 28,
+            "end": 68,
+            "loc": {
+                "start": { "line": 2, "column": 0 },
+                "end": { "line": 2, "column": 40 }
+            }
+        },
+        {
+            "type": "CommentLine",
+            "value": " }",
+            "start": 69,
+            "end": 73,
+            "loc": {
+                "start": { "line": 3, "column": 0 },
+                "end": { "line": 3, "column": 4 }
+            }
+        },
+        {
+            "type": "CommentLine",
+            "value": " function mali(){}",
+            "start": 75,
+            "end": 95,
+            "loc": {
+                "start": { "line": 5, "column": 0 },
+                "end": { "line": 5, "column": 20 }
+            }
+        },
+        {
+            "type": "CommentLine",
+            "value": " exports.default = mali",
+            "start": 184,
+            "end": 209,
+            "loc": {
+                "start": { "line": 15, "column": 0 },
+                "end": { "line": 15, "column": 25 }
+            }
+        },
+        {
+            "type": "CommentLine",
+            "value": " exports.mali = void 0;",
+            "start": 210,
+            "end": 235,
+            "loc": {
+                "start": { "line": 16, "column": 0 },
+                "end": { "line": 16, "column": 25 }
+            }
+        },
+        {
+            "type": "CommentLine",
+            "value": " exports.mali = mali",
+            "start": 236,
+            "end": 258,
+            "loc": {
+                "start": { "line": 17, "column": 0 },
+                "end": { "line": 17, "column": 22 }
+            }
+        }
+    ]
+}

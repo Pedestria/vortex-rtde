@@ -5,6 +5,7 @@ import traverse from '@babel/traverse'
 import * as fs from 'fs-extra'
 import {DefaultQuarkTable, QuarkLibEntry} from './QuarkTable'
 import {isProduction} from './Options'
+import chalk = require('chalk')
 
 export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:string){
 
@@ -25,6 +26,11 @@ export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:st
 export function resolveLibBundle(nodeLibName:string){
     //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
     let minified = new RegExp('min')
+    let STD_NODE_LIBS = ['path','fs','module']
+
+    if(STD_NODE_LIBS.includes(nodeLibName)){
+        return 'node.js'
+    }
 
     let bundles = ResolveLibrary(nodeLibName)
     if(bundles instanceof Array)
@@ -107,9 +113,9 @@ function LibraryRelayVerify(packageIndexDirname:string){
     return libBundles
 }
 
-function fixLibraryPath(pathToFile:string){
-    if(pathToFile.search('node_modules') == -1){
-        throw new Error('Package Does not Exist!')
+function fixLibraryPath(pathToFile:string){ 
+    if(pathToFile.includes('node_modules') == false){
+        throw new Error(chalk.redBright('Package "' + pathToFile + '" does not Exist!'))
     }
     else{
         let i = pathToFile.search('node_modules')

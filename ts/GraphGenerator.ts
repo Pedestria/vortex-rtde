@@ -27,7 +27,7 @@ export default function StarGraph(entry:string) {
     let Graph = new VortexGraph
 
     let fileLoc = './dep-graph.json';
-    let loadedFilesCache:Array<String> = []
+    let loadedFilesCache:Array<string> = []
 
     GraphDepsAndModsForCurrentFile(addJsExtensionIfNecessary(entry),Graph);
     loadedFilesCache.push(entry)

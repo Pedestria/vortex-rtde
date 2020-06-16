@@ -1,0 +1,390 @@
+{
+    "Graph": {
+        "Star": [
+            {
+                "name": "./test/vortex/GraphGenerator.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/Main.js",
+                        "line": 4,
+                        "modules": [{ "name": "StarGraph", "type": 3 }]
+                    }
+                ]
+            },
+            {
+                "name": "fs-extra",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/Main.js",
+                        "line": 5,
+                        "modules": [{ "name": "fs", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/GraphGenerator.js",
+                        "line": 3,
+                        "modules": [{ "name": "fs", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/graphers/EsModuleGrapher.js",
+                        "line": 5,
+                        "modules": [{ "name": "fs", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
+                        "line": 5,
+                        "modules": [{ "name": "fs", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/Resolve.js",
+                        "line": 8,
+                        "modules": [{ "name": "fs", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/dependencies/EsModuleDependency.js",
+                        "line": 4,
+                        "modules": [{ "name": "fs", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/dependencies/CjsModuleDependency.js",
+                        "line": 5,
+                        "modules": [{ "name": "fs", "type": 3 }]
+                    }
+                ],
+                "libLoc": "./node_modules/fs-extra/lib/index.js"
+            },
+            {
+                "name": "./test/vortex/Graph.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/GraphGenerator.js",
+                        "line": 4,
+                        "modules": [{ "name": "Graph_js_1", "type": 3 }]
+                    }
+                ]
+            },
+            {
+                "name": "./test/vortex/graphers/EsModuleGrapher.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/GraphGenerator.js",
+                        "line": 5,
+                        "modules": [{ "name": "EsModuleGrapher", "type": 3 }]
+                    }
+                ]
+            },
+            {
+                "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/GraphGenerator.js",
+                        "line": 6,
+                        "modules": [{ "name": "CjsModuleGrapher", "type": 3 }]
+                    }
+                ]
+            },
+            {
+                "name": "./test/vortex/Resolve.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/GraphGenerator.js",
+                        "line": 7,
+                        "modules": [{ "name": "Resolve_js_1", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/Transport.js",
+                        "line": 4,
+                        "modules": [{ "name": "Resolve_js_1", "type": 3 }]
+                    }
+                ]
+            },
+            {
+                "name": "./test/vortex/dependencies/ModuleDependency.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/GraphGenerator.js",
+                        "line": 8,
+                        "modules": [
+                            { "name": "ModuleDependency_js_1", "type": 3 }
+                        ]
+                    },
+                    {
+                        "name": "./test/vortex/Graph.js",
+                        "line": 4,
+                        "modules": [
+                            { "name": "ModuleDependency_js_1", "type": 3 }
+                        ]
+                    },
+                    {
+                        "name": "./test/vortex/dependencies/EsModuleDependency.js",
+                        "line": 7,
+                        "modules": [
+                            { "name": "ModuleDependency_js_1", "type": 3 }
+                        ]
+                    },
+                    {
+                        "name": "./test/vortex/Transport.js",
+                        "line": 5,
+                        "modules": [
+                            { "name": "ModuleDependency_js_1", "type": 3 }
+                        ]
+                    },
+                    {
+                        "name": "./test/vortex/dependencies/CjsModuleDependency.js",
+                        "line": 3,
+                        "modules": [
+                            { "name": "ModuleDependency_js_1", "type": 3 }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "./test/vortex/Options.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/GraphGenerator.js",
+                        "line": 9,
+                        "modules": [{ "name": "Options_js_1", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/Resolve.js",
+                        "line": 10,
+                        "modules": [{ "name": "Options_1", "type": 3 }]
+                    }
+                ]
+            },
+            {
+                "name": "@babel/parser",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/graphers/EsModuleGrapher.js",
+                        "line": 4,
+                        "modules": [{ "name": "Babel", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
+                        "line": 4,
+                        "modules": [{ "name": "Babel", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/Resolve.js",
+                        "line": 6,
+                        "modules": [{ "name": "Babel", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/dependencies/EsModuleDependency.js",
+                        "line": 3,
+                        "modules": [{ "name": "Babel", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/dependencies/CjsModuleDependency.js",
+                        "line": 4,
+                        "modules": [{ "name": "Babel", "type": 3 }]
+                    }
+                ],
+                "libLoc": "./node_modules/@babel/parser/lib/index.js"
+            },
+            {
+                "name": "@babel/traverse",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/graphers/EsModuleGrapher.js",
+                        "line": 6,
+                        "modules": [{ "name": "traverse_1", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
+                        "line": 6,
+                        "modules": [{ "name": "traverse_1", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/Resolve.js",
+                        "line": 7,
+                        "modules": [{ "name": "traverse_1", "type": 3 }]
+                    }
+                ],
+                "libLoc": "./node_modules/@babel/traverse/lib/index.js"
+            },
+            {
+                "name": "./test/vortex/Module.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/graphers/EsModuleGrapher.js",
+                        "line": 7,
+                        "modules": [{ "name": "Module_js_1", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
+                        "line": 7,
+                        "modules": [{ "name": "Module_js_1", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/dependencies/EsModuleDependency.js",
+                        "line": 5,
+                        "modules": [{ "name": "Module_1", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/dependencies/CjsModuleDependency.js",
+                        "line": 6,
+                        "modules": [{ "name": "Module_1", "type": 3 }]
+                    }
+                ]
+            },
+            {
+                "name": "./test/vortex/dependencies/EsModuleDependency.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/graphers/EsModuleGrapher.js",
+                        "line": 9,
+                        "modules": [
+                            { "name": "EsModuleDependency_1", "type": 3 }
+                        ]
+                    },
+                    {
+                        "name": "./test/vortex/Transport.js",
+                        "line": 6,
+                        "modules": [
+                            { "name": "EsModuleDependency_js_1", "type": 3 }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "./test/vortex/Transport.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/graphers/EsModuleGrapher.js",
+                        "line": 11,
+                        "modules": [{ "name": "Transport_js_1", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
+                        "line": 9,
+                        "modules": [{ "name": "Transport_js_1", "type": 3 }]
+                    }
+                ]
+            },
+            {
+                "name": "./test/vortex/MDImportLocation.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/graphers/EsModuleGrapher.js",
+                        "line": 12,
+                        "modules": [
+                            { "name": "MDImportLocation_js_1", "type": 3 }
+                        ]
+                    },
+                    {
+                        "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
+                        "line": 10,
+                        "modules": [
+                            { "name": "MDImportLocation_js_1", "type": 3 }
+                        ]
+                    },
+                    {
+                        "name": "./test/vortex/dependencies/EsModuleDependency.js",
+                        "line": 8,
+                        "modules": [
+                            { "name": "MDImportLocation_js_1", "type": 3 }
+                        ]
+                    },
+                    {
+                        "name": "./test/vortex/dependencies/CjsModuleDependency.js",
+                        "line": 8,
+                        "modules": [
+                            { "name": "MDImportLocation_js_1", "type": 3 }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "./test/vortex/dependencies/CjsModuleDependency.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
+                        "line": 8,
+                        "modules": [
+                            { "name": "CjsModuleDependency_js_1", "type": 3 }
+                        ]
+                    },
+                    {
+                        "name": "./test/vortex/Transport.js",
+                        "line": 7,
+                        "modules": [
+                            { "name": "CjsModuleDependency_js_1", "type": 3 }
+                        ]
+                    }
+                ]
+            },
+            {
+                "name": "path",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/Resolve.js",
+                        "line": 4,
+                        "modules": [{ "name": "path", "type": 3 }]
+                    }
+                ],
+                "libLoc": "node.js"
+            },
+            {
+                "name": "resolve",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/Resolve.js",
+                        "line": 5,
+                        "modules": [{ "name": "resolve", "type": 3 }]
+                    }
+                ],
+                "libLoc": "./node_modules/resolve/index.js"
+            },
+            {
+                "name": "./test/vortex/QuarkTable.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/Resolve.js",
+                        "line": 9,
+                        "modules": [{ "name": "QuarkTable_1", "type": 3 }]
+                    }
+                ]
+            },
+            {
+                "name": "./test/vortex/Dependency.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/dependencies/ModuleDependency.js",
+                        "line": 3,
+                        "modules": [{ "name": "Dependency_js_1", "type": 3 }]
+                    }
+                ]
+            },
+            {
+                "name": "chalk",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/dependencies/EsModuleDependency.js",
+                        "line": 6,
+                        "modules": [{ "name": "chalk", "type": 3 }]
+                    },
+                    {
+                        "name": "./test/vortex/dependencies/CjsModuleDependency.js",
+                        "line": 7,
+                        "modules": [{ "name": "chalk", "type": 3 }]
+                    }
+                ],
+                "libLoc": "./node_modules/chalk/source/index.js"
+            },
+            {
+                "name": "./test/vortex/ImportLocation.js",
+                "importLocations": [
+                    {
+                        "name": "./test/vortex/MDImportLocation.js",
+                        "line": 3,
+                        "modules": [
+                            { "name": "ImportLocation_js_1", "type": 3 }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}
