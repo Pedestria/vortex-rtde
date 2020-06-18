@@ -36,37 +36,35 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                                 }
                             }
                             else{
-                            modules.push(new Module(path.node.declarations[0].id.name,ModuleTypes.CjsDefaultOrNamespaceModule))
+                            modules.push(new Module(path.node.declarations[0].id.name,ModuleTypes.CjsNamespaceProvider))
                             }
                             //console.log(path.node.declarations[0].init.arguments[0].value)
-                            let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules)
+                            let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules,path.node.declarations[0].init.arguments[0].value)
                             Transport(new CjsModuleDependency(path.node.declarations[0].init.arguments[0].value,currentImpLoc),Graph,file,currentImpLoc)
                         }
                     }
-            }}});
-
-        traverse(jsCode,{
+            }},
             ExpressionStatement: function(path) {
                 let modules = []
                 if (path.node.expression.type === 'AssignmentExpression') {
                     if(path.node.expression.left.type === 'MemberExpression' && path.node.expression.right.type === 'CallExpression'){
                         if(path.node.expression.right.callee.name === 'require') {
-                            modules.push(new Module(path.node.expression.right.arguments[0].value,ModuleTypes.CjsDefaultOrNamespaceModule))
-                            let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules)
+                            modules.push(new Module(path.node.expression.right.arguments[0].value,ModuleTypes.CjsNamespaceProvider))
+                            let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules,path.node.expression.right.arguments[0].value)
                             Transport(new CjsModuleDependency(path.node.expression.right.arguments[0].value,currentImpLoc),Graph,file,currentImpLoc)
                         }
                     }
                 }
                 if(path.node.expression.type === 'CallExpression'){
                     if(path.node.expression.callee.type === 'Identifier' && path.node.expression.callee.name == 'require'){
-                        modules.push(new Module('_Default_',ModuleTypes.CjsDefaultOrNamespaceModule))
-                        let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules)
+                        modules.push(new Module('_Default_',ModuleTypes.CjsDefaultModule))
+                        let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules,path.node.expression.arguments[0].value)
                         Transport(new CjsModuleDependency(path.node.expression.arguments[0].value,currentImpLoc),Graph,file,currentImpLoc)
                     }
                     if(path.node.expression.callee.type === 'CallExpression'){
                         if (path.node.expression.callee.callee.name === 'require'){
                             modules.push(new Module('_DefaultFunction_',ModuleTypes.CjsDefaultFunction));
-                            let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules)
+                            let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules,path.node.expression.callee.arguments[0].value)
                             Transport(new CjsModuleDependency(path.node.expression.callee.arguments[0].value,currentImpLoc),Graph,file,currentImpLoc)
                         }
                     }

@@ -16,7 +16,8 @@ export enum ModuleTypes {
     EsModule = 0,
     EsDefaultOrNamespaceModule = 1,
     CjsModule = 2,
-    CjsDefaultOrNamespaceModule = 3,
-    CjsDefaultFunction = 4
+    CjsDefaultModule = 3,
+    CjsDefaultFunction = 4,
+    CjsNamespaceProvider = 5,
 
 }

@@ -4,18 +4,19 @@ import ModuleDependency from "./dependencies/ModuleDependency.js";
 
 export class VortexGraph {
 
-    Graph = {
-        Star:Array<Dependency>
-    };
+        entryPoint:string
+        Star:Array<Dependency> = []
 
-    constructor(){}
+    constructor(entrypoint:string){
+        this.entryPoint = entrypoint
+    }
 
     add(Dependency:Dependency){
-        this.Graph.Star.push(Dependency);
+        this.Star.push(Dependency);
     }
 
     searchFor(Dependency:Dependency) : boolean {
-        for (let dep of this.Graph.Star){
+        for (let dep of this.Star){
             if(Dependency.name == dep.name) {
                 return true
             }
@@ -23,7 +24,7 @@ export class VortexGraph {
         return false
     }
     update(newDependency:Dependency){
-        for (let dep of this.Graph.Star){
+        for (let dep of this.Star){
             if(newDependency instanceof ModuleDependency && dep instanceof ModuleDependency){
                 ModuleDependencyUpdater(newDependency,dep)
             }
@@ -31,12 +32,12 @@ export class VortexGraph {
     }
 
     remove(Dependency:Dependency){
-        let index = this.Graph.Star.indexOf(Dependency)
-        this.Graph.Star.splice(index)
+        let index = this.Star.indexOf(Dependency)
+        this.Star.splice(index)
     }
 
     display(): Array<Dependency> {
-        return this.Graph.Star
+        return this.Star
     }
 }
 

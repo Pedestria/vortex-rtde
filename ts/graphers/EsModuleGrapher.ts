@@ -33,7 +33,7 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                     }
                 }
                 //console.log(modules)
-                let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules)
+                let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules,path.node.source.value)
                 Transport(new EsModuleDependency(path.node.source.value,currentImpLoc),Graph,file,currentImpLoc)
         }
     })

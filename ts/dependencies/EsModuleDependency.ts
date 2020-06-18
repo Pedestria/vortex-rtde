@@ -12,9 +12,9 @@ export default class EsModuleDependency extends ModuleDependency {
         super(name,initImportLocation)
     }
 
-    verifyImportedModules(file:string,currentImpLoc:MDImportLocation){
+    verifyImportedModules(dep:EsModuleDependency,currentImpLoc:MDImportLocation){
 
-        const buffer = fs.readFileSync(file,'utf-8').toString();
+        const buffer = fs.readFileSync(dep.name,'utf-8').toString();
 
         const jsCode = Babel.parse(buffer,{"sourceType":"module"})
 
@@ -30,9 +30,7 @@ export default class EsModuleDependency extends ModuleDependency {
                     let defaultMod = path.node.declaration
                     let modid =  defaultMod.id.name
                     modBuffer.push(new Module(modid,ModuleTypes.EsDefaultOrNamespaceModule))
-                }});
-        
-        traverse(jsCode,{
+                },
             ExportNamedDeclaration : function(path){
                     for (let ExportType of path.node.specifiers){
                         if (ExportType.type === 'ExportSpecifier'){
@@ -55,7 +53,7 @@ export default class EsModuleDependency extends ModuleDependency {
 
         //console.log(confModExp,confModImp)
 
-        let NonExtError = new Error(chalk.bgRed('Non Existant Modules Imported from ' + file))
+        let NonExtError = new Error(chalk.redBright('Non Existent Modules Imported from ' + dep.name))
 
         for(let mod of currentImpLoc.modules){
             if(dummyImpLoc.testForModule(mod) == false){

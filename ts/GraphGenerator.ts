@@ -24,7 +24,7 @@ export default function StarGraph(entry:string) {
 
     //let resolvedEntry = path.resolve(entry)
 
-    let Graph = new VortexGraph
+    let Graph = new VortexGraph(entry)
 
     let fileLoc = './dep-graph.json';
     let loadedFilesCache:Array<string> = []
@@ -32,7 +32,7 @@ export default function StarGraph(entry:string) {
     GraphDepsAndModsForCurrentFile(addJsExtensionIfNecessary(entry),Graph);
     loadedFilesCache.push(entry)
     
-    for (let dep of Graph.Graph.Star){
+    for (let dep of Graph.Star){
         let str = './'
         if (loadedFilesCache.includes(dep.name) == false){
             if (dep.name.includes(str) == true) {

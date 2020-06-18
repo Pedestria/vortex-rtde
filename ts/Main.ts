@@ -1,10 +1,16 @@
 import * as StarGraph from './GraphGenerator'
 import * as fs from 'fs-extra'
-import * as chalk from 'chalk'
-import * as Logger from './Log'
-import { resolveLibBundle } from './GraphGenerator';
-import * as terser from 'terser'
+import Compile from './Compiler.js';
+import { VortexGraph } from './Graph.js';
+//import * as chalk from 'chalk'
+//import * as Logger from './Log'
+//import { resolveLibBundle } from './GraphGenerator';
+//import * as terser from 'terser'
 import * as Babel from '@babel/parser'
+import { stage1, stage2, stage3, finish } from './Log.js';
+import { usingTerser } from './Options.js';
+import * as terser from 'terser'
+import * as path from 'path'
 
 
 export function createStarPackage (productionMode:boolean,entry:string){
@@ -12,6 +18,8 @@ export function createStarPackage (productionMode:boolean,entry:string){
   
 
     let isProduction:boolean = productionMode;
+
+    let outputFilename = './out/vortex.js'
 
     // if (isProduction){
     //     process.env.NODE_ENV = 'production'
@@ -21,14 +29,29 @@ export function createStarPackage (productionMode:boolean,entry:string){
     // }
     //Logger.Log();
 
-
+    // fs.writeJsonSync('./out/tree.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"sourceType":"module"}))
+    stage1()
     let Graph = StarGraph.default(entry);
+    stage2()
+    let bundle = Compile(Graph);
+    if(usingTerser){
+      stage3()
+      let minBundle = terser.minify(bundle,{compress:true,mangle:true}).code
+      let newFilename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
+      fs.writeFileSync(newFilename,minBundle)
+      finish()
+    }
+    else{
+      fs.writeFileSync(outputFilename,bundle)
+      finish()
+    }
+
     //console.log(Graph)
 
-    fs.writeJson('./vortex-depGraph.json',Graph, err => {
-        if (err) return console.error(err)
-        console.log('Wrote Star Graph to dep-graph.json ')
-      })
+    // fs.writeJson('./vortex-depGraph.json',Graph, err => {
+    //     if (err) return console.error(err)
+    //     console.log('Wrote Star Graph to dep-graph.json ')
+    //   })
 
     //process.exit(0)
 

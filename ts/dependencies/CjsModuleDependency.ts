@@ -5,6 +5,7 @@ import Module, { ModuleTypes } from '../Module'
 import chalk = require("chalk");
 import MDImportLocation from "../MDImportLocation.js";
 import { traverse } from "@babel/core";
+//import Dependency from "../Dependency.js";
 
 export default class CjsModuleDependency extends ModuleDependency{
 
@@ -12,9 +13,9 @@ export default class CjsModuleDependency extends ModuleDependency{
         super(name,initImportLocation);
     }
 
-    verifyImportedModules(file:string,currentImpLoc:MDImportLocation){
+    verifyImportedModules(dep:CjsModuleDependency,currentImpLoc:MDImportLocation){
 
-        const buffer = fs.readFileSync(file,'utf-8').toString();
+        const buffer = fs.readFileSync(dep.name,'utf-8').toString();
 
         const jsCode = Babel.parse(buffer,{"sourceType":"module"})
 
@@ -38,7 +39,7 @@ export default class CjsModuleDependency extends ModuleDependency{
                         if(path.node.expression.left.object.name === 'exports'){
                            if(path.node.expression.left.property.name === 'default'){
                                if(path.node.expression.right.type !== 'UnaryExpression'){
-                               modBuffer.push(new Module(path.node.expression.right.name,ModuleTypes.CjsDefaultOrNamespaceModule))
+                               modBuffer.push(new Module(path.node.expression.right.name,ModuleTypes.CjsDefaultModule))
                                }
                             }
                            else{
@@ -69,7 +70,7 @@ export default class CjsModuleDependency extends ModuleDependency{
         //console.log(currentImpLoc)
 
 
-        let NonExtError = new Error(chalk.redBright('Non Existant Modules Imported from ' + file))
+        let NonExtError = new Error(chalk.redBright('Non Existant Modules Imported from ' + dep.name))
 
         for(let mod of currentImpLoc.modules){
             if(dummyImpLoc.testForModule(mod) == false){
@@ -78,6 +79,7 @@ export default class CjsModuleDependency extends ModuleDependency{
                         throw NonExtError
                     }
                }
+               currentImpLoc.modules[currentImpLoc.indexOfModuleByName(mod.name)].type = ModuleTypes.CjsNamespaceProvider
             }
         }
     }

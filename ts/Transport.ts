@@ -18,7 +18,7 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
     if (Dependency.name.includes(str)){
         Dependency.updateName(LocalizedResolve(CurrentFile,addJsExtensionIfNecessary(Dependency.name)))
         if(Dependency instanceof EsModuleDependency || Dependency instanceof CjsModuleDependency){
-            Dependency.verifyImportedModules(Dependency.name,CurrentMDImpLoc)
+            Dependency.verifyImportedModules(Dependency,CurrentMDImpLoc)
         }
     }
     else{

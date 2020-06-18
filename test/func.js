@@ -1,17 +1,12 @@
-// module.exports = () => {
-//     console.log("CjsDefaultFunction")
-// }
-
-// function mali(){}
-
 const haha = require('haha')
+const blah = require('blahsw')
 
-haha.blah()
+const mama = 3;
 
-const plooh = new haha.mama
 
-haha.variable
+haha.funct()
 
-// exports.default = mali
-// exports.mali = void 0;
-// exports.mali = mali
+new haha.Kelo
+
+haha.mama
+
