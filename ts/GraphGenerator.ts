@@ -3,13 +3,48 @@ import { VortexGraph } from './Graph.js'
 import * as EsModuleGrapher from './graphers/EsModuleGrapher'
 import * as CjsModuleGrapher from './graphers/CommonJsModuleGrapher'
 import * as resolve from 'resolve'
-import path = require('path')
+import * as path from 'path'
+import * as t from '@babel/types'
 import { ResolveLibrary, LocalizedResolve, addJsExtensionIfNecessary, resolveLibBundle } from './Resolve.js'
 import { DefaultQuarkTable } from './QuarkTable.js'
+import * as Babel from '@babel/parser'
 import Dependency from './Dependency.js'
 import ModuleDependency from './dependencies/ModuleDependency.js'
 import { isProduction, isLibrary } from './Options.js'
 //import * as terser from 'terser'
+
+var queue:Array<QueueEntry> = []
+
+export function isInQueue(entryName:string){
+    for(let ent of queue){
+        if(ent.name === entryName){
+            return true
+        }
+    }
+    return false
+}
+
+export function addEntryToQueue(entry:QueueEntry){
+    queue.push(entry)
+}
+
+export function loadEntryFromQueue(entryName:string){
+    for(let ent of queue){
+        if(ent.name === entryName){
+            return ent
+        }
+    }
+}
+
+export class QueueEntry {
+    name:string
+    ast:t.File
+    constructor(name:string,parsedCode:t.File){
+        this.name = name
+        this.ast = parsedCode
+    }
+
+}
 
 
 
@@ -29,16 +64,32 @@ export default function StarGraph(entry:string) {
     let fileLoc = './dep-graph.json';
     let loadedFilesCache:Array<string> = []
 
-    GraphDepsAndModsForCurrentFile(addJsExtensionIfNecessary(entry),Graph);
+    let modEnt = addJsExtensionIfNecessary(entry)
+
+    let entryFile = fs.readFileSync(modEnt).toString()
+
+    let entryAst = Babel.parse(entryFile,{"sourceType":'module'})
+
+    addEntryToQueue(new QueueEntry(entry,entryAst))
+
+    GraphDepsAndModsForCurrentFile(loadEntryFromQueue(modEnt),Graph);
     loadedFilesCache.push(entry)
     
     for (let dep of Graph.Star){
         let str = './'
         if (loadedFilesCache.includes(dep.name) == false){
             if (dep.name.includes(str) == true) {
-                //Local File Graphing
-                GraphDepsAndModsForCurrentFile(dep.name,Graph)
-                loadedFilesCache.push(dep.name)
+                let modName = addJsExtensionIfNecessary(dep.name)
+                if(isInQueue(modName)){
+                    GraphDepsAndModsForCurrentFile(loadEntryFromQueue(modName),Graph)
+                }
+                else{
+                    let ent = new QueueEntry(modName,Babel.parse(fs.readFileSync(modName).toString()))
+                    addEntryToQueue(ent)
+                    GraphDepsAndModsForCurrentFile(loadEntryFromQueue(ent.name),Graph)
+                }
+
+                loadedFilesCache.push(modName)
             }
             else{
                 if(isLibrary == false){
@@ -58,10 +109,10 @@ export default function StarGraph(entry:string) {
 }
 
 
-function GraphDepsAndModsForCurrentFile(file:string,Graph:VortexGraph){
+function GraphDepsAndModsForCurrentFile(entry:QueueEntry,Graph:VortexGraph){
 
-    EsModuleGrapher.SearchAndGraph(file,Graph)
-    CjsModuleGrapher.SearchAndGraph(file,Graph)
+    EsModuleGrapher.SearchAndGraph(entry,Graph)
+    CjsModuleGrapher.SearchAndGraph(entry,Graph)
 }
 
 function GraphDepsForLib(dep:Dependency,Graph:VortexGraph){

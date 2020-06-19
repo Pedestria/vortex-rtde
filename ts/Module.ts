@@ -14,7 +14,8 @@ export default class Module {
 
 export enum ModuleTypes {
     EsModule = 0,
-    EsDefaultOrNamespaceModule = 1,
+    EsDefaultModule = 1,
+    EsNamespaceProvider = 2,
     CjsModule = 2,
     CjsDefaultModule = 3,
     CjsDefaultFunction = 4,

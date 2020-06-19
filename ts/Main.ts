@@ -15,6 +15,7 @@ import * as path from 'path'
 
 export function createStarPackage (productionMode:boolean,entry:string){
 
+
   
 
     let isProduction:boolean = productionMode;
@@ -30,15 +31,21 @@ export function createStarPackage (productionMode:boolean,entry:string){
     //Logger.Log();
 
     // fs.writeJsonSync('./out/tree.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"sourceType":"module"}))
+
+
     stage1()
     let Graph = StarGraph.default(entry);
     stage2()
     let bundle = Compile(Graph);
     if(usingTerser){
       stage3()
-      let minBundle = terser.minify(bundle,{compress:true,mangle:true}).code
+      let yourCredits = fs.readJsonSync('./package.json')
+      let credits = `/*********NEUTRON-STAR*********/ \n ${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License:${yourCredits.license} \n ${yourCredits.description} \n`
+      let output = Promise.resolve(terser.minify(bundle,{compress:true,mangle:true}).code).then((minBundle) => {
+          return credits + minBundle
+      })
       let newFilename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
-      fs.writeFileSync(newFilename,minBundle)
+      fs.writeFile(newFilename,output)
       finish()
     }
     else{
@@ -46,14 +53,13 @@ export function createStarPackage (productionMode:boolean,entry:string){
       finish()
     }
 
-    //console.log(Graph)
 
     // fs.writeJson('./vortex-depGraph.json',Graph, err => {
     //     if (err) return console.error(err)
     //     console.log('Wrote Star Graph to dep-graph.json ')
     //   })
 
-    //process.exit(0)
+    // process.exit(0)
 
     // let buffer = fs.readFileSync('./test/func.js').toString()
 

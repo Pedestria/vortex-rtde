@@ -1,29 +1,21 @@
 import { VortexGraph } from "../Graph.js";
 import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
-import traverse, { Scope } from '@babel/traverse'
 import Module, { ModuleTypes } from "../Module.js";
-import Dependency from "../Dependency.js";
-import chalk = require("chalk");
 import CjsModuleDependency from "../dependencies/CjsModuleDependency.js";
-import path = require('path')
-import { LocalizedResolve, addJsExtensionIfNecessary } from "../Resolve.js";
 import { Transport } from "../Transport.js";
 import MDImportLocation from "../MDImportLocation.js";
+import traverse from "@babel/traverse";
+import * as t from '@babel/types'
+import { QueueEntry } from "../GraphGenerator.js";
 
-export function SearchAndGraph(file:string,Graph:VortexGraph){
-
-    const buffer = fs.readFileSync(file,'utf-8').toString();
-
-    let str = './'
-
-    const jsCode = Babel.parse(buffer,{"sourceType":"module"})
+export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
 
     // fs.writeJson('./debug.json',jsCode, err => {
     //         if (err) return console.error(err)
     //         console.log('Debug Written')
     //       })
-    traverse(jsCode,{
+    traverse(entry.ast,{
         VariableDeclaration: function(path) {
                 let modules = []
                 if (path.node.declarations[0].init !== null){
@@ -39,8 +31,8 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                             modules.push(new Module(path.node.declarations[0].id.name,ModuleTypes.CjsNamespaceProvider))
                             }
                             //console.log(path.node.declarations[0].init.arguments[0].value)
-                            let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules,path.node.declarations[0].init.arguments[0].value)
-                            Transport(new CjsModuleDependency(path.node.declarations[0].init.arguments[0].value,currentImpLoc),Graph,file,currentImpLoc)
+                            let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.declarations[0].init.arguments[0].value)
+                            Transport(new CjsModuleDependency(path.node.declarations[0].init.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc)
                         }
                     }
             }},
@@ -50,22 +42,22 @@ export function SearchAndGraph(file:string,Graph:VortexGraph){
                     if(path.node.expression.left.type === 'MemberExpression' && path.node.expression.right.type === 'CallExpression'){
                         if(path.node.expression.right.callee.name === 'require') {
                             modules.push(new Module(path.node.expression.right.arguments[0].value,ModuleTypes.CjsNamespaceProvider))
-                            let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules,path.node.expression.right.arguments[0].value)
-                            Transport(new CjsModuleDependency(path.node.expression.right.arguments[0].value,currentImpLoc),Graph,file,currentImpLoc)
+                            let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.expression.right.arguments[0].value)
+                            Transport(new CjsModuleDependency(path.node.expression.right.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc)
                         }
                     }
                 }
                 if(path.node.expression.type === 'CallExpression'){
                     if(path.node.expression.callee.type === 'Identifier' && path.node.expression.callee.name == 'require'){
                         modules.push(new Module('_Default_',ModuleTypes.CjsDefaultModule))
-                        let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules,path.node.expression.arguments[0].value)
-                        Transport(new CjsModuleDependency(path.node.expression.arguments[0].value,currentImpLoc),Graph,file,currentImpLoc)
+                        let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.expression.arguments[0].value)
+                        Transport(new CjsModuleDependency(path.node.expression.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc)
                     }
                     if(path.node.expression.callee.type === 'CallExpression'){
                         if (path.node.expression.callee.callee.name === 'require'){
                             modules.push(new Module('_DefaultFunction_',ModuleTypes.CjsDefaultFunction));
-                            let currentImpLoc = new MDImportLocation(file,path.node.loc.start.line,modules,path.node.expression.callee.arguments[0].value)
-                            Transport(new CjsModuleDependency(path.node.expression.callee.arguments[0].value,currentImpLoc),Graph,file,currentImpLoc)
+                            let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.expression.callee.arguments[0].value)
+                            Transport(new CjsModuleDependency(path.node.expression.callee.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc)
                         }
                     }
                 }

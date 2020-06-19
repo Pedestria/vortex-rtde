@@ -1,12 +1,9 @@
-const haha = require('haha')
-const blah = require('blahsw')
+class HelloThere{
 
-const mama = 3;
+}
 
+var Danny = 4;
 
-haha.funct()
+export {HelloThere}
 
-new haha.Kelo
-
-haha.mama
-
+export {Danny as default}

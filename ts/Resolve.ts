@@ -1,11 +1,11 @@
-import path = require('path')
-import resolve = require('resolve')
+import * as path from 'path'
+import * as resolve from 'resolve'
 import * as Babel from '@babel/parser'
 import traverse from '@babel/traverse'
 import * as fs from 'fs-extra'
 import {DefaultQuarkTable, QuarkLibEntry} from './QuarkTable'
 import {isProduction} from './Options'
-import chalk = require('chalk')
+import * as chalk from 'chalk'
 
 export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:string){
 

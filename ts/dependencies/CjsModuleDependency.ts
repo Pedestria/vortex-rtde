@@ -2,9 +2,11 @@ import ModuleDependency from "./ModuleDependency.js"
 import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
 import Module, { ModuleTypes } from '../Module'
-import chalk = require("chalk");
+import * as chalk from 'chalk'
 import MDImportLocation from "../MDImportLocation.js";
-import { traverse } from "@babel/core";
+import traverse from "@babel/traverse";
+import * as t from '@babel/types'
+import { QueueEntry } from "../GraphGenerator.js"
 //import Dependency from "../Dependency.js";
 
 export default class CjsModuleDependency extends ModuleDependency{
@@ -13,17 +15,13 @@ export default class CjsModuleDependency extends ModuleDependency{
         super(name,initImportLocation);
     }
 
-    verifyImportedModules(dep:CjsModuleDependency,currentImpLoc:MDImportLocation){
-
-        const buffer = fs.readFileSync(dep.name,'utf-8').toString();
-
-        const jsCode = Babel.parse(buffer,{"sourceType":"module"})
+    verifyImportedModules(entry:QueueEntry,currentImpLoc:MDImportLocation){
 
         let modBuffer:Array<Module> = []
 
         //console.log("Calling" + file)
 
-        traverse(jsCode,{
+        traverse(entry.ast,{
             ExpressionStatement: function(path) {
                 if(path.node.expression.type === 'AssignmentExpression'){
                     if(path.node.expression.left.type === 'MemberExpression'){
@@ -53,7 +51,7 @@ export default class CjsModuleDependency extends ModuleDependency{
             }
         })
 
-        let dummyImpLoc = new MDImportLocation('buffer',0,modBuffer)
+        let dummyImpLoc = new MDImportLocation('buffer',0,modBuffer,'')
         //console.log(dummyImpLoc)
 
         // let confModImp = []
@@ -70,7 +68,7 @@ export default class CjsModuleDependency extends ModuleDependency{
         //console.log(currentImpLoc)
 
 
-        let NonExtError = new Error(chalk.redBright('Non Existant Modules Imported from ' + dep.name))
+        let NonExtError = new Error(chalk.redBright('Non Existant Modules Imported from ' + entry.name))
 
         for(let mod of currentImpLoc.modules){
             if(dummyImpLoc.testForModule(mod) == false){

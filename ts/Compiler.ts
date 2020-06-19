@@ -2,18 +2,39 @@ import { VortexGraph } from "./Graph.js";
 import * as fs from 'fs-extra'
 import EsModuleDependency from "./dependencies/EsModuleDependency.js";
 import generate from "@babel/generator";
-import traverse, { Node } from "@babel/traverse";
+import traverse from "@babel/traverse";
 import * as Babel from "@babel/parser";
 import { template } from "@babel/core";
 import * as t from '@babel/types';
 import MDImportLocation from "./MDImportLocation.js";
 import { ModuleTypes } from "./Module.js";
 import Module from './Module'
+import ModuleDependency from "./dependencies/ModuleDependency.js";
+import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
+
+function fixDependencyName(name:string){
+    let NASTY_CHARS = '/@^$#*&!%'
+    let newName:string
+    if(name[0] === '@'){
+        newName = name.slice(1)
+    }
+    for(let char of NASTY_CHARS){
+        if(newName.includes(char)){
+            let a 
+            let b 
+            a = newName.slice(0,newName.indexOf(char))
+            b = newName.slice(newName.indexOf(char)+1)
+            newName = `${a}_${b}`
+        }
+    }
+    return newName
+
+}
 
 //Transforms VortexGraph into a Star/Bundle
 export default function Compile(Graph:VortexGraph){
 
-    let finalLib = CommonJSLibCompile(Graph)
+    let finalLib = LibCompile(Graph)
 
     return finalLib
     // const buffer = fs.readFileSync('./test/func.js').toString()
@@ -30,7 +51,7 @@ export default function Compile(Graph:VortexGraph){
 
 }
 
-function CommonJSLibCompile(Graph:VortexGraph){
+function LibCompile(Graph:VortexGraph){
 
     let libB = new LibBundle
 
@@ -38,29 +59,37 @@ function CommonJSLibCompile(Graph:VortexGraph){
 
     
     for(let dep of Graph.Star){
-        for(let impLoc of dep.importLocations){
-            if(impLoc instanceof MDImportLocation){
-                if(libB.isInQueue(impLoc.name)){
-                    removeImportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast,impLoc,dep.name,libB)
-                }
-                else{
-                    let filename = fs.readFileSync(impLoc.name).toString()
-                    libB.addEntryToQueue(new BundleEntry(impLoc.name,Babel.parse(filename)))
-                    removeImportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast,impLoc,dep.name,libB)
-                    if(impLoc.name === Graph.entryPoint){
-                        removeExportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast)
+        if(dep instanceof ModuleDependency){
+            for(let impLoc of dep.importLocations){
+                if(impLoc instanceof MDImportLocation){
+                    if(libB.isInQueue(impLoc.name)){
+                        if(dep.name.includes('./') == false && impLoc.modules[0].type !== ModuleTypes.EsNamespaceProvider){
+                            mangleVariableNamesFromAst(libB.loadEntryFromQueue(impLoc.name).ast,impLoc.modules)
+                        }
+                        removeImportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
+                    }
+                    else{
+                        let filename = fs.readFileSync(impLoc.name).toString()
+                        libB.addEntryToQueue(new BundleEntry(impLoc.name,Babel.parse(filename,{"sourceType":'module'})))
+                        if(dep.name.includes('./') == false && impLoc.modules[0].type !== ModuleTypes.EsNamespaceProvider){
+                            mangleVariableNamesFromAst(libB.loadEntryFromQueue(impLoc.name).ast,impLoc.modules)
+                        }
+                        removeImportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
+                        if(impLoc.name === Graph.entryPoint){
+                            removeExportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast,dep)
+                        }
                     }
                 }
             }
-        }
-        if(libB.isInQueue(dep.name)){
-            removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast)
-        }
-        else{
-            if(dep.name.includes('./')){
-                let filename = fs.readFileSync(dep.name).toString()
-                libB.addEntryToQueue(new BundleEntry(dep.name,Babel.parse(filename)))
-                removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast)
+            if(libB.isInQueue(dep.name)){
+                removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep)
+            }
+            else{
+                if(dep.name.includes('./')){
+                    let filename = fs.readFileSync(dep.name).toString()
+                    libB.addEntryToQueue(new BundleEntry(dep.name,Babel.parse(filename,{"sourceType":'module'})))
+                    removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep)
+                }
             }
         }
     }
@@ -77,15 +106,19 @@ function CommonJSLibCompile(Graph:VortexGraph){
 
 }
 
-function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,depName:string,libBund:LibBundle){
+function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDependency,libBund:LibBundle){
 
-
-    if(depName.includes('./') == false){
-        if(libBund.isLibEntryInCode(depName,impLoc.modules[0].name) == false){
-            libBund.addEntryToLibs(depName,impLoc.modules[0].name)
+    //Grabs all requires/imports of libs and converts them to CJS and places them at the top of bundle
+    //
+    if(dep instanceof CjsModuleDependency){
+        if(dep.name.includes('./') == false){
+            if(libBund.isLibEntryInCode(dep.name,impLoc.modules[0].name) == false){
+                libBund.addEntryToLibs(dep.name,impLoc.modules[0].name)
+            }
         }
-    }
-        if(impLoc.modules[0].type === ModuleTypes.CjsNamespaceProvider){
+
+
+            if(impLoc.modules[0].type === ModuleTypes.CjsNamespaceProvider){
 
             traverse(ast,{
                 // Removes Require statements.
@@ -102,13 +135,13 @@ function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,depName:string,
                 },
                 //Removes Namespace from all references calls to namespace
                 MemberExpression : function(path){
-                    if(depName.includes('./')){
+                    if(dep.name.includes('./')){
 
                         if(path.node.object.name == impLoc.modules[0].name){
                             if(path.node.property !== null){
                                 if(path.node.property.name === 'default'){
                                     path.replaceWith(
-                                        t.identifier(findDefaultExportName(depName))
+                                        t.identifier(findDefaultExportName(dep))
                                     )
                                 }
                                 else{
@@ -122,57 +155,170 @@ function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,depName:string,
                 } 
             })
         }
+    } 
+    else if (dep instanceof EsModuleDependency){
+            if(dep.name.includes('./') == false){
+                if(impLoc.modules[0].type === ModuleTypes.EsNamespaceProvider){
+                    if(libBund.isLibEntryInCode(dep.name,impLoc.modules[0].name) == false){
+                        libBund.addEntryToLibs(dep.name,impLoc.modules[0].name)
+                    }
+                }
+                else{
+                    var namespace = `${fixDependencyName(dep.name)}_NAMESPACE`
+                    if(libBund.isLibEntryInCode(dep.name,namespace) == false){
+                        libBund.addEntryToLibs(dep.name,namespace)
+                    }
+                }
+            }
+        
+        
+
+        traverse(ast,{ 
+            ImportDeclaration: function(path) {
+                //Removes imports regardless if dep is lib or local file.
+                if(path.node.source.value === impLoc.relativePathToDep){
+                    path.remove()
+                }
+            },
+            MemberExpression: function(path) {
+                //Visits if dep is NOT a lib but is a EsNamespaceProvider
+                if(dep.name.includes('./')){
+                    if(impLoc.modules[0].type === ModuleTypes.EsNamespaceProvider){
+                        if(path.node.object.name === impLoc.modules[0].name){
+                            if(path.node.property.name === 'default'){
+                                path.replaceWith(t.identifier(findDefaultExportName(dep)))
+                            }
+                            else{
+                                path.replaceWith(t.identifier(path.node.property.name))
+                            }
+                        }
+                    }
+                }
+            },
+            Identifier: function(path) {
+                if(dep.name.includes('./') == false){
+                    if(impLoc.modules[0].type !== ModuleTypes.EsNamespaceProvider){
+                        for(let mod of impLoc.modules){
+                            if(mod.type !== ModuleTypes.EsDefaultModule){
+                                if(path.node.name === '_'+mod.name){
+                                    path.replaceWith(t.memberExpression(t.identifier(namespace),t.identifier(mod.name)))
+                                }
+                            }
+                            else if (mod.type === ModuleTypes.EsDefaultModule){
+                                if(path.node.name === '_'+mod.name){
+                                    path.replaceWith(t.memberExpression(t.identifier(namespace),t.identifier('default')))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        })
+    }
 }
 
-function findDefaultExportName(file:string){
+function findDefaultExportName(dep:ModuleDependency){
 
-    let buffer =  fs.readFileSync(file).toString()
+    let buffer =  fs.readFileSync(dep.name).toString()
 
     let code = Babel.parse(buffer,{"sourceType":"module"})
 
     let name
 
-    traverse(code,{
-        ExpressionStatement: function(path){
-            if(path.node.expression.type === 'AssignmentExpression'){
-                if(path.node.expression.left.type === 'MemberExpression'){
-                    if(path.node.expression.left.object.name === 'module' && path.node.expression.left.property.name === 'exports'){
+    if (dep instanceof CjsModuleDependency){
 
+            traverse(code,{
+                ExpressionStatement: function(path){
+                    if(path.node.expression.type === 'AssignmentExpression'){
+                        if(path.node.expression.left.type === 'MemberExpression'){
+                            // if(path.node.expression.left !== null){
+                            //     if(path.node.expression.left.object.name === 'module' && path.node.expression.left.property.name === 'exports'){
+
+                            //     }
+                            // }
+                        
+                    if(path.node.expression.left !== null){
+                        if(path.node.expression.left.object.name === 'exports'){
+                            if(path.node.expression.left.property.name === 'default'){
+                                name = path.node.expression.right.name
+                            }
+                            }
+                        }
                     }
+            
                 }
-                if(path.node.expression.left.object.name === 'exports'){
-                    if(path.node.expression.left.property.name === 'default'){
-                        name = path.node.expression.right.name
+            }
+        })
+    } else if (dep instanceof EsModuleDependency){
+
+        traverse(code,{
+            ExportDefaultDeclaration: function(path){
+                if(path.node.declaration !== null){
+                    name = path.node.declaration.id.name
+                }
+            },
+            ExportNamedDeclaration: function(path){
+                if(path.node.declaration == null){
+                    for(let ImpType of path.node.specifiers){
+                        if(ImpType.type === 'ExportSpecifier'){
+                            if(ImpType.exported.name === 'default'){
+                                name = ImpType.local.name
+                            }
+                        }
                     }
                 }
             }
-        }
-    })
+        })
+
+    }
     return name
 
 }
 
-function removeExportsFromAST(ast:t.File){
+function removeExportsFromAST(ast:t.File,dep:ModuleDependency){
 
-    traverse(ast,{
-        ExpressionStatement: function(path){
-            if(path.node.expression.type === 'AssignmentExpression'){
-                if(path.node.expression.left.type === 'MemberExpression'){
-                    if(path.node.expression.left.object.name === 'module' && path.node.expression.left.property.name === 'exports'){
+    if(dep instanceof CjsModuleDependency){
+
+        traverse(ast,{
+            ExpressionStatement: function(path){
+                if(path.node.expression.type === 'AssignmentExpression'){
+                    if(path.node.expression.left.type === 'MemberExpression'){
+                        if(path.node.expression.left.object.name === 'module' && path.node.expression.left.property.name === 'exports'){
+                            path.remove()
+                        }
+                    if(path.node.expression.left.object.name === 'exports'){
                         path.remove()
                     }
                 }
-                if(path.node.expression.left.object.name === 'exports'){
+            }
+        }})
+    } 
+    else if (dep instanceof EsModuleDependency){
+        traverse(ast,{
+            ExportNamedDeclaration: function(path) {
+                if(path.node.declaration.type !== 'Identifier' || path.node.specifiers.length === 0){
+                    path.replaceWith(path.node.declaration)
+                }
+                else{
+                    path.remove()
+                }
+            },
+            ExportDefaultDeclaration: function(path) {
+                if(path.node.declaration.type !== 'Identifier'){
+                    path.replaceWith(path.node.declaration)
+                }
+                else{
                     path.remove()
                 }
             }
-        }
-    })
+        })
+
+    }
 
 }
 
 function Division(){
-    let code = `\n /******Division******/ \n`
+    let code = `\n /******VORTEX_DIVIDER******/ \n`
     return code
 }
 
@@ -186,11 +332,11 @@ class LibBundle {
         this.queue.push(entry)
     }
 
-    addEntryToLibs(libName:string,namespace:string){
-        const lib = CommonJSTemplate({
-            NAMESPACE: t.identifier(namespace),
-            LIBNAME: t.stringLiteral(libName)
-        })
+    addEntryToLibs(libname:string,namespace:string){
+            const lib = CommonJSTemplate({
+                NAMESPACE: t.identifier(namespace),
+                LIBNAME: t.stringLiteral(libname)
+            })
 
         const code = generate(lib)
 
@@ -237,4 +383,17 @@ class BundleEntry{
         this.ast = ast
 
     }
+}
+
+function mangleVariableNamesFromAst(ast:t.File,impLocModules:Array<Module>){
+    traverse(ast,{
+        Identifier: function(path){
+            for(let mod of impLocModules){
+                if(mod.name === path.node.name){
+                    path.node.name = `_${path.node.name}`
+                }
+            }
+        }
+    })
+
 }

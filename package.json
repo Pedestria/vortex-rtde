@@ -1,8 +1,9 @@
 {
-  "name": "Vortex-Bundler",
+  "name": "VORTEX RTDE",
   "version": "0.0.3",
   "author": "Alex Topper",
   "license": "MIT",
+  "description": "The LiveUpdate Bundler For ALL Purposes.",
   "scripts": {
     "cleanup": "prettier --write dep-graph.json",
     "roll": "rollup -c",
