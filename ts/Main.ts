@@ -31,7 +31,7 @@ export function createStarPackage (productionMode:boolean,entry:string){
     //Logger.Log();
 
     // fs.writeJsonSync('./out/tree.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"sourceType":"module"}))
-
+    let yourCredits = fs.readJSONSync('./package.json',{encoding:'utf-8'})
 
     stage1()
     let Graph = StarGraph.default(entry);
@@ -39,17 +39,21 @@ export function createStarPackage (productionMode:boolean,entry:string){
     let bundle = Compile(Graph);
     if(usingTerser){
       stage3()
-      let yourCredits = fs.readJsonSync('./package.json')
-      let credits = `/*********NEUTRON-STAR*********/ \n ${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License:${yourCredits.license} \n ${yourCredits.description} \n`
-      let output = Promise.resolve(terser.minify(bundle,{compress:true,mangle:true}).code).then((minBundle) => {
-          return credits + minBundle
-      })
+      let credits = `/*********NEUTRON-STAR*********/ \n /*${yourCredits.name} ${yourCredits.version} _MINIFIED_ \n ${yourCredits.author} \n License:${yourCredits.license} \n ${yourCredits.description} */ \n`
+      //console.log(credits)
+      let minBundle = terser.minify(bundle,{compress:true,mangle:true}).code
+      let output = credits + minBundle
+      //console.log(output)
+
       let newFilename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
-      fs.writeFile(newFilename,output)
+      fs.ensureDirSync(path.dirname(outputFilename) + '/')
+      fs.writeFileSync(newFilename,output)
       finish()
     }
     else{
-      fs.writeFileSync(outputFilename,bundle)
+      let credits = `/*********STAR*********/ \n /*${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License:${yourCredits.license} \n ${yourCredits.description} */ \n`
+      fs.ensureDirSync(path.dirname(outputFilename) + '/')
+      fs.writeFileSync(outputFilename,credits + bundle)
       finish()
     }
 
