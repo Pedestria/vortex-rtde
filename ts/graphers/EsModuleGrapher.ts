@@ -11,6 +11,13 @@ import { Transport } from "../Transport.js";
 import MDImportLocation from "../MDImportLocation.js";
 import { QueueEntry } from "../GraphGenerator.js";
 
+/**Searchs and Graphs JS code for ECMAScript Module Dependencies
+ * 
+ * @param {QueueEntry} entry 
+ * @param {VortexGraph} Graph 
+ */
+
+
 export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
 
     traverse(entry.ast,{

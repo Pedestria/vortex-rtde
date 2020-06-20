@@ -2,6 +2,12 @@ import Dependency from "../Dependency.js";
 import Module from "../Module.js";
 import MDImportLocation from "../MDImportLocation.js";
 
+/**
+ * A JavaScript Dependency where modules are acquired from.
+ *
+ * @extends Dependency
+ * 
+ */
 export default class ModuleDependency extends Dependency {
 
     acquiredModules:Array<Module>

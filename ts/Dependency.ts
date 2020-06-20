@@ -1,10 +1,22 @@
-import Module from "./Module.js"
 import ImportLocation from "./ImportLocation.js"
-import MDImportLocation from "./MDImportLocation.js"
 
+/**
+ * A Dependent File or Library that is required by another file.
+ */
 export default class Dependency {
+    /**
+     * Location/Name of Dependency
+     */
     name:string
+    /**
+     * ALL Import Locations of this Dependency
+     */
     importLocations:Array<ImportLocation>
+    /**
+     * 
+     * @param {string} name Name of Dependency
+     * @param {ImportLocation} initImportLocation Inital location where the Dependency is imported from 
+     */
 
     constructor(name:string,initImportLocation?:ImportLocation){
         this.name = name

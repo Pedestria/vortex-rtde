@@ -10,10 +10,14 @@ import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
 import { isInQueue, loadEntryFromQueue, addEntryToQueue, QueueEntry } from "./GraphGenerator.js";
 //import MDImportLocation from "./MDImportLocation.js";
-//
-//Transports Dependencies into the Graph
-//
 
+/**Transports the given dependency to given Graph.
+ * 
+ * @param {Dependency} Dependency Dependency to Transport
+ * @param {VortexGraph} Graph Graph to Use
+ * @param {string} CurrentFile Current file being loading from. 
+ * @param {MDImportLocation} CurrentMDImpLoc Curret Module Dependency Import Location
+ */
 export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:string,CurrentMDImpLoc:MDImportLocation){
 
     let str = './'

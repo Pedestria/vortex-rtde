@@ -13,6 +13,15 @@ import * as terser from 'terser'
 import * as path from 'path'
 import * as Babel_Core from '@babel/core'
 
+/**Creates a Star or Neutron Star from entry point.
+ * 
+ * @param {boolean} productionMode 
+ * Production/Minified
+ * @param {string} entry 
+ * Define an entry point for Vortex
+ * @param {string} output 
+ * Name of output bundle.
+ */ 
 
 function createStarPackage (productionMode:boolean,entry:string,output:string){
 
@@ -38,13 +47,13 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
     let Graph = StarGraph.default(entry);
     stage2()
     let bundle = Compile(Graph);
-    let transformed = Babel_Core.transformSync(bundle,{sourceType:'module',presets:['@babel/preset-env']})
+    ///let transformed = Babel_Core.transformSync(bundle,{sourceType:'module',presets:['@babel/preset-env']}).code
 
     if(usingTerser){
       stage3()
       let credits = `/*********NEUTRON-STAR*********/ \n /*${yourCredits.name} ${yourCredits.version} _MINIFIED_ \n ${yourCredits.author} \n License:${yourCredits.license} \n ${yourCredits.description} */ \n`
       //console.log(credits)
-      let minBundle = terser.minify(transformed.code,{compress:true,mangle:true}).code
+      let minBundle = terser.minify(bundle,{compress:true,mangle:true}).code
       let output = credits + minBundle
       //console.log(output)
 
@@ -56,7 +65,7 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
     else{
       let credits = `/*********STAR*********/ \n /*${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License:${yourCredits.license} \n ${yourCredits.description} */ \n`
       fs.ensureDirSync(path.dirname(outputFilename) + '/')
-      fs.writeFileSync(outputFilename,credits + transformed.code)
+      fs.writeFileSync(outputFilename,credits + bundle)
       finish()
     }
 

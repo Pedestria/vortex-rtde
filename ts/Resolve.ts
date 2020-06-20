@@ -7,6 +7,14 @@ import {DefaultQuarkTable, QuarkLibEntry} from './QuarkTable'
 import {isProduction} from './Options'
 import * as chalk from 'chalk'
 
+/**Resolves dependency location based off of Import Location
+ * __(To allow Node File System to read/verify imported modules)__
+ * 
+ * @param {string} rootFileDirToEntry Directory to Current File
+ * @param {string} dependencyLocalDir Directory _(according to Current File)_ to Dependency
+ * @returns {string} A Resolved Dependency location. 
+ */
+
 export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:string){
 
     if(rootFileDirToEntry == dependencyLocalDir){
@@ -22,6 +30,12 @@ export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:st
     return './' + path.join(dirname,localFilePath)
 
 }
+
+/**Resolves a Node Module
+ * 
+ * @param {string} nodeLibName Name of Node Module to Resolve 
+ * @returns {string} A Locally Resolved library bundle location __(Depending on global config, will return either minified or development bundle. If a minified bundle does NOT exist, a cache directory will be made and the bundle will be minfied using _Terser_ )__
+ */
 
 export function resolveLibBundle(nodeLibName:string){
     //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)

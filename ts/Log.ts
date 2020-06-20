@@ -38,5 +38,3 @@ import { usingTerser } from './Options.js'
         }
         process.exit();
     }
-
-}

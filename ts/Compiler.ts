@@ -31,7 +31,10 @@ function fixDependencyName(name:string){
 
 }
 
-//Transforms VortexGraph into a Star/Bundle
+/**
+ * Creates a Star depending on the global config
+ * @param {VortexGraph} Graph The Dependency Graph created by the Graph Generator 
+ */
 export default function Compile(Graph:VortexGraph){
 
     let finalLib = LibCompile(Graph)
@@ -97,22 +100,30 @@ function LibCompile(Graph:VortexGraph){
 
     //console.log(libB.queue)
     let finalAr = libB.queue.reverse()
-    finalBundle += `/***NODE_REQUIRES***/ \n`
+    finalBundle += `/*NODE_REQUIRES*/ \n`
     finalBundle += libB.libs.join('\n')
-    finalBundle += `\n /****LIB_CODE****/ \n`
+    finalBundle += `\n /*LIB_CODE*/ \n`
     for(let ent of finalAr){
         if(ent.name !== Graph.entryPoint){
             finalBundle += Division()
         }
         finalBundle += generate(ent.ast).code
     }
-    finalBundle += `\n /***NODE_EXPORTS***/ \n`
+    finalBundle += `\n /*NODE_EXPORTS*/ \n`
     finalBundle += libB.exports.join('\n')
     return finalBundle
     //console.log(code)
     //return libB.code
 
 }
+
+/**
+ * Removes imports of CommonJS or ES Modules from the current Import Location depending on the type of Module Dependency given.
+ * @param {t.File} ast Abstract Syntax Tree (ESTree Format)
+ * @param {MDImportLocation} impLoc Current Import Location
+ * @param {ModuleDependency} dep The Module Dependency
+ * @param {LibBundle} libBund The Library Bundle
+ */
 
 function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDependency,libBund:LibBundle){
 
@@ -342,20 +353,39 @@ function removeExportsFromAST(ast:t.File,dep:ModuleDependency,libbund:LibBundle)
 }
 
 function Division(){
-    let code = `\n /******VORTEX_DIVIDER******/ \n`
+    let code = `\n /*VORTEX_DIVIDER*/ \n`
     return code
 }
 
+/**
+ * The Library Bundle used in libCompile
+ */
 class LibBundle {
+    /**
+     * The LibBundle that contains all Bundle Entries.
+     */
     queue:Array<BundleEntry> = []
-    libs:Array<string> = []
-    exports:Array<string> = []
+    /**Array of compiled requires */
+    libs:Array<string> = [] 
+    /**Array of compiled exposures (exports) */
+    exports:Array<string> = [] 
 
     constructor(){}
+
+    /**
+     * Adds an entry to the lib Bundle Queue
+     * @param {BundleEntry} entry 
+     */
 
     addEntryToQueue(entry:BundleEntry){
         this.queue.push(entry)
     }
+
+    /**
+     * Adds a CommonJS require entry to bundle libraries
+     * @param {string} libname Name of library to add to requires 
+     * @param {string} namespace Namespace applied to the entry 
+     */
 
     addEntryToLibs(libname:string,namespace:string){
             const lib = CommonJSTemplate({
@@ -369,6 +399,11 @@ class LibBundle {
 
     }
 
+    /**
+     * Adds a CommonJS exports entry to bundle exposures
+     * @param {string} exportName Name of Export to Expose.
+     */
+
     addEntryToExposedExports(exportName:string){
         const exp = CJSExportsTemplate({
             EXPORT: t.identifier(exportName)
@@ -380,6 +415,12 @@ class LibBundle {
 
     }
 
+    /**
+     * Checks to see if export has already been added to exposures
+     * @param {string} exportName Name of Exposed Export
+     * @return {boolean} True or False
+     */
+
     isExportEntryInCode(exportName:string){
         for(let expo of this.exports){
             if(expo.includes(exportName)){
@@ -388,6 +429,13 @@ class LibBundle {
         }
         return false
     }
+
+    /**
+     * Checks to see if export has already been added to requires.
+     * @param {string} libName Name of library 
+     * @param {string} namespace Namespace applied to the entry
+     * @return {boolean} True or False
+     */
 
     isLibEntryInCode(libName:string, namespace:string){
         for(let req of this.libs){
@@ -398,6 +446,12 @@ class LibBundle {
         return false
     }
 
+    /**
+     * Checks to see if entry is in bundle queue already.
+     * @param {string} entryName Name of Bundle Entry
+     * @return {boolean} True or False
+     */
+
     isInQueue(entryName:string){
         for(let ent of this.queue){
             if(ent.name == entryName){
@@ -406,6 +460,11 @@ class LibBundle {
         }
         return false
     }
+    /**
+     * loads bundle entry from queue
+     * @param {string} entryName Name of Bundle Entry
+     * @returns {BundleEntry} The Bundle Entry if it exists
+     */
 
     loadEntryFromQueue(entryName:string){
         for(let ent of this.queue){

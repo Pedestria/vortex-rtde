@@ -1,15 +1,15 @@
 import ModuleDependency from "./ModuleDependency.js"
-import * as Babel from '@babel/parser'
-import * as fs from 'fs-extra'
 import Module, { ModuleTypes } from '../Module'
 import * as chalk from 'chalk'
 import MDImportLocation from "../MDImportLocation.js";
 import traverse from "@babel/traverse";
-import * as t from '@babel/types'
 import { QueueEntry } from "../GraphGenerator.js"
 //import Dependency from "../Dependency.js";
 import {findModulesUnderNamespace,searchForModuleUnderNamespace} from './NamespaceSearch'
 
+/** CommonJS Dependency that contain exported Modules 
+ * @extends ModuleDependency
+ */
 export default class CjsModuleDependency extends ModuleDependency{
 
     constructor(name:string,initImportLocation?:MDImportLocation) {

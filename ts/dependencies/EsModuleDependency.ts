@@ -1,14 +1,14 @@
-import Dependency from "../Dependency.js";
-import * as Babel from '@babel/parser'
-import * as fs from 'fs-extra'
 import Module, { ModuleTypes } from '../Module'
 import * as chalk from 'chalk'
 import ModuleDependency from "./ModuleDependency.js";
 import MDImportLocation from "../MDImportLocation.js";
 import traverse from "@babel/traverse";
-import * as t from '@babel/types'
 import { QueueEntry } from "../GraphGenerator.js";
 import {findModulesUnderNamespace,searchForModuleUnderNamespace} from './NamespaceSearch'
+
+/**ECMAScript Dependency that contain exported Modules.
+ * @extends ModuleDependency
+ */
 export default class EsModuleDependency extends ModuleDependency {
     constructor(name:string,initImportLocation?:MDImportLocation){
         super(name,initImportLocation)

@@ -43,9 +43,14 @@ export class QueueEntry {
 
 }
 
+/**
+ * Generates a Vortex Graph of your app/library.
+ * @param {string} entry Entry point for GraphGenerator
+ * @returns {VortexGraph} A Dependency Graph
+ * 
+ */
 
-
-export default function StarGraph(entry:string) {
+export default function StarGraph(entry:string): VortexGraph {
 
     if(isProduction){
         fs.emptyDirSync('./cache/files')

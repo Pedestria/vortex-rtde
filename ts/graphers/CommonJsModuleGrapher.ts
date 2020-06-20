@@ -9,6 +9,12 @@ import traverse from "@babel/traverse";
 import * as t from '@babel/types'
 import { QueueEntry } from "../GraphGenerator.js";
 
+/**Searchs and Graphs JS code for CommonJS Dependencies
+ * 
+ * @param {QueueEntry} entry 
+ * @param {VortexGraph} Graph 
+ */
+
 export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
 
     // fs.writeJson('./debug.json',jsCode, err => {
