@@ -39,6 +39,7 @@
     "typescript": "^3.9.5"
   },
   "devDependencies": {
+    "@babel/cli": "^7.10.1",
     "@rollup/plugin-commonjs": "^13.0.0",
     "aws-sdk": "^2.695.0",
     "lodash": "^4.17.15",

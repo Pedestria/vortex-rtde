@@ -11,16 +11,17 @@ import { stage1, stage2, stage3, finish } from './Log.js';
 import { usingTerser } from './Options.js';
 import * as terser from 'terser'
 import * as path from 'path'
+import * as Babel_Core from '@babel/core'
 
 
-export function createStarPackage (productionMode:boolean,entry:string){
+function createStarPackage (productionMode:boolean,entry:string,output:string){
 
 
   
 
     let isProduction:boolean = productionMode;
 
-    let outputFilename = './out/vortex.js'
+    let outputFilename = output
 
     // if (isProduction){
     //     process.env.NODE_ENV = 'production'
@@ -37,11 +38,13 @@ export function createStarPackage (productionMode:boolean,entry:string){
     let Graph = StarGraph.default(entry);
     stage2()
     let bundle = Compile(Graph);
+    let transformed = Babel_Core.transformSync(bundle,{sourceType:'module',presets:['@babel/preset-env']})
+
     if(usingTerser){
       stage3()
       let credits = `/*********NEUTRON-STAR*********/ \n /*${yourCredits.name} ${yourCredits.version} _MINIFIED_ \n ${yourCredits.author} \n License:${yourCredits.license} \n ${yourCredits.description} */ \n`
       //console.log(credits)
-      let minBundle = terser.minify(bundle,{compress:true,mangle:true}).code
+      let minBundle = terser.minify(transformed.code,{compress:true,mangle:true}).code
       let output = credits + minBundle
       //console.log(output)
 
@@ -53,7 +56,7 @@ export function createStarPackage (productionMode:boolean,entry:string){
     else{
       let credits = `/*********STAR*********/ \n /*${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License:${yourCredits.license} \n ${yourCredits.description} */ \n`
       fs.ensureDirSync(path.dirname(outputFilename) + '/')
-      fs.writeFileSync(outputFilename,credits + bundle)
+      fs.writeFileSync(outputFilename,credits + transformed.code)
       finish()
     }
 
@@ -78,3 +81,5 @@ export function createStarPackage (productionMode:boolean,entry:string){
 
     //console.log(Graph.display());
 }
+
+export {createStarPackage/*vortexExpose*/} 

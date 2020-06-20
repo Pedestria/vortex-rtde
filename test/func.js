@@ -1,9 +1,8 @@
-class HelloThere{
+//class HelloThere{
+var namespace = {
 
+    SearchAndGraph : function(entry){
+        var id = 4;
+    }
 }
-
-var Danny = 4;
-
-export {HelloThere}
-
-export {Danny as default}
+//MAMA

@@ -8,7 +8,7 @@ import MDImportLocation from "../MDImportLocation.js";
 import traverse from "@babel/traverse";
 import * as t from '@babel/types'
 import { QueueEntry } from "../GraphGenerator.js";
-
+import {findModulesUnderNamespace,searchForModuleUnderNamespace} from './NamespaceSearch'
 export default class EsModuleDependency extends ModuleDependency {
     constructor(name:string,initImportLocation?:MDImportLocation){
         super(name,initImportLocation)
@@ -97,52 +97,3 @@ export default class EsModuleDependency extends ModuleDependency {
  
  }
  
- function findModulesUnderNamespace(file:string,Namespace:string){
- 
-     const buffer = fs.readFileSync(file,'utf-8').toString();
- 
-     const jsCode = Babel.parse(buffer,{"sourceType":"module"})
- 
-     let modules:Array<string> = []
- 
- 
-     traverse(jsCode,{
-         MemberExpression : function (path){
-                 if(path.node.object.type === 'Identifier'){
-                     var namespace = path.node.object.name
-                 }
-                 if(path.node.property.type === 'Identifier'){
-                     if(namespace == Namespace){
-                         modules.push(path.node.property.name)
-                     }
-                 }
-             }
-         })
-     return modules
- 
- }
- 
- function searchForModuleUnderNamespace(file:string,Module:string,Namespace:string):boolean{
- 
-     const buffer = fs.readFileSync(file,'utf-8').toString();
- 
-     const jsCode = Babel.parse(buffer,{"sourceType":"module"})
- 
-     let rc = false
- 
-     traverse(jsCode,{
-         MemberExpression : function (path) {
-                 if(path.node.object.type === 'Identifier'){
-                     var namespace = path.node.object.name
-                 }
-                 if(path.node.property.type === 'Identifier'){
-                     if(namespace == Namespace){
-                         if(path.node.property.name === Module){
-                             rc = true
-                         }
-                     }
-                 }
-             }
-         })
-     return rc
- }

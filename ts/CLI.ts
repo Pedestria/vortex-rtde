@@ -6,9 +6,9 @@ let program = Commander.createCommand();
 
 program.version('0.0.1a')
 program
-    .command('vortex <entryPoint>')
-    .action((entryPoint) => {
-        Vortex.createStarPackage(false,entryPoint)
+    .command('vortex <entryPoint> <output>')
+    .action((entryPoint,output) => {
+        Vortex.createStarPackage(false,entryPoint,output)
     })
     .parse(process.argv)
 

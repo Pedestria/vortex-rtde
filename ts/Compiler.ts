@@ -14,7 +14,7 @@ import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
 
 function fixDependencyName(name:string){
     let NASTY_CHARS = '/@^$#*&!%'
-    let newName:string
+    let newName:string = ""
     if(name[0] === '@'){
         newName = name.slice(1)
     }
@@ -75,31 +75,39 @@ function LibCompile(Graph:VortexGraph){
                             mangleVariableNamesFromAst(libB.loadEntryFromQueue(impLoc.name).ast,impLoc.modules)
                         }
                         removeImportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
+
                         if(impLoc.name === Graph.entryPoint){
-                            removeExportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast,dep)
+                            removeExportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast,dep,libB)
                         }
                     }
                 }
             }
             if(libB.isInQueue(dep.name)){
-                removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep)
+                removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep,libB)
             }
             else{
                 if(dep.name.includes('./')){
                     let filename = fs.readFileSync(dep.name).toString()
                     libB.addEntryToQueue(new BundleEntry(dep.name,Babel.parse(filename,{"sourceType":'module'})))
-                    removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep)
+                    removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep,libB)
                 }
             }
         }
     }
 
     //console.log(libB.queue)
+    let finalAr = libB.queue.reverse()
+    finalBundle += `/***NODE_REQUIRES***/ \n`
     finalBundle += libB.libs.join('\n')
-    for(let ent of libB.queue){
-        finalBundle += Division()
+    finalBundle += `\n /****LIB_CODE****/ \n`
+    for(let ent of finalAr){
+        if(ent.name !== Graph.entryPoint){
+            finalBundle += Division()
+        }
         finalBundle += generate(ent.ast).code
     }
+    finalBundle += `\n /***NODE_EXPORTS***/ \n`
+    finalBundle += libB.exports.join('\n')
     return finalBundle
     //console.log(code)
     //return libB.code
@@ -196,6 +204,7 @@ function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDepen
                 }
             },
             Identifier: function(path) {
+                //Visits if dep is a lib but NOT a EsNamespaceProvider
                 if(dep.name.includes('./') == false){
                     if(impLoc.modules[0].type !== ModuleTypes.EsNamespaceProvider){
                         for(let mod of impLoc.modules){
@@ -275,7 +284,7 @@ function findDefaultExportName(dep:ModuleDependency){
 
 }
 
-function removeExportsFromAST(ast:t.File,dep:ModuleDependency){
+function removeExportsFromAST(ast:t.File,dep:ModuleDependency,libbund:LibBundle){
 
     if(dep instanceof CjsModuleDependency){
 
@@ -296,12 +305,26 @@ function removeExportsFromAST(ast:t.File,dep:ModuleDependency){
     else if (dep instanceof EsModuleDependency){
         traverse(ast,{
             ExportNamedDeclaration: function(path) {
-                if(path.node.declaration.type !== 'Identifier' || path.node.specifiers.length === 0){
-                    path.replaceWith(path.node.declaration)
+                if(path.node.declaration !== null){
+                    if(path.node.declaration.type !== 'Identifier' || path.node.specifiers.length === 0){
+                        path.replaceWith(path.node.declaration)
+                    }
+                    else{
+                        path.remove()
+                    }
+                } 
+                else {
+                    if (findVortexExpose(path.node)){
+                        for(let exp of getExposures(path.node)){
+                                libbund.addEntryToExposedExports(exp)
+                            }
+                            path.remove()
+                        }
+                    else{
+                        path.remove()
+                    }
                 }
-                else{
-                    path.remove()
-                }
+
             },
             ExportDefaultDeclaration: function(path) {
                 if(path.node.declaration.type !== 'Identifier'){
@@ -312,6 +335,7 @@ function removeExportsFromAST(ast:t.File,dep:ModuleDependency){
                 }
             }
         })
+
 
     }
 
@@ -325,6 +349,7 @@ function Division(){
 class LibBundle {
     queue:Array<BundleEntry> = []
     libs:Array<string> = []
+    exports:Array<string> = []
 
     constructor(){}
 
@@ -342,6 +367,26 @@ class LibBundle {
 
         this.libs.push(code.code)
 
+    }
+
+    addEntryToExposedExports(exportName:string){
+        const exp = CJSExportsTemplate({
+            EXPORT: t.identifier(exportName)
+        })
+
+        const code = generate(exp)
+
+        this.exports.push(code.code)
+
+    }
+
+    isExportEntryInCode(exportName:string){
+        for(let expo of this.exports){
+            if(expo.includes(exportName)){
+                return true
+            }
+        }
+        return false
     }
 
     isLibEntryInCode(libName:string, namespace:string){
@@ -373,6 +418,7 @@ class LibBundle {
 }
 
 const CommonJSTemplate = template(`const NAMESPACE = require(LIBNAME)`)
+const CJSExportsTemplate = template(`exports.EXPORT = EXPORT`)
 
 class BundleEntry{
     name:string
@@ -396,4 +442,54 @@ function mangleVariableNamesFromAst(ast:t.File,impLocModules:Array<Module>){
         }
     })
 
+}
+
+function findVortexExpose(exportNode:t.ExportNamedDeclaration){
+    //console.log(exportNode.trailingComments)
+    if(exportNode.trailingComments !== undefined){
+
+
+        let comments = exportNode.trailingComments.map(comm => comm.value)
+
+        for(let comm of comments){
+            if(comm === 'vortexExpose'){
+                return true
+            }
+        }
+    }
+    else{
+        for(let spec of exportNode.specifiers){
+            if(spec.trailingComments !== undefined){
+                if(spec.trailingComments[0].value === 'vortexExpose'){
+                    return true
+                }
+            }
+        }
+    }
+
+    return false
+
+}
+
+function getExposures(exportNode:t.ExportNamedDeclaration){
+
+    let allExports:Array<string>= exportNode.specifiers.map(exp => exp.exported.name)
+    if(exportNode.trailingComments !== undefined){
+        let comments = exportNode.trailingComments.map(comm => comm.value)
+
+        for(let comm of comments){
+            if(comm === 'vortexExpose'){
+                return allExports
+            }
+        }
+        
+    }
+    let exports:Array<string> = []
+
+    for(let spec of exportNode.specifiers){
+        if(spec.trailingComments[0].value === 'vortexExpose'){
+            exports.push(spec.exported.name)
+        }
+    }
+    return exports
 }
