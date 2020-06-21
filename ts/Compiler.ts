@@ -54,6 +54,11 @@ export default function Compile(Graph:VortexGraph){
 
 }
 
+/**Compiles a library bundle from a given Vortex Graph
+ * 
+ * @param {VortexGraph} Graph 
+ */
+
 function LibCompile(Graph:VortexGraph){
 
     let libB = new LibBundle
@@ -86,12 +91,19 @@ function LibCompile(Graph:VortexGraph){
                 }
             }
             if(libB.isInQueue(dep.name)){
+                if(dep.importLocations[0].modules[0].type === ModuleTypes.EsNamespaceProvider){
+                    convertToNamespace(libB.loadEntryFromQueue(dep.name).ast,dep.importLocations[0])
+                }
                 removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep,libB)
             }
             else{
+                //Libraries are skipped completely in Lib Bundle
                 if(dep.name.includes('./')){
                     let filename = fs.readFileSync(dep.name).toString()
                     libB.addEntryToQueue(new BundleEntry(dep.name,Babel.parse(filename,{"sourceType":'module'})))
+                    if(dep.importLocations[0].modules[0].type === ModuleTypes.EsNamespaceProvider){
+                        convertToNamespace(libB.loadEntryFromQueue(dep.name).ast,dep.importLocations[0])
+                    }
                     removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep,libB)
                 }
             }
@@ -104,9 +116,7 @@ function LibCompile(Graph:VortexGraph){
     finalBundle += libB.libs.join('\n')
     finalBundle += `\n /*LIB_CODE*/ \n`
     for(let ent of finalAr){
-        if(ent.name !== Graph.entryPoint){
-            finalBundle += Division()
-        }
+        finalBundle += Division()
         finalBundle += generate(ent.ast).code
     }
     finalBundle += `\n /*NODE_EXPORTS*/ \n`
@@ -116,6 +126,72 @@ function LibCompile(Graph:VortexGraph){
     //return libB.code
 
 }
+
+/**Converts entire dependency file to a ECMAScript Module Namespace.
+ * 
+ * @param {t.File} ast Abstract Syntax Tree (ESTree Format+)
+ * @param {MDImportLocation} imploc First MDImport Location of current dependency 
+ */
+
+function convertToNamespace(ast:t.File,imploc:MDImportLocation){
+
+    var namespace = t.variableDeclaration('var',new Array(t.variableDeclarator(t.identifier(imploc.modules[0].name))))
+
+    traverse(ast,{
+        ExportNamedDeclaration: function(path){
+            if(path.node.declaration !== null){
+                addToNamespace(path.node.declaration,namespace)
+                path.remove()
+            }
+        },
+        ExportDefaultDeclaration: function(path){
+            if(path.node.declaration !== null){
+                addToNamespace(path.node.declaration,namespace)
+                path.remove()
+            }
+        }
+    })
+
+    ast.program.body.push(namespace)
+    ast.program.body.reverse();
+}
+
+/**Adds Node (Function/Class/Variable) to given namespace
+ * 
+ * @param {t.FunctionDeclaration|t.ClassDeclaration|t.VariableDeclaration} Node 
+ * @param {t.VariableDeclaration} namespace 
+ */
+
+function addToNamespace(Node:t.FunctionDeclaration | t.VariableDeclaration | t.ClassDeclaration ,namespace:t.VariableDeclaration){
+    if(namespace.declarations[0].init !== null){
+        if(namespace.declarations[0].init.type === 'ObjectExpression'){
+            if(Node.type === 'FunctionDeclaration'){
+                let name = Node.id
+                Node.id = null;
+                namespace.declarations[0].init.properties.push(t.objectProperty(name,t.functionExpression(null,Node.params,Node.body,Node.generator,Node.async)))
+            } else if (Node.type === 'ClassDeclaration'){
+                let name = Node.id
+                namespace.declarations[0].init.properties.push(t.objectProperty(name,t.classExpression(null,Node.superClass,Node.body)))
+            }
+        }
+    }
+    else{
+        let props = []
+            if(Node.type === 'FunctionDeclaration'){
+                let name = Node.id
+                Node.id = null;
+                props.push(t.objectProperty(name,t.functionExpression(null,Node.params,Node.body,Node.generator,Node.async)))
+                namespace.declarations[0].init = t.objectExpression(props)
+            } else if (Node.type === 'ClassDeclaration'){
+                let name = Node.id
+                props.push(t.objectProperty(name,t.classExpression(null,Node.superClass,Node.body)))
+                namespace.declarations[0].init = t.objectExpression(props)
+                
+            }
+    }
+        
+}
+
 
 /**
  * Removes imports of CommonJS or ES Modules from the current Import Location depending on the type of Module Dependency given.
@@ -199,21 +275,21 @@ function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDepen
                     path.remove()
                 }
             },
-            MemberExpression: function(path) {
-                //Visits if dep is NOT a lib but is a EsNamespaceProvider
-                if(dep.name.includes('./')){
-                    if(impLoc.modules[0].type === ModuleTypes.EsNamespaceProvider){
-                        if(path.node.object.name === impLoc.modules[0].name){
-                            if(path.node.property.name === 'default'){
-                                path.replaceWith(t.identifier(findDefaultExportName(dep)))
-                            }
-                            else{
-                                path.replaceWith(t.identifier(path.node.property.name))
-                            }
-                        }
-                    }
-                }
-            },
+            // MemberExpression: function(path) {
+            //     //Visits if dep is NOT a lib but is a EsNamespaceProvider
+            //     if(dep.name.includes('./')){
+            //         if(impLoc.modules[0].type === ModuleTypes.EsNamespaceProvider){
+            //             if(path.node.object.name === impLoc.modules[0].name){
+            //                 if(path.node.property.name === 'default'){
+            //                     path.replaceWith(t.identifier(findDefaultExportName(dep)))
+            //                 }
+            //                 else{
+            //                     path.replaceWith(t.identifier(path.node.property.name))
+            //                 }
+            //             }
+            //         }
+            //     }
+            // },
             Identifier: function(path) {
                 //Visits if dep is a lib but NOT a EsNamespaceProvider
                 if(dep.name.includes('./') == false){

@@ -50,7 +50,7 @@ export class QueueEntry {
  * 
  */
 
-export default function StarGraph(entry:string): VortexGraph {
+export default function GenerateGraph(entry:string): VortexGraph {
 
     if(isProduction){
         fs.emptyDirSync('./cache/files')

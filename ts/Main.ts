@@ -1,17 +1,11 @@
-import * as StarGraph from './GraphGenerator'
+import GenerateGraph from './GraphGenerator'
 import * as fs from 'fs-extra'
 import Compile from './Compiler.js';
-import { VortexGraph } from './Graph.js';
-//import * as chalk from 'chalk'
-//import * as Logger from './Log'
-//import { resolveLibBundle } from './GraphGenerator';
-//import * as terser from 'terser'
-import * as Babel from '@babel/parser'
 import { stage1, stage2, stage3, finish } from './Log.js';
 import { usingTerser } from './Options.js';
 import * as terser from 'terser'
 import * as path from 'path'
-import * as Babel_Core from '@babel/core'
+//import * as Babel_Core from '@babel/core'
 
 /**Creates a Star or Neutron Star from entry point.
  * 
@@ -44,14 +38,14 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
     let yourCredits = fs.readJSONSync('./package.json',{encoding:'utf-8'})
 
     stage1()
-    let Graph = StarGraph.default(entry);
+    let Graph = GenerateGraph(entry);
     stage2()
     let bundle = Compile(Graph);
     ///let transformed = Babel_Core.transformSync(bundle,{sourceType:'module',presets:['@babel/preset-env']}).code
 
     if(usingTerser){
       stage3()
-      let credits = `/*********NEUTRON-STAR*********/ \n /*${yourCredits.name} ${yourCredits.version} _MINIFIED_ \n ${yourCredits.author} \n License:${yourCredits.license} \n ${yourCredits.description} */ \n`
+      let credits = `/*NEUTRON-STAR*/ \n /*${yourCredits.name} ${yourCredits.version} _MINIFIED_ \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
       //console.log(credits)
       let minBundle = terser.minify(bundle,{compress:true,mangle:true}).code
       let output = credits + minBundle
@@ -63,7 +57,7 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
       finish()
     }
     else{
-      let credits = `/*********STAR*********/ \n /*${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License:${yourCredits.license} \n ${yourCredits.description} */ \n`
+      let credits = `/*STAR*/ \n /*${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
       fs.ensureDirSync(path.dirname(outputFilename) + '/')
       fs.writeFileSync(outputFilename,credits + bundle)
       finish()
