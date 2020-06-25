@@ -7,10 +7,11 @@ import {addJsExtensionIfNecessary, resolveLibBundle } from './Resolve.js'
 import * as Babel from '@babel/parser'
 import Dependency from './Dependency.js'
 import ModuleDependency from './dependencies/ModuleDependency.js'
-import { isProduction, isLibrary } from './Options.js'
+import { isProduction, isLibrary, BabelSettings } from './Options.js'
+import { transform, transformSync } from '@babel/core'
 //import * as terser from 'terser'
 
-var queue:Array<QueueEntry> = []
+export var queue:Array<QueueEntry> = []
 
 export function isInQueue(entryName:string){
     for(let ent of queue){
@@ -68,7 +69,12 @@ export default function GenerateGraph(entry:string): VortexGraph {
 
     let modEnt = addJsExtensionIfNecessary(entry)
 
+
     let entryFile = fs.readFileSync(modEnt).toString()
+
+    if(!isLibrary){
+        entryFile = transformSync(fs.readFileSync(modEnt).toString(),BabelSettings).code
+    }
 
     let entryAst = Babel.parse(entryFile,{"sourceType":'module'})
 
@@ -94,13 +100,26 @@ export default function GenerateGraph(entry:string): VortexGraph {
                 loadedFilesCache.push(modName)
             }
             else{
-                if(isLibrary == false){
-                    GraphDepsForLib(dep,Graph)
-                    loadedFilesCache.push(dep.name)
+                    if(dep instanceof ModuleDependency){
+                        if(!isLibrary){
+                            if(isInQueue(dep.libLoc)){
+                                GraphDepsAndModsForCurrentFile(dep.libLoc);
+                            }
+                            else{
+                                let ent = new QueueEntry(dep.libLoc,Babel.parse(fs.readFileSync(dep.libLoc).toString()))
+                                addEntryToQueue(ent)
+                                GraphDepsAndModsForCurrentFile(loadEntryFromQueue(ent.name),Graph)
+                                
+                            }
+                        }
+                        loadedFilesCache.push(dep.name)
                 }
             }
         }
     }
+
+    console.log(loadedFilesCache)
+    console.log(queue)
     //console.log(loadedFilesCache)
         //console.log(loadedFilesCache)
         //console.log(resolveLibBundle("lodash",Graph,false))
@@ -112,7 +131,6 @@ export default function GenerateGraph(entry:string): VortexGraph {
 
 
 function GraphDepsAndModsForCurrentFile(entry:QueueEntry,Graph:VortexGraph){
-
     EsModuleGrapher.SearchAndGraph(entry,Graph)
     CjsModuleGrapher.SearchAndGraph(entry,Graph)
 }

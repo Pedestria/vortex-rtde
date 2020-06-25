@@ -1,5 +1,6 @@
 import GenerateGraph from './GraphGenerator'
 import * as fs from 'fs-extra'
+import * as Babel from '@babel/parser'
 import Compile from './Compiler.js';
 import { stage1, stage2, stage3, finish } from './Log.js';
 import { usingTerser } from './Options.js';
@@ -34,34 +35,36 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
     // }
     //Logger.Log();
 
-    // fs.writeJsonSync('./out/tree.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"sourceType":"module"}))
+    fs.writeJsonSync('./out/tree.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"sourceType":"module"}))
     let yourCredits = fs.readJSONSync('./package.json',{encoding:'utf-8'})
 
-    stage1()
-    let Graph = GenerateGraph(entry);
-    stage2()
-    let bundle = Compile(Graph);
-    ///let transformed = Babel_Core.transformSync(bundle,{sourceType:'module',presets:['@babel/preset-env']}).code
+    // stage1()
+    // let Graph = GenerateGraph(entry);
+    // console.log(Graph)
+    // // stage2()
+    // Compile(Graph);
+    // let bundle = Compile(Graph);
+    // ///let transformed = Babel_Core.transformSync(bundle,{sourceType:'module',presets:['@babel/preset-env']}).code
 
-    if(usingTerser){
-      stage3()
-      let credits = `/*NEUTRON-STAR*/ \n /*${yourCredits.name} ${yourCredits.version} _MINIFIED_ \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
-      //console.log(credits)
-      let minBundle = terser.minify(bundle,{compress:true,mangle:true}).code
-      let output = credits + minBundle
-      //console.log(output)
+    // if(usingTerser){
+    //   stage3()
+    //   let credits = `/*NEUTRON-STAR*/ \n /*${yourCredits.name} ${yourCredits.version} _MINIFIED_ \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
+    //   //console.log(credits)
+    //   let minBundle = terser.minify(bundle,{compress:true,mangle:true}).code
+    //   let output = credits + minBundle
+    //   //console.log(output)
 
-      let newFilename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
-      fs.ensureDirSync(path.dirname(outputFilename) + '/')
-      fs.writeFileSync(newFilename,output)
-      finish()
-    }
-    else{
-      let credits = `/*STAR*/ \n /*${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
-      fs.ensureDirSync(path.dirname(outputFilename) + '/')
-      fs.writeFileSync(outputFilename,credits + bundle)
-      finish()
-    }
+    //   let newFilename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
+    //   fs.ensureDirSync(path.dirname(outputFilename) + '/')
+    //   fs.writeFileSync(newFilename,output)
+    //   finish()
+    // }
+    // else{
+    //   let credits = `/*STAR*/ \n /*${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
+    //   fs.ensureDirSync(path.dirname(outputFilename) + '/')
+    //   fs.writeFileSync(outputFilename,credits + bundle)
+    //   finish()
+    // }
 
 
     // fs.writeJson('./vortex-depGraph.json',Graph, err => {
