@@ -35,14 +35,14 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
     // }
     //Logger.Log();
 
-    fs.writeJsonSync('./out/tree.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"sourceType":"module"}))
+    // fs.writeJsonSync('./out/tree.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"sourceType":"module"}))
     let yourCredits = fs.readJSONSync('./package.json',{encoding:'utf-8'})
 
     // stage1()
-    // let Graph = GenerateGraph(entry);
-    // console.log(Graph)
-    // // stage2()
-    // Compile(Graph);
+    let Graph = GenerateGraph(entry);
+    console.log(Graph)
+    // // // stage2()
+    Compile(Graph);
     // let bundle = Compile(Graph);
     // ///let transformed = Babel_Core.transformSync(bundle,{sourceType:'module',presets:['@babel/preset-env']}).code
 

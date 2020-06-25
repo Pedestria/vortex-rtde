@@ -36,6 +36,7 @@
     "ora": "^4.0.4",
     "prettier": "^2.0.5",
     "resolve": "^1.17.0",
+    "source-map": "^0.7.3",
     "terser": "^4.7.0",
     "typescript": "^3.9.5"
   },

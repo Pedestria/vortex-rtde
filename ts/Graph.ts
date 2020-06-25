@@ -34,14 +34,14 @@ export class VortexGraph {
     }
 
     /**
-     * Checks to see if dependency has already been added to Graph 
+     * Checks to see if dependency has already been added to Graph. (Type sensitive!!) 
      * @param {Dependency} Dependency Dependency to check for 
      * @returns {boolean} True or False
      */
 
     searchFor(Dependency:Dependency) : boolean {
         for (let dep of this.Star){
-            if(Dependency.name == dep.name) {
+            if(Dependency.name == dep.name && Object.getPrototypeOf(dep) === Object.getPrototypeOf(Dependency)){
                 return true
             }
         }

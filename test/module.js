@@ -7,12 +7,12 @@
     //Shuttle (New Module Definition)
     //Finds exports and returns them under fake namespace.
     function shuttle(mod_name){
-        var fakeNamespace = {
+        var namespace = {
             named:{},
             default:{}
         }
-        modules[mod_name](shuttle,fakeNamespace.named = shuttle_exports,fakeNamespace.default = shuttle_default)
-        return fakeNamespace
+        modules[mod_name](shuttle,namespace.named = shuttle_exports,namespace.default = shuttle_default)
+        return namespace
     }
 
     //Calls Entrypoint to Initialize
@@ -21,15 +21,15 @@
 }({
     "./module1": (function(shuttle,shuttle_exports,shuttle_default){
         "use strict"
-        eval('console.log("module1"); function LogMe(){console.log("Named Export Call");};function defCall(name){console.log(name);}; shuttle_exports.LogMe = LogMe; shuttle_default.export = defCall;')
+        console.log("module1"); function LogMe(){console.log("Named Export Call");};function defCall(name){console.log(name);}; shuttle_exports.LogMe = LogMe; shuttle_default.export = defCall;
     }),
     "./module2": (function(shuttle,shuttle_exports,shuttle_default){
         "use strict"
-        eval('console.log("module2"); var _module1 = shuttle("./module1"); var _module3 = shuttle("./module3"); _module3.named.LogMoo(); _module1.named.LogMe(); _module1.default.export("Default Export Call With Param")')
+        console.log("module2"); var _module1 = shuttle("./module1"); var _module3 = shuttle("./module3"); _module3.named.LogMoo(); _module1.named.LogMe(); _module1.default.export("Default Export Call With Param");
     }),
     "./module3": (function(shuttle,shuttle_exports,shuttle_default){
         "use strict"
-        eval('console.log("module3"); function LogMoo(){console.log("Named Export Call2")}; shuttle_exports.LogMoo = LogMoo')
+        console.log("module3"); function LogMoo(){console.log("Named Export Call2")}; shuttle_exports.LogMoo = LogMoo;
     }),
 }))
 

@@ -1,450 +1,109 @@
 {
     "Star": [
         {
-            "name": "./test/vortex/GraphGenerator.js",
+            "name": "react",
             "importLocations": [
                 {
-                    "name": "./test/vortex/Main.js",
-                    "line": 1,
-                    "modules": [{ "name": "StarGraph", "type": 2 }],
-                    "relativePathToDep": "./GraphGenerator"
-                }
-            ]
-        },
-        {
-            "name": "fs-extra",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/Main.js",
-                    "line": 2,
-                    "modules": [{ "name": "fs", "type": 2 }],
-                    "relativePathToDep": "fs-extra"
+                    "name": "./test/web/Main.jsx",
+                    "line": 23,
+                    "modules": [
+                        { "name": "React", "type": 1 },
+                        { "name": "Component", "type": 0 }
+                    ],
+                    "relativePathToDep": "react"
                 },
                 {
-                    "name": "./test/vortex/GraphGenerator.js",
-                    "line": 1,
-                    "modules": [{ "name": "fs", "type": 2 }],
-                    "relativePathToDep": "fs-extra"
-                },
-                {
-                    "name": "./test/vortex/graphers/EsModuleGrapher.js",
-                    "line": 2,
-                    "modules": [{ "name": "fs", "type": 2 }],
-                    "relativePathToDep": "fs-extra"
-                },
-                {
-                    "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
-                    "line": 2,
-                    "modules": [{ "name": "fs", "type": 2 }],
-                    "relativePathToDep": "fs-extra"
-                },
-                {
-                    "name": "./test/vortex/Resolve.js",
-                    "line": 5,
-                    "modules": [{ "name": "fs", "type": 2 }],
-                    "relativePathToDep": "fs-extra"
-                },
-                {
-                    "name": "./test/vortex/dependencies/EsModuleDependency.js",
-                    "line": 2,
-                    "modules": [{ "name": "fs", "type": 2 }],
-                    "relativePathToDep": "fs-extra"
-                },
-                {
-                    "name": "./test/vortex/dependencies/CjsModuleDependency.js",
-                    "line": 3,
-                    "modules": [{ "name": "fs", "type": 2 }],
-                    "relativePathToDep": "fs-extra"
+                    "name": "./node_modules/react-dom/cjs/react-dom.development.js",
+                    "line": 18,
+                    "modules": [{ "name": "React", "type": 5 }],
+                    "relativePathToDep": "react"
                 }
             ],
-            "libLoc": "./node_modules/fs-extra/lib/index.js"
+            "libLoc": "./node_modules/react/cjs/react.development.js"
         },
         {
-            "name": "./test/vortex/Graph.js",
+            "name": "react-dom",
             "importLocations": [
                 {
-                    "name": "./test/vortex/GraphGenerator.js",
-                    "line": 2,
-                    "modules": [{ "name": "VortexGraph", "type": 0 }],
-                    "relativePathToDep": "./Graph.js"
-                }
-            ]
-        },
-        {
-            "name": "./test/vortex/graphers/EsModuleGrapher.js",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/GraphGenerator.js",
-                    "line": 3,
-                    "modules": [{ "name": "EsModuleGrapher", "type": 2 }],
-                    "relativePathToDep": "./graphers/EsModuleGrapher"
-                }
-            ]
-        },
-        {
-            "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/GraphGenerator.js",
-                    "line": 4,
-                    "modules": [{ "name": "CjsModuleGrapher", "type": 2 }],
-                    "relativePathToDep": "./graphers/CommonJsModuleGrapher"
-                }
-            ]
-        },
-        {
-            "name": "./test/vortex/Resolve.js",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/GraphGenerator.js",
-                    "line": 5,
-                    "modules": [
-                        { "name": "addJsExtensionIfNecessary", "type": 0 },
-                        { "name": "resolveLibBundle", "type": 0 }
-                    ],
-                    "relativePathToDep": "./Resolve.js"
-                },
-                {
-                    "name": "./test/vortex/Transport.js",
-                    "line": 1,
-                    "modules": [
-                        { "name": "LocalizedResolve", "type": 0 },
-                        { "name": "addJsExtensionIfNecessary", "type": 0 },
-                        { "name": "resolveLibBundle", "type": 0 }
-                    ],
-                    "relativePathToDep": "./Resolve.js"
-                }
-            ]
-        },
-        {
-            "name": "./test/vortex/dependencies/ModuleDependency.js",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/GraphGenerator.js",
-                    "line": 6,
-                    "modules": [{ "name": "ModuleDependency", "type": 1 }],
-                    "relativePathToDep": "./dependencies/ModuleDependency.js"
-                },
-                {
-                    "name": "./test/vortex/Graph.js",
-                    "line": 1,
-                    "modules": [{ "name": "ModuleDependency", "type": 1 }],
-                    "relativePathToDep": "./dependencies/ModuleDependency.js"
-                },
-                {
-                    "name": "./test/vortex/dependencies/EsModuleDependency.js",
-                    "line": 5,
-                    "modules": [{ "name": "ModuleDependency", "type": 1 }],
-                    "relativePathToDep": "./ModuleDependency.js"
-                },
-                {
-                    "name": "./test/vortex/Transport.js",
-                    "line": 2,
-                    "modules": [{ "name": "ModuleDependency", "type": 1 }],
-                    "relativePathToDep": "./dependencies/ModuleDependency.js"
-                },
-                {
-                    "name": "./test/vortex/dependencies/CjsModuleDependency.js",
-                    "line": 1,
-                    "modules": [{ "name": "ModuleDependency", "type": 1 }],
-                    "relativePathToDep": "./ModuleDependency.js"
-                }
-            ]
-        },
-        {
-            "name": "./test/vortex/Options.js",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/GraphGenerator.js",
-                    "line": 7,
-                    "modules": [
-                        { "name": "isProduction", "type": 0 },
-                        { "name": "isLibrary", "type": 0 }
-                    ],
-                    "relativePathToDep": "./Options.js"
-                },
-                {
-                    "name": "./test/vortex/Resolve.js",
-                    "line": 7,
-                    "modules": [{ "name": "isProduction", "type": 0 }],
-                    "relativePathToDep": "./Options"
-                }
-            ]
-        },
-        {
-            "name": "@babel/parser",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/graphers/EsModuleGrapher.js",
-                    "line": 1,
-                    "modules": [{ "name": "Babel", "type": 2 }],
-                    "relativePathToDep": "@babel/parser"
-                },
-                {
-                    "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
-                    "line": 1,
-                    "modules": [{ "name": "Babel", "type": 2 }],
-                    "relativePathToDep": "@babel/parser"
-                },
-                {
-                    "name": "./test/vortex/Resolve.js",
-                    "line": 3,
-                    "modules": [{ "name": "Babel", "type": 2 }],
-                    "relativePathToDep": "@babel/parser"
-                },
-                {
-                    "name": "./test/vortex/dependencies/EsModuleDependency.js",
-                    "line": 1,
-                    "modules": [{ "name": "Babel", "type": 2 }],
-                    "relativePathToDep": "@babel/parser"
-                },
-                {
-                    "name": "./test/vortex/dependencies/CjsModuleDependency.js",
-                    "line": 2,
-                    "modules": [{ "name": "Babel", "type": 2 }],
-                    "relativePathToDep": "@babel/parser"
+                    "name": "./test/web/Main.jsx",
+                    "line": 24,
+                    "modules": [{ "name": "ReactDOM", "type": 1 }],
+                    "relativePathToDep": "react-dom"
                 }
             ],
-            "libLoc": "./node_modules/@babel/parser/lib/index.js"
+            "libLoc": "./node_modules/react-dom/cjs/react-dom.development.js"
         },
         {
-            "name": "@babel/traverse",
+            "name": "object-assign",
             "importLocations": [
                 {
-                    "name": "./test/vortex/graphers/EsModuleGrapher.js",
-                    "line": 3,
-                    "modules": [null],
-                    "relativePathToDep": "@babel/traverse"
+                    "name": "./node_modules/react/cjs/react.development.js",
+                    "line": 18,
+                    "modules": [{ "name": "_assign", "type": 5 }],
+                    "relativePathToDep": "object-assign"
                 },
                 {
-                    "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
-                    "line": 7,
-                    "modules": [null],
-                    "relativePathToDep": "@babel/traverse"
-                },
-                {
-                    "name": "./test/vortex/Resolve.js",
-                    "line": 4,
-                    "modules": [null],
-                    "relativePathToDep": "@babel/traverse"
-                },
-                {
-                    "name": "./test/vortex/dependencies/EsModuleDependency.js",
-                    "line": 7,
-                    "modules": [null],
-                    "relativePathToDep": "@babel/traverse"
-                },
-                {
-                    "name": "./test/vortex/dependencies/CjsModuleDependency.js",
-                    "line": 7,
-                    "modules": [null],
-                    "relativePathToDep": "@babel/traverse"
+                    "name": "./node_modules/react-dom/cjs/react-dom.development.js",
+                    "line": 19,
+                    "modules": [{ "name": "_assign", "type": 5 }],
+                    "relativePathToDep": "object-assign"
                 }
             ],
-            "libLoc": "./node_modules/@babel/traverse/lib/index.js"
+            "libLoc": "./node_modules/object-assign/index.js"
         },
         {
-            "name": "./test/vortex/Module.js",
+            "name": "prop-types/checkPropTypes",
             "importLocations": [
                 {
-                    "name": "./test/vortex/graphers/EsModuleGrapher.js",
-                    "line": 4,
-                    "modules": [
-                        { "name": "Module", "type": 1 },
-                        { "name": "ModuleTypes", "type": 0 }
-                    ],
-                    "relativePathToDep": "../Module.js"
+                    "name": "./node_modules/react/cjs/react.development.js",
+                    "line": 19,
+                    "modules": [{ "name": "checkPropTypes", "type": 5 }],
+                    "relativePathToDep": "prop-types/checkPropTypes"
                 },
                 {
-                    "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
-                    "line": 3,
-                    "modules": [
-                        { "name": "Module", "type": 1 },
-                        { "name": "ModuleTypes", "type": 0 }
-                    ],
-                    "relativePathToDep": "../Module.js"
-                },
-                {
-                    "name": "./test/vortex/dependencies/EsModuleDependency.js",
-                    "line": 3,
-                    "modules": [
-                        { "name": "Module", "type": 1 },
-                        { "name": "ModuleTypes", "type": 0 }
-                    ],
-                    "relativePathToDep": "../Module"
-                },
-                {
-                    "name": "./test/vortex/dependencies/CjsModuleDependency.js",
-                    "line": 4,
-                    "modules": [
-                        { "name": "Module", "type": 1 },
-                        { "name": "ModuleTypes", "type": 0 }
-                    ],
-                    "relativePathToDep": "../Module"
-                }
-            ]
-        },
-        {
-            "name": "./test/vortex/dependencies/EsModuleDependency.js",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/graphers/EsModuleGrapher.js",
-                    "line": 6,
-                    "modules": [{ "name": "EsModuleDependency", "type": 1 }],
-                    "relativePathToDep": "../dependencies/EsModuleDependency"
-                },
-                {
-                    "name": "./test/vortex/Transport.js",
-                    "line": 3,
-                    "modules": [{ "name": "EsModuleDependency", "type": 1 }],
-                    "relativePathToDep": "./dependencies/EsModuleDependency.js"
-                }
-            ]
-        },
-        {
-            "name": "./test/vortex/Transport.js",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/graphers/EsModuleGrapher.js",
-                    "line": 8,
-                    "modules": [{ "name": "Transport", "type": 0 }],
-                    "relativePathToDep": "../Transport.js"
-                },
-                {
-                    "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
-                    "line": 5,
-                    "modules": [{ "name": "Transport", "type": 0 }],
-                    "relativePathToDep": "../Transport.js"
-                }
-            ]
-        },
-        {
-            "name": "./test/vortex/MDImportLocation.js",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/graphers/EsModuleGrapher.js",
-                    "line": 9,
-                    "modules": [{ "name": "MDImportLocation", "type": 1 }],
-                    "relativePathToDep": "../MDImportLocation.js"
-                },
-                {
-                    "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
-                    "line": 6,
-                    "modules": [{ "name": "MDImportLocation", "type": 1 }],
-                    "relativePathToDep": "../MDImportLocation.js"
-                },
-                {
-                    "name": "./test/vortex/dependencies/EsModuleDependency.js",
-                    "line": 6,
-                    "modules": [{ "name": "MDImportLocation", "type": 1 }],
-                    "relativePathToDep": "../MDImportLocation.js"
-                },
-                {
-                    "name": "./test/vortex/dependencies/CjsModuleDependency.js",
-                    "line": 6,
-                    "modules": [{ "name": "MDImportLocation", "type": 1 }],
-                    "relativePathToDep": "../MDImportLocation.js"
-                }
-            ]
-        },
-        {
-            "name": "./test/vortex/dependencies/CjsModuleDependency.js",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/graphers/CommonJsModuleGrapher.js",
-                    "line": 4,
-                    "modules": [{ "name": "CjsModuleDependency", "type": 1 }],
-                    "relativePathToDep": "../dependencies/CjsModuleDependency.js"
-                },
-                {
-                    "name": "./test/vortex/Transport.js",
-                    "line": 4,
-                    "modules": [{ "name": "CjsModuleDependency", "type": 1 }],
-                    "relativePathToDep": "./dependencies/CjsModuleDependency.js"
-                }
-            ]
-        },
-        {
-            "name": "path",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/Resolve.js",
-                    "line": 1,
-                    "modules": [{ "name": "path", "type": 2 }],
-                    "relativePathToDep": "path"
+                    "name": "./node_modules/react-dom/cjs/react-dom.development.js",
+                    "line": 21,
+                    "modules": [{ "name": "checkPropTypes", "type": 5 }],
+                    "relativePathToDep": "prop-types/checkPropTypes"
                 }
             ],
-            "libLoc": "node.js"
+            "libLoc": "./node_modules/prop-types/checkPropTypes.js"
         },
         {
-            "name": "resolve",
+            "name": "scheduler",
             "importLocations": [
                 {
-                    "name": "./test/vortex/Resolve.js",
-                    "line": 2,
-                    "modules": [{ "name": "resolve", "type": 2 }],
-                    "relativePathToDep": "resolve"
+                    "name": "./node_modules/react-dom/cjs/react-dom.development.js",
+                    "line": 20,
+                    "modules": [{ "name": "Scheduler", "type": 5 }],
+                    "relativePathToDep": "scheduler"
                 }
             ],
-            "libLoc": "./node_modules/resolve/index.js"
+            "libLoc": "./node_modules/scheduler/cjs/scheduler.development.js"
         },
         {
-            "name": "./test/vortex/QuarkTable.js",
+            "name": "scheduler/tracing",
             "importLocations": [
                 {
-                    "name": "./test/vortex/Resolve.js",
-                    "line": 6,
-                    "modules": [{ "name": "DefaultQuarkTable", "type": 0 }],
-                    "relativePathToDep": "./QuarkTable"
-                }
-            ]
-        },
-        {
-            "name": "chalk",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/Resolve.js",
-                    "line": 8,
-                    "modules": [{ "name": "chalk", "type": 2 }],
-                    "relativePathToDep": "chalk"
-                },
-                {
-                    "name": "./test/vortex/dependencies/EsModuleDependency.js",
-                    "line": 4,
-                    "modules": [{ "name": "chalk", "type": 2 }],
-                    "relativePathToDep": "chalk"
-                },
-                {
-                    "name": "./test/vortex/dependencies/CjsModuleDependency.js",
-                    "line": 5,
-                    "modules": [{ "name": "chalk", "type": 2 }],
-                    "relativePathToDep": "chalk"
+                    "name": "./node_modules/react-dom/cjs/react-dom.development.js",
+                    "line": 22,
+                    "modules": [{ "name": "tracing", "type": 5 }],
+                    "relativePathToDep": "scheduler/tracing"
                 }
             ],
-            "libLoc": "./node_modules/chalk/source/index.js"
+            "libLoc": "./node_modules/scheduler/cjs/scheduler-tracing.development.js"
         },
         {
-            "name": "./test/vortex/Dependency.js",
+            "name": "./node_modules/prop-types/lib/ReactPropTypesSecret.js",
             "importLocations": [
                 {
-                    "name": "./test/vortex/dependencies/ModuleDependency.js",
-                    "line": 1,
-                    "modules": [{ "name": "Dependency", "type": 1 }],
-                    "relativePathToDep": "../Dependency.js"
-                }
-            ]
-        },
-        {
-            "name": "./test/vortex/ImportLocation.js",
-            "importLocations": [
-                {
-                    "name": "./test/vortex/MDImportLocation.js",
-                    "line": 1,
-                    "modules": [{ "name": "ImportLocation", "type": 1 }],
-                    "relativePathToDep": "./ImportLocation.js"
+                    "name": "./node_modules/prop-types/checkPropTypes.js",
+                    "line": 13,
+                    "modules": [{ "name": "ReactPropTypesSecret", "type": 5 }],
+                    "relativePathToDep": "./lib/ReactPropTypesSecret"
                 }
             ]
         }
     ],
-    "entryPoint": "./test/vortex/Main.js"
+    "entryPoint": "./test/web/Main.jsx"
 }

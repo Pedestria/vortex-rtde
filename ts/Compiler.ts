@@ -11,25 +11,31 @@ import { ModuleTypes } from "./Module.js";
 import Module from './Module'
 import ModuleDependency from "./dependencies/ModuleDependency.js";
 import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
-import { BabelSettings } from "./Options.js";
+import { BabelSettings, isProduction, useDebug} from "./Options.js";
 import { queue, loadEntryFromQueue } from "./GraphGenerator.js";
-import { PassThrough } from "stream";
+import * as sourceMap from 'source-map'
 
 function fixDependencyName(name:string){
-    let NASTY_CHARS = '/@^$#*&!%'
+    let NASTY_CHARS = './@^$#*&!%-'
     let newName:string = ""
     if(name[0] === '@'){
         newName = name.slice(1)
     }
+    else{
+        newName = name
+    }
     for(let char of NASTY_CHARS){
         if(newName.includes(char)){
-            let a 
-            let b 
-            a = newName.slice(0,newName.indexOf(char))
-            b = newName.slice(newName.indexOf(char)+1)
-            newName = `${a}_${b}`
+            while(newName.includes(char)){
+                let a 
+                let b 
+                a = newName.slice(0,newName.indexOf(char))
+                b = newName.slice(newName.indexOf(char)+1)
+                newName = `${a}_${b}`
+            }
         }
     }
+    //console.log(newName)
     return newName
 
 }
@@ -649,11 +655,39 @@ function WebAppCompile (Graph:VortexGraph){
     for(let dep of Graph.Star){
         if(dep instanceof ModuleDependency){
             for(let impLoc of dep.importLocations){
-                mangleVariableNamesFromAst(loadEntryFromQueue(impLoc.name).ast,impLoc.modules)
                 TransformImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep)
             }
+            TransformExportsFromAST(loadEntryFromQueue(dep.name.includes('./') ? dep.name : dep.libLoc).ast,dep)
         }
     }
+
+    const entry = loadEntryFromQueue(Graph.entryPoint)
+    stripNodeProcess(entry.ast)
+    const COMP = generate(entry.ast,{sourceMaps:false})
+    const mod = useDebug ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL:${entry.name} \n`)})
+    shuttle.addModuleToBuffer(Graph.entryPoint,mod)
+
+    for(let dep of Graph.Star){
+        if(dep instanceof ModuleDependency){
+            if(dep.libLoc !== undefined){
+                    const entry = loadEntryFromQueue(dep.libLoc)
+                    stripNodeProcess(entry.ast)
+                    const COMP = generate(entry.ast,{sourceMaps:false})
+                    const mod = useDebug ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL:${entry.name} \n`)})
+                    shuttle.addModuleToBuffer(dep.libLoc,mod)
+                }
+                else{
+                    const entry = loadEntryFromQueue(dep.name)
+                    stripNodeProcess(entry.ast)
+                    const COMP = generate(entry.ast,{sourceMaps:false})
+                    const mod = useDebug ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL:${entry.name} \n`)})
+                    shuttle.addModuleToBuffer(dep.name,mod)
+                }
+            }
+    }
+
+
+
     // if(dep.libLoc !== undefined){
     //     const mod = ModuleEvalTemplate({CODE:t.stringLiteral(generate(loadEntryFromQueue(dep.libLoc).ast).code)})
     //     shuttle.addModuleToBuffer(dep.libLoc,mod)
@@ -681,12 +715,12 @@ function WebAppCompile (Graph:VortexGraph){
     //Shuttle (New Module Definition)
     //Finds exports and returns them under fake namespace.
     function shuttle(mod_name){
-        var fakeNamespace = {
+        var namespace = {
             named:{},
             default:{}
         }
-        modules[mod_name](shuttle,fakeNamespace.named = shuttle_exports,fakeNamespace.default = shuttle_default)
-        return fakeNamespace
+        modules[mod_name](shuttle,namespace.named = shuttle_exports,namespace.default = shuttle_default)
+        return namespace
     }
 
     //Calls Entrypoint to Initialize
@@ -694,7 +728,7 @@ function WebAppCompile (Graph:VortexGraph){
 
     let parsedFactory = Babel.parse(factory).program.body
 
-    let finalCode = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier("modules")],t.blockStatement(parsedFactory),false,false),[shuttle.buffer])]))).code;
+    let finalCode = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier("modules")],t.blockStatement(parsedFactory),false,false),[shuttle.buffer])])),{compact:false}).code;
 
     fs.writeFileSync('./out/webapp.js',finalCode);
     console.log('Successfully Wrote Test to webapp.js')
@@ -706,19 +740,15 @@ class Shuttle {
 
     //[shuttle,_exports_]
 
-    addModuleToBuffer(entry:string,evalModule:t.Statement){
-        let func = t.functionExpression(null,[t.identifier('shuttle'),t.identifier('shuttle_exports'),t.identifier('shuttle_default')],t.blockStatement([evalModule]),false,false)
+    addModuleToBuffer(entry:string,evalModule:t.Statement|Array<t.Statement>){
+        let func = t.functionExpression(null,[t.identifier('shuttle'),t.identifier('shuttle_exports'),t.identifier('shuttle_default')],t.blockStatement(useDebug ? evalModule : [evalModule]),false,false)
         this.buffer.properties.push(t.objectProperty(t.stringLiteral(entry),t.callExpression(t.identifier(''),[func])))
-    }
-
-    isInBuffer(){
-
     }
 }
 //Shuttle Module Templates:
 
-const ShuttleInitialize = template("var MODULE = shuttle(MODULENAME)")
-const ShuttleExportNamed = template("shuttle_exports.EXPORT = EXPORT")
+const ShuttleInitialize = template("MODULE = shuttle(MODULENAME)")
+const ShuttleExportNamed = template("shuttle_exports.EXPORT = LOCAL")
 const ShuttleExportDefault = template("shuttle_default.export = EXPORT")
 
 function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:ModuleDependency){
@@ -728,39 +758,47 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
     if(dep instanceof EsModuleDependency){
             traverse(ast,{
                 ImportDeclaration: function(path){
-                    if(path.node.source.value === dep.name){
+                    if(path.node.source.value === currentImpLoc.relativePathToDep){
                         if(dep.name.includes('./')){
-                            path.replaceWith(ShuttleInitialize({MODULE:namespace,MODULENAME:t.stringLiteral(dep.name)}))
+                            // Uses dep name as replacement module source
+                            path.replaceWith(t.variableDeclaration('var',[t.variableDeclarator(t.identifier(namespace),t.callExpression(t.identifier('shuttle'),[t.stringLiteral(dep.name)]))]))
                         } else{
-                            path.replaceWith(ShuttleInitialize({MODULE:namespace,MODULENAME:t.stringLiteral(dep.libLoc)}))
+                            //Search for lib bundle if lib
+                            path.replaceWith(t.variableDeclaration('var',[t.variableDeclarator(t.identifier(namespace),t.callExpression(t.identifier('shuttle'),[t.stringLiteral(dep.libLoc)]))]))
                         }
                     }
                 },
                 Identifier: function(path){
-                    if(currentImpLoc.indexOfModuleByName(path.node.name.slice(1)) !== null){
-                        if(dep.name.includes('./') == false){
-                            //If library but NOT default import from lib
-                            if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type !== ModuleTypes.EsDefaultModule){
-                                path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('named')),t.identifier(path.node.name.slice(1))))
-                            }
-                            //if NOT library at all
-                        } else{
-                            if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name.slice(1))].type === ModuleTypes.EsDefaultModule){
-                                path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('default')),t.identifier('export')))
-                            }
-                            else{
-                                path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('named')),t.identifier(path.node.name.slice(1))))
+                    if(path.parent.type !== 'MemberExpression' && path.parent.type !== 'ImportSpecifier' && path.parent.type !== 'ImportDefaultSpecifier'){
+
+                            if(currentImpLoc.indexOfModuleByName(path.node.name) !== null){
+                                if(dep.name.includes('./') == false){
+                                    //If library but NOT default import from lib
+                                    if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type !== ModuleTypes.EsDefaultModule){
+                                        path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('named')),t.identifier(path.node.name)))
+                                    }
+                                    //if NOT library at all
+                                } else{
+                                    if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type === ModuleTypes.EsDefaultModule){
+                                        path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('default')),t.identifier('export')))
+                                    }
+                                    else{
+                                        path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('named')),t.identifier(path.node.name)))
+                                    }
+                                }
                             }
                         }
-                    }
-                },
+                    },
                 //Reassigns lib default namespace to vortex namespace
                 MemberExpression: function(path){
                     if(dep.name.includes('./') == false){
                         if(path.node.object.type === 'Identifier'){
-                            let defaultMod = currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.object.name)]
-                            if(defaultMod.type === ModuleTypes.EsDefaultModule && defaultMod.name === path.node.object.name){
-                                path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('named')),path.node.property))
+                            if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.object.name)] !== undefined){
+                                // Only passes through here namespace IS the default module.
+                                let defaultMod = currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.object.name)]
+                                if(defaultMod.type === ModuleTypes.EsDefaultModule && defaultMod.name === path.node.object.name){
+                                    path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('named')),path.node.property))
+                                }
                             }
                         }
                     }
@@ -770,13 +808,14 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
 
             if(currentImpLoc.modules[0].type === ModuleTypes.CjsNamespaceProvider){
                 traverse(ast,{
-                    VariableDeclaration: function(path){
+                    VariableDeclarator: function(path){
                         if(dep.name.includes('./')){
-                            if (path.node.declarations[0].init !== null){
-                                if (path.node.declarations[0].init.type === 'CallExpression') {
-                                    if(path.node.declarations[0].init.callee.name === 'require') {
-                                        if(path.node.declarations[0].id.name === currentImpLoc.modules[0].name && path.node.declarations[0].init.arguments[0].value === currentImpLoc.relativePathToDep){
-                                            path.replaceWith(ShuttleInitialize({MODULE:currentImpLoc.modules[0].name,MODULENAME:t.stringLiteral(currentImpLoc.relativePathToDep)}))
+                            //IF is local File
+                            if (path.node.init !== null){
+                                if (path.node.init.type === 'CallExpression') {
+                                    if(path.node.init.callee.name === 'require') {
+                                        if(path.node.id.name === currentImpLoc.modules[0].name && path.node.init.arguments[0].value === currentImpLoc.relativePathToDep){
+                                            path.replaceWith(ShuttleInitialize({MODULE:namespace,MODULENAME:t.stringLiteral(dep.name)}))
                                         }
                                     }
                                 }
@@ -784,11 +823,12 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
 
                         } 
                         else {
-                            if (path.node.declarations[0].init !== null){
-                                if (path.node.declarations[0].init.type === 'CallExpression') {
-                                    if(path.node.declarations[0].init.callee.name === 'require') {
-                                        if(path.node.declarations[0].id.name === currentImpLoc.modules[0].name && path.node.declarations[0].init.arguments[0].value === dep.name){
-                                            path.replaceWith(ShuttleInitialize({MODULE:currentImpLoc.modules[0].name,MODULENAME:t.stringLiteral(dep.name)}))
+                            //IF is library
+                            if (path.node.init !== null){
+                                if (path.node.init.type === 'CallExpression') {
+                                    if(path.node.init.callee.name === 'require') {
+                                        if(path.node.id.name === currentImpLoc.modules[0].name && path.node.init.arguments[0].value === dep.name){
+                                            path.replaceWith(ShuttleInitialize({MODULE:namespace,MODULENAME:t.stringLiteral(dep.libLoc)}))
                                         }
                                     }
                                 }
@@ -803,9 +843,16 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
                             }
                         }
                     },
-                    //Replaces CommonJs Namespace if library DOES have default export.
                     Identifier: function(path){
-                        if(path.parent.type !== 'MemberExpression'){
+                        if(path.parent.type === 'ObjectProperty'){
+                            if(path.node.name !== path.parent.key && path.node === path.parent.value){
+                                if(path.node.name === currentImpLoc.modules[0].name){
+                                    path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('default')),t.identifier('export')))
+                                }
+                            }
+                        }
+                        //Replaces CommonJs Namespace if library DOES have default export.
+                        else if(path.parent.type !== 'MemberExpression' && path.parent.type !== 'VariableDeclarator'){
                             if(path.node.name === currentImpLoc.modules[0].name){
                                 path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('default')),t.identifier('export')))
                             }
@@ -819,13 +866,20 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
 
 
 function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
-
-    if(dep instanceof EsModuleDependency){
+    //Removes exports from local file ES Modules only.
+    if(dep instanceof EsModuleDependency && dep.libLoc == null){
         let exportsToBeRolled:Array<string> = []
         let defaultExport:string
         traverse(ast,{
             ExportNamedDeclaration: function(path){
-                if(path.node.specifiers === undefined){
+                if(path.node.declaration !== undefined){
+                    if(path.node.declaration.type === 'FunctionDeclaration'){
+                        exportsToBeRolled.push(path.node.declaration.id.name)
+                    }
+                    else if(path.node.declaration.type === 'VariableDeclaration'){
+                        exportsToBeRolled.push(path.node.declaration.declarations[0].id.name)
+                    }
+
                     path.replaceWith(path.node.declaration)
                 }
                 else{
@@ -841,33 +895,60 @@ function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
                 } else if(path.node.declaration.type === 'Identifier'){
                     defaultExport = path.node.declaration.name
                 }
+                path.replaceWith(path.node.declaration)
             }
         })
-        //Rolls out/Converts exports to Shuttle Module Definition
+        //Rolls out/Converts exports to be read by Shuttle Module Loader
         for(let expo of exportsToBeRolled){
             ast.program.body.push(ShuttleExportNamed({EXPORT:expo}))
         }
-        //Pushes/converts default export to Shuttle Module Definition
-        ast.program.body.push(ShuttleExportDefault({EXPORT:defaultExport}))
+        //Pushes/converts default export ONLY if it exists be read by Shuttle Module Loader
+        if(defaultExport !== undefined){
+            ast.program.body.push(ShuttleExportDefault({EXPORT:defaultExport}))
+        }
     }
-    else if (dep instanceof CjsModuleDependency){
+    //Will rewrite exports for not only CJS dependencies but for Node Modules all together.
+    else if (dep instanceof CjsModuleDependency || dep.libLoc !== null){
         traverse(ast,{
-            ExpressionStatement: function(path){
-                if(path.node.expression.type === 'AssignmentExpression'){
-                    if(path.node.expression.left.type === 'MemberExpression'){
-                        if(path.node.expression.left.object.type === 'Identifier'){
+            AssignmentExpression: function(path){
+                    if(path.node.left.type === 'MemberExpression'){
+                        if(path.node.left.object.type === 'Identifier'){
                             //Looks for CommonJs named exports
-                            if(path.node.object.name === 'exports'){
-                                path.replaceWith(ShuttleExportNamed({EXPORT:path.node.expression.left.property.name}))
+                            if(path.node.left.object.name === 'exports'){
+                                path.replaceWith(ShuttleExportNamed({EXPORT:path.node.left.property.name,LOCAL:path.node.right}))
                             }
-                            else if(path.node.expression.left.object.name === 'module' && path.node.expression.left.property.name === 'exports'){
-                                path.replaceWith(ShuttleExportDefault({EXPORT:path.node.expression.right.name}))
+                            else if(path.node.left.object.name === 'module' && path.node.left.property.name === 'exports'){
+                                path.replaceWith(ShuttleExportDefault({EXPORT:path.node.right.type === 'Identifier' ? path.node.right.name : path.node.right}))
                             }
+                        }
+                    }
+                },
+            MemberExpression: function(path){
+                if(path.parent.type !== 'AssignmentExpression'){
+                    if(path.node.object.type === 'Identifier'){
+                        if(path.node.object.name === 'exports'){
+                            path.node.object.name = 'shuttle_exports'
                         }
                     }
                 }
             }
         })
     }
+}
 
+function stripNodeProcess(ast:t.File){
+    traverse(ast,{
+        IfStatement: function(path){
+            //Removes any if statement having any relation with NodeJs process!
+            if(path.node.test.type === 'BinaryExpression'){
+                if(path.node.test.left.type === 'MemberExpression'){
+                    if(path.node.test.left.object.type === 'MemberExpression'){
+                        if(path.node.test.left.object.object.name === 'process'){
+                            path.replaceWith(path.node.consequent)
+                        }
+                    }
+                }
+            }
+        }
+    })
 }

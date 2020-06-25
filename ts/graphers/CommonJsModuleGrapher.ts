@@ -22,23 +22,23 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
     //         console.log('Debug Written')
     //       })
     traverse(entry.ast,{
-        VariableDeclaration: function(path) {
+        VariableDeclarator: function(path) {
                 let modules = []
-                if (path.node.declarations[0].init !== null){
-                    if (path.node.declarations[0].init.type === 'CallExpression') {
-                        if(path.node.declarations[0].init.callee.name === 'require') {
-                            if(path.node.declarations[0].id.type === 'ObjectPattern'){
-                                for (let namedRequires of path.node.declarations[0].id.properties){
+                if (path.node.init !== null){
+                    if (path.node.init.type === 'CallExpression') {
+                        if(path.node.init.callee.name === 'require') {
+                            if(path.node.id.type === 'ObjectPattern'){
+                                for (let namedRequires of path.node.id.properties){
                                     //console.log(namedRequires.value)
                                     modules.push(new Module(namedRequires.value.name,ModuleTypes.CjsModule))
                                 }
                             }
                             else{
-                            modules.push(new Module(path.node.declarations[0].id.name,ModuleTypes.CjsNamespaceProvider))
+                            modules.push(new Module(path.node.id.name,ModuleTypes.CjsNamespaceProvider))
                             }
                             //console.log(path.node.declarations[0].init.arguments[0].value)
-                            let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.declarations[0].init.arguments[0].value)
-                            Transport(new CjsModuleDependency(path.node.declarations[0].init.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc)
+                            let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.init.arguments[0].value)
+                            Transport(new CjsModuleDependency(path.node.init.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc)
                         }
                     }
             }},

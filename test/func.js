@@ -1,4 +1,13 @@
-//class HelloThere{
-    "use strict"
-VORTEX_MODULE_blah.named.getMe()
-//MAMA
+if(process.env.NODE_ENV !== 'production'){
+
+}
+
+exports.Foo = Poop
+
+
+var blah = require('mama'), bah = require('ls'), zah = require('mapa')
+
+
+
+
+
