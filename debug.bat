@@ -1,1 +1,0 @@
-node ./out/webapp.js

@@ -5,9 +5,10 @@ class MainComponent extends Component{
 
     render(){
         return(
-            <h1>Welcome to Vortex and React!!!!!!!!!!!!!!!
-                And CONGRADULATIONS!!! YOU BUILT A WORKING JS BUNDLER FOR WEB!!!!!!!
-            </h1>
+            <div>
+                <h1>Test WebApp</h1>
+                <p>I am a Paragraph Describing Stuff!</p>
+            </div>
         );
     }
 }

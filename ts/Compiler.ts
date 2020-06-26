@@ -11,7 +11,7 @@ import { ModuleTypes } from "./Module.js";
 import Module from './Module'
 import ModuleDependency from "./dependencies/ModuleDependency.js";
 import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
-import { BabelSettings, isProduction, useDebug} from "./Options.js";
+import { BabelSettings, isProduction, useDebug, isLibrary} from "./Options.js";
 import { queue, loadEntryFromQueue } from "./GraphGenerator.js";
 import * as sourceMap from 'source-map'
 
@@ -46,11 +46,21 @@ function fixDependencyName(name:string){
  */
 export default function Compile(Graph:VortexGraph){
 
+    let finalBundle
+
+    if(isLibrary){
+        finalBundle = LibCompile(Graph)
+    }
+    else{
+        finalBundle = WebAppCompile(Graph)
+    }
+
+    return finalBundle
+
     // let finalLib = LibCompile(Graph)
 
     // return finalLib
 
-    WebAppCompile(Graph)
     // const buffer = fs.readFileSync('./test/func.js').toString()
 
     // const code = Babel.parse(buffer,{"sourceType":"module"})
@@ -668,7 +678,7 @@ function WebAppCompile (Graph:VortexGraph){
     const entry = loadEntryFromQueue(Graph.entryPoint)
     stripNodeProcess(entry.ast)
     const COMP = generate(entry.ast,{sourceMaps:false})
-    const mod = useDebug ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL:${entry.name} \n`)})
+    const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${entry.name} \n`)})
     shuttle.addModuleToBuffer(Graph.entryPoint,mod)
     bufferNames.push(Graph.entryPoint)
 
@@ -681,7 +691,7 @@ function WebAppCompile (Graph:VortexGraph){
                         const entry = loadEntryFromQueue(dep.libLoc)
                         stripNodeProcess(entry.ast)
                         const COMP = generate(entry.ast,{sourceMaps:false})
-                        const mod = useDebug ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL:${entry.name} \n`)})
+                        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${entry.name} \n`)})
                         shuttle.addModuleToBuffer(dep.libLoc,mod)
                         bufferNames.push(dep.libLoc)
                     }
@@ -691,7 +701,7 @@ function WebAppCompile (Graph:VortexGraph){
                         const entry = loadEntryFromQueue(dep.name)
                         stripNodeProcess(entry.ast)
                         const COMP = generate(entry.ast,{sourceMaps:false})
-                        const mod = useDebug ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL:${entry.name} \n`)})
+                        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL:${entry.name} \n`)})
                         shuttle.addModuleToBuffer(dep.name,mod)
                         bufferNames.push(dep.name)
                     }
@@ -719,53 +729,45 @@ function WebAppCompile (Graph:VortexGraph){
     //     prop.value.extra.parenStart = prop.value.start-1
     // }
 
-    let factory = `//Named Exports For Module
-    var shuttle_exports = {}
-    //Default Export For Module
-    var shuttle_default = {}
-
-    var loadedModules = []
-
-    var loadedExportsByModule = {}
-
-    //Shuttle (New Module Definition)
+    let factory = `
+    //Named Exports For Module
+    var loadedModules = [];
+    var loadedExportsByModule = {}; 
+    //Shuttle Module Loader
     //Finds exports and returns them under fake namespace.
-    function shuttle(mod_name){
-        //If module has already been loaded, load the exports that were cached away.
-        if(loadedModules.includes(mod_name)){
-            return loadedExportsByModule[mod_name].cachedExports
-        }
-
-        else {
-
-            var mod = {
-                exports:{}
-            }
-
-            modules[mod_name].call(mod,mod.exports,shuttle,mod.exports)
-
-            var o = new Object(mod_name)
-            Object.defineProperty(o,'cachedExports',{
-                value:mod.exports,
-                writable:false
-            })
-
-            Object.defineProperty(loadedExportsByModule,mod_name,{value:o})
-
-            loadedModules.push(mod_name)
-            return mod.exports
-        }
-    }
-
-    //Calls Entrypoint to Initialize
-    return shuttle('${Graph.entryPoint}')`
+  
+    function shuttle(mod_name) {
+      //If module has already been loaded, load the exports that were cached away.
+      if (loadedModules.includes(mod_name)) {
+        return loadedExportsByModule[mod_name].cachedExports;
+      } else {
+        var mod = {
+          exports: {}
+        };
+        modules[mod_name](shuttle, mod.exports);
+  
+        var o = new Object(mod_name);
+        Object.defineProperty(o, 'cachedExports', {
+          value: mod.exports,
+          writable: false
+        });
+        Object.defineProperty(loadedExportsByModule, mod_name, {
+          value: o
+        });
+        loadedModules.push(mod_name);
+        return mod.exports;
+      }
+    } 
+    //Calls EntryPoint to Initialize
+  
+  
+    return shuttle('${Graph.entryPoint}');`
 
     let parsedFactory = Babel.parse(factory,{allowReturnOutsideFunction:true}).program.body
 
-    let finalCode = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier("modules")],t.blockStatement(parsedFactory),false,false),[shuttle.buffer])])),{compact:false}).code;
+    let finalCode = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier("modules")],t.blockStatement(parsedFactory),false,false),[shuttle.buffer])])),{compact: isProduction? true : false}).code;
 
-    fs.writeFileSync('./out/webapp.js',finalCode);
-    console.log('Successfully Wrote Test to webapp.js')
+    return finalCode
 }
 
 class Shuttle {
@@ -775,7 +777,7 @@ class Shuttle {
     //[shuttle,_exports_]
 
     addModuleToBuffer(entry:string,evalModule:t.Statement|Array<t.Statement>){
-        let func = t.functionExpression(null,[t.identifier('mod'),t.identifier('shuttle'),t.identifier('shuttle_exports')],t.blockStatement(useDebug ? evalModule : [evalModule]),false,false)
+        let func = t.functionExpression(null,[t.identifier('shuttle'),t.identifier('shuttle_exports')],t.blockStatement(isProduction ? evalModule : [evalModule]),false,false)
         this.buffer.properties.push(t.objectProperty(t.stringLiteral(entry),t.callExpression(t.identifier(''),[func])))
     }
 

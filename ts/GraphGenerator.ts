@@ -53,11 +53,6 @@ export class QueueEntry {
 
 export default function GenerateGraph(entry:string): VortexGraph {
 
-    if(isProduction){
-        fs.emptyDirSync('./cache/files')
-        fs.emptyDirSync('./cache/libs')
-    }
-
     const node_modules:string = 'node_modules'
 
     //let resolvedEntry = path.resolve(entry)
