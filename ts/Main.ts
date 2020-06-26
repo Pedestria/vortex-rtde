@@ -41,7 +41,7 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
     // stage1()
     let Graph = GenerateGraph(entry);
     console.log(Graph)
-    // // // stage2()
+    // // // // stage2()
     Compile(Graph);
     // let bundle = Compile(Graph);
     // ///let transformed = Babel_Core.transformSync(bundle,{sourceType:'module',presets:['@babel/preset-env']}).code

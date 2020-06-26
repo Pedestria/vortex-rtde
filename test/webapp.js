@@ -136,6 +136,7 @@
     }
 
     var VORTEX_MODULE_react = shuttle("./node_modules/react/cjs/react.development.js");
+
     var VORTEX_MODULE_react_dom = shuttle("./node_modules/react-dom/cjs/react-dom.development.js");
 
     var MainComponent = /*#__PURE__*/function (_Component) {
