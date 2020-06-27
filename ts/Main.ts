@@ -70,11 +70,14 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
         if(usingTerser){
             stage3()
             let credits = `/*NEUTRON-STAR*/ \n /*BUNDLED BY VORTEX*/ \n`
-            let finalBundle = Promise.resolve(terser.minify(bundle,{compress:true,mangle:false}).code).then(code =>{
-                return credits + code
-            })
+            let minBundle = terser.minify(bundle,{compress:true,mangle:false}).code
+
+            let output = credits + minBundle
+
+            let newFilename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
+
             fs.ensureDirSync(path.dirname(outputFilename) + '/')
-            fs.writeFile(outputFilename,finalBundle)
+            fs.writeFileSync(newFilename,output)
             finish()
         }
         else{

@@ -58,8 +58,7 @@ export default function GenerateGraph(entry:string): VortexGraph {
     //let resolvedEntry = path.resolve(entry)
 
     let Graph = new VortexGraph(entry)
-
-    let fileLoc = './dep-graph.json';
+    
     let loadedFilesCache:Array<string> = []
 
     let modEnt = addJsExtensionIfNecessary(entry)

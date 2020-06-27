@@ -658,9 +658,17 @@ function getExposures(exportNode:t.ExportNamedDeclaration){
 
 const ModuleEvalTemplate = template('eval(CODE)')
 
+/**
+ * Compiles Graph into browser compatible application
+ * @param {VortexGraph} Graph 
+ * @returns {string} WebApp Bundle
+ */
+
 function WebAppCompile (Graph:VortexGraph){
 
    let shuttle = new Shuttle();
+
+   //Transforms exports and Imports on all parsed Queue entries.
 
     for(let dep of Graph.Star){
         if(dep instanceof ModuleDependency){
@@ -674,6 +682,7 @@ function WebAppCompile (Graph:VortexGraph){
 
     let bufferNames:Array<string> = []
 
+    // Pushes entrypoint into buffer to be compiled.
 
     const entry = loadEntryFromQueue(Graph.entryPoint)
     stripNodeProcess(entry.ast)
@@ -728,6 +737,10 @@ function WebAppCompile (Graph:VortexGraph){
     //     prop.value.extra.parenthesized = true
     //     prop.value.extra.parenStart = prop.value.start-1
     // }
+
+    /**
+     * Factory Shuttle Module Loader (Vortex's Official Module Loader for the browser!)
+     */
 
     let factory = `
     //Named Exports For Module
@@ -794,9 +807,27 @@ class Shuttle {
 }
 //Shuttle Module Templates:
 
+
+/**
+ * Vortex's Require Function Template
+ */
 const ShuttleInitialize = template("MODULE = shuttle(MODULENAME)")
+/**
+ * Vortex's Named Export Template
+ */
 const ShuttleExportNamed = template("shuttle_exports.EXPORT = LOCAL")
+/**
+ * Vortex's Default Export Template
+ */
 const ShuttleExportDefault = template("shuttle_exports.default = EXPORT")
+
+/**
+ * Compiles imports from the provided AST into the Shuttle Module Loader format.
+ * 
+ * @param {t.File} ast Abstract Syntax Tree (ESTree Format)
+ * @param {MDImportLocation} currentImpLoc The Current ModuleDependency Import Location 
+ * @param {ModuleDependency} dep The current ModuleDependency.
+ */
 
 function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:ModuleDependency){
 
@@ -855,28 +886,14 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
 
             if(currentImpLoc.modules[0].type === ModuleTypes.CjsNamespaceProvider){
                 traverse(ast,{
-                    VariableDeclarator: function(path){
-                        if(dep.name.includes('./')){
-                            //IF is local File
-                            if (path.node.init !== null){
-                                if (path.node.init.type === 'CallExpression') {
-                                    if(path.node.init.callee.name === 'require') {
-                                        if(path.node.id.name === currentImpLoc.modules[0].name && path.node.init.arguments[0].value === currentImpLoc.relativePathToDep){
-                                            path.replaceWith(ShuttleInitialize({MODULE:namespace,MODULENAME:t.stringLiteral(dep.name)}))
-                                        }
-                                    }
-                                }
-                            }
-
-                        } 
-                        else {
-                            //IF is library
-                            if (path.node.init !== null){
-                                if (path.node.init.type === 'CallExpression') {
-                                    if(path.node.init.callee.name === 'require') {
-                                        if(path.node.id.name === currentImpLoc.modules[0].name && path.node.init.arguments[0].value === dep.name){
-                                            path.replaceWith(ShuttleInitialize({MODULE:namespace,MODULENAME:t.stringLiteral(dep.libLoc)}))
-                                        }
+                    VariableDeclaration: function(path){
+                        for(let dec of path.node.declarations){
+                            if(dec.init !== null){
+                                if(dec.init.type === 'CallExpression'){
+                                    if(dec.init.callee.name === 'require' && dec.init.arguments[0].value === currentImpLoc.relativePathToDep){
+                                        dec.id.name = namespace
+                                        dec.init.callee.name = 'shuttle'
+                                        dec.init.arguments[0].value = dep.name.includes('./')? dep.name : dep.libLoc
                                     }
                                 }
                             }
@@ -922,6 +939,12 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
 
         }
 }
+
+/**Compiles exports from the provided AST into the Shuttle Module Loader format.
+ * 
+ * @param {t.File} ast Abstract Syntax Tree (ESTree Format)
+ * @param {ModuleDependency} dep The Current ModuleDependency 
+ */
 
 
 function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
@@ -994,6 +1017,13 @@ function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
         })
     }
 }
+
+/** __WARNING: THIS WILL SOON BE DEPRECATED!!__
+ * 
+ * Strips process.node functions/conditionals from the code.
+ * 
+ * @param {t.File} ast Abstract Syntax Tree (ESTree Format)
+ */
 
 function stripNodeProcess(ast:t.File){
     traverse(ast,{
