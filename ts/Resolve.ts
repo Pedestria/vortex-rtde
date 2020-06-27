@@ -4,7 +4,7 @@ import * as Babel from '@babel/parser'
 import traverse from '@babel/traverse'
 import * as fs from 'fs-extra'
 import {DefaultQuarkTable, QuarkLibEntry} from './QuarkTable'
-import {isProduction} from './Options'
+import {isProduction} from  './Main'
 import * as chalk from 'chalk'
 
 /**Resolves dependency location based off of Import Location

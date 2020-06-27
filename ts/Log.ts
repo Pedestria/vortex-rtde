@@ -1,7 +1,7 @@
 import * as chalk from 'chalk'
 import * as cliSpinners from 'cli-spinners'
 import * as ora from 'ora'
-import { usingTerser } from './Options.js'
+import { usingTerser, isProduction } from './Main'
 
 
     const spinner2 = ora('1. Opening the Portal')
@@ -26,15 +26,15 @@ import { usingTerser } from './Options.js'
         spinner4.start();
     }
 
-    export function finish (){
+    export function finish (output:string){
 
         if(usingTerser){
             spinner4.succeed()
-            console.log(chalk.bold.yellowBright('Successfully Created Neutron Star!'))
+            console.log(chalk.bold.yellowBright(`Successfully Created Neutron Star! (${output})`))
         }
         else{
             spinner3.succeed()
-            console.log(chalk.bold.redBright('Successfully Created Star!'))
+            console.log(chalk.bold.redBright(`Successfully Created Star! (${output})`))
         }
         process.exit();
     }

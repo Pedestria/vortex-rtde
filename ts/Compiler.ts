@@ -11,7 +11,8 @@ import { ModuleTypes } from "./Module.js";
 import Module from './Module'
 import ModuleDependency from "./dependencies/ModuleDependency.js";
 import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
-import { BabelSettings, isProduction, useDebug, isLibrary} from "./Options.js";
+import { BabelSettings} from "./Options.js";
+import {isProduction, isLibrary} from './Main'
 import { queue, loadEntryFromQueue } from "./GraphGenerator.js";
 import * as sourceMap from 'source-map'
 
@@ -982,7 +983,7 @@ function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
         })
         //Rolls out/Converts exports to be read by Shuttle Module Loader
         for(let expo of exportsToBeRolled){
-            ast.program.body.push(ShuttleExportNamed({EXPORT:expo}))
+            ast.program.body.push(ShuttleExportNamed({EXPORT:expo, LOCAL:expo}))
         }
         //Pushes/converts default export ONLY if it exists be read by Shuttle Module Loader
         if(defaultExport !== undefined){

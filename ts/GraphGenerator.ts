@@ -7,8 +7,9 @@ import {addJsExtensionIfNecessary, resolveLibBundle } from './Resolve.js'
 import * as Babel from '@babel/parser'
 import Dependency from './Dependency.js'
 import ModuleDependency from './dependencies/ModuleDependency.js'
-import { isProduction, isLibrary, BabelSettings } from './Options.js'
-import { transform, transformSync } from '@babel/core'
+import {BabelSettings } from './Options.js'
+import {isProduction, isLibrary} from './Main'
+import { transform, transformSync, transformFileSync } from '@babel/core'
 //import * as terser from 'terser'
 
 export var queue:Array<QueueEntry> = []
@@ -63,7 +64,6 @@ export default function GenerateGraph(entry:string): VortexGraph {
 
     let modEnt = addJsExtensionIfNecessary(entry)
 
-
     let entryFile = fs.readFileSync(modEnt).toString()
 
     if(!isLibrary){
@@ -73,11 +73,11 @@ export default function GenerateGraph(entry:string): VortexGraph {
     let entryAst = Babel.parse(entryFile,{"sourceType":'module'})
 
     addEntryToQueue(new QueueEntry(entry,entryAst))
-
     GraphDepsAndModsForCurrentFile(loadEntryFromQueue(modEnt),Graph);
     loadedFilesCache.push(entry)
     
     for (let dep of Graph.Star){
+        console.log(dep)
         let str = './'
         if (loadedFilesCache.includes(dep.name) == false){
             if (dep.name.includes(str) == true) {
@@ -86,7 +86,15 @@ export default function GenerateGraph(entry:string): VortexGraph {
                     GraphDepsAndModsForCurrentFile(loadEntryFromQueue(modName),Graph)
                 }
                 else{
-                    let ent = new QueueEntry(modName,Babel.parse(fs.readFileSync(modName).toString()))
+                    let file = fs.readFileSync(modName).toString()
+
+                    if(!isLibrary){
+                        file = transformSync(file,BabelSettings).code
+                    }
+
+                    let entryAst = Babel.parse(file,{"sourceType":'module'})
+
+                    let ent = new QueueEntry(modName,entryAst)
                     addEntryToQueue(ent)
                     GraphDepsAndModsForCurrentFile(loadEntryFromQueue(ent.name),Graph)
                 }
@@ -100,7 +108,7 @@ export default function GenerateGraph(entry:string): VortexGraph {
                                 GraphDepsAndModsForCurrentFile(dep.libLoc);
                             }
                             else{
-                                let ent = new QueueEntry(dep.libLoc,Babel.parse(fs.readFileSync(dep.libLoc).toString()))
+                                let ent = new QueueEntry(dep.libLoc,Babel.parse(fs.readFileSync(dep.libLoc).toString(),{"sourceType":'module'}))
                                 addEntryToQueue(ent)
                                 GraphDepsAndModsForCurrentFile(loadEntryFromQueue(ent.name),Graph)
                                 

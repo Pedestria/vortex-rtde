@@ -9,6 +9,9 @@ import MDImportLocation from "./MDImportLocation.js";
 import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
 import { isInQueue, loadEntryFromQueue, addEntryToQueue, QueueEntry } from "./GraphGenerator.js";
+import { isLibrary } from "./Main.js";
+import { transformSync } from "@babel/core";
+import { BabelSettings } from "./Options.js";
 //import MDImportLocation from "./MDImportLocation.js";
 
 /**Transports the given dependency to given Graph.
@@ -30,7 +33,11 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
                 Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
             }
             else{
-                addEntryToQueue(new QueueEntry(Dependency.name,Babel.parse(fs.readFileSync(Dependency.name).toString(),{"sourceType":'module'})))
+                let file = fs.readFileSync(Dependency.name).toString()
+                if(!isLibrary){
+                    file = transformSync(file,BabelSettings).code
+                }
+                addEntryToQueue(new QueueEntry(Dependency.name,Babel.parse(file,{"sourceType":'module'})))
                 Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
             }
         }

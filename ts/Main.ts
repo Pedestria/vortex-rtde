@@ -3,27 +3,57 @@ import * as fs from 'fs-extra'
 import * as Babel from '@babel/parser'
 import Compile from './Compiler.js';
 import { stage1, stage2, stage3, finish } from './Log.js';
-import { usingTerser, isLibrary } from './Options.js';
 import * as terser from 'terser'
 import * as path from 'path'
+import Panel = require('../vortex.panel.js')
+import * as chalk from 'chalk';
+import { transformSync } from '@babel/core';
+import { BabelSettings } from './Options';
 //import * as Babel_Core from '@babel/core'
 
+/**
+ * If checked True, then Vortex will bundle with NO debug tools.
+ * If checked False, then Vortex will bundle with debug tools.
+ */
+export var isProduction:boolean;
+/**
+ * If checked true, Vortex will consider your program a library instead of a web application.
+ */
+export var isLibrary:boolean
+/**
+ * If checked true, Terser will be used to minify production bundle. (Can NOT be used on development bundles.) (Labels it Neutron Star)
+ */
+export var usingTerser:boolean = false;
+
+export var useDebug:boolean;
+
 /**Creates a Star or Neutron Star from entry point.
- * 
- * @param {boolean} productionMode 
- * Production/Minified
- * @param {string} entry 
- * Define an entry point for Vortex
- * @param {string} output 
- * Name of output bundle.
+ *  
  */ 
 
-function createStarPackage (productionMode:boolean,entry:string,output:string){
+function createStarPackage (){
 
-    let isProduction:boolean = productionMode;
+    let outputFilename = Panel.output;
 
-    let outputFilename = output
+    if(Panel.bundleMode === 'star'){
+        isProduction = false
+    } else if(Panel.bundleMode === 'neutronstar'){
+        isProduction = true
+    }
 
+    if(Panel.useTerser == true && !isProduction){
+        throw new Error(chalk.redBright('ERROR: Can not use terser on regular star!'))
+    }
+    //Assignment to config from Panel
+
+    usingTerser = Panel.useTerser
+    if(Panel.type === 'app'){
+        isLibrary = false
+    } else if(Panel.type === 'library'){
+        isLibrary = true
+    }
+
+    
     // if (isProduction){
     //     process.env.NODE_ENV = 'production'
     // }
@@ -36,7 +66,7 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
     let yourCredits = fs.readJSONSync('./package.json',{encoding:'utf-8'})
 
     stage1()
-    let Graph = GenerateGraph(entry);
+    let Graph = GenerateGraph(Panel.start);
     console.log(Graph)
     stage2()
     let bundle = Compile(Graph);
@@ -56,21 +86,21 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
             let newFilename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
             fs.ensureDirSync(path.dirname(outputFilename) + '/')
             fs.writeFileSync(newFilename,output)
-            finish()
+            finish(newFilename)
         }
 
         else{
             let credits = `/*STAR*/ \n /*${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
             fs.ensureDirSync(path.dirname(outputFilename) + '/')
             fs.writeFileSync(outputFilename,credits + bundle)
-            finish()
+            finish(outputFilename)
         }
     } 
     else{
         if(usingTerser){
             stage3()
             let credits = `/*NEUTRON-STAR*/ \n /*BUNDLED BY VORTEX*/ \n`
-            let minBundle = terser.minify(bundle,{compress:true,mangle:false}).code
+            let minBundle = terser.minify(bundle,{compress:true,mangle:true}).code
 
             let output = credits + minBundle
 
@@ -78,14 +108,14 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
 
             fs.ensureDirSync(path.dirname(outputFilename) + '/')
             fs.writeFileSync(newFilename,output)
-            finish()
+            finish(newFilename)
         }
         else{
-            let credits = `/*STAR*/ \n /*BUNDLED BY VORTEX*/ \n`
+            let credits = isProduction? `/*NEUTRON-STAR*/ \n /*BUNDLED BY VORTEX*/ \n` : `/*STAR*/ \n /*BUNDLED BY VORTEX*/ \n`
             let finalBundle = credits + bundle;
             fs.ensureDirSync(path.dirname(outputFilename) + '/')
             fs.writeFileSync(outputFilename,finalBundle)
-            finish()
+            finish(outputFilename)
         }
     }
 
@@ -111,4 +141,4 @@ function createStarPackage (productionMode:boolean,entry:string,output:string){
     //console.log(Graph.display());
 }
 
-export {createStarPackage/*vortexExpose*/} 
+createStarPackage()
