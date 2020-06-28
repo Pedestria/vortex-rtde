@@ -77,51 +77,49 @@ export default function GenerateGraph(entry:string): VortexGraph {
     loadedFilesCache.push(entry)
     
     for (let dep of Graph.Star){
-        console.log(dep)
-        let str = './'
-        if (loadedFilesCache.includes(dep.name) == false){
-            if (dep.name.includes(str) == true) {
-                let modName = addJsExtensionIfNecessary(dep.name)
-                if(isInQueue(modName)){
-                    GraphDepsAndModsForCurrentFile(loadEntryFromQueue(modName),Graph)
-                }
-                else{
-                    let file = fs.readFileSync(modName).toString()
+      if(dep instanceof ModuleDependency){
+            let str = './'
+            if (loadedFilesCache.includes(dep.name) == false){
+                if (dep.name.includes(str) == true) {
+                    let modName = addJsExtensionIfNecessary(dep.name)
+                    if(isInQueue(modName)){
+                        GraphDepsAndModsForCurrentFile(loadEntryFromQueue(modName),Graph)
+                    }
+                    else{
+                        let file = fs.readFileSync(modName).toString()
 
-                    if(!isLibrary){
-                        file = transformSync(file,BabelSettings).code
+                        if(!isLibrary){
+                            file = transformSync(file,BabelSettings).code
+                        }
+
+                        let entryAst = Babel.parse(file,{"sourceType":'module'})
+
+                        let ent = new QueueEntry(modName,entryAst)
+                        addEntryToQueue(ent)
+                        GraphDepsAndModsForCurrentFile(loadEntryFromQueue(ent.name),Graph)
                     }
 
-                    let entryAst = Babel.parse(file,{"sourceType":'module'})
-
-                    let ent = new QueueEntry(modName,entryAst)
-                    addEntryToQueue(ent)
-                    GraphDepsAndModsForCurrentFile(loadEntryFromQueue(ent.name),Graph)
+                    loadedFilesCache.push(modName)
                 }
-
-                loadedFilesCache.push(modName)
-            }
-            else{
-                    if(dep instanceof ModuleDependency){
-                        if(!isLibrary){
-                            if(isInQueue(dep.libLoc)){
-                                GraphDepsAndModsForCurrentFile(dep.libLoc);
+                else{
+                        if(dep instanceof ModuleDependency){
+                            if(!isLibrary){
+                                if(isInQueue(dep.libLoc)){
+                                    GraphDepsAndModsForCurrentFile(dep.libLoc);
+                                }
+                                else{
+                                    let ent = new QueueEntry(dep.libLoc,Babel.parse(fs.readFileSync(dep.libLoc).toString(),{"sourceType":'module'}))
+                                    addEntryToQueue(ent)
+                                    GraphDepsAndModsForCurrentFile(loadEntryFromQueue(ent.name),Graph)
+                                    
+                                }
                             }
-                            else{
-                                let ent = new QueueEntry(dep.libLoc,Babel.parse(fs.readFileSync(dep.libLoc).toString(),{"sourceType":'module'}))
-                                addEntryToQueue(ent)
-                                GraphDepsAndModsForCurrentFile(loadEntryFromQueue(ent.name),Graph)
-                                
-                            }
-                        }
-                        loadedFilesCache.push(dep.name)
+                            loadedFilesCache.push(dep.name)
+                    }
                 }
             }
         }
     }
-
-    console.log(loadedFilesCache)
-    console.log(queue)
     //console.log(loadedFilesCache)
         //console.log(loadedFilesCache)
         //console.log(resolveLibBundle("lodash",Graph,false))

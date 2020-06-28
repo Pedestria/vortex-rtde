@@ -1,6 +1,7 @@
 import React, {Component} from 'react'
 import ReactDOM from 'react-dom'
 import { OtherThing } from './Com.jsx'
+import './styles.css'
 
 class MainComponent extends Component{
 

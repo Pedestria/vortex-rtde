@@ -9,6 +9,7 @@ import Panel = require('../vortex.panel.js')
 import * as chalk from 'chalk';
 import { transformSync } from '@babel/core';
 import { BabelSettings } from './Options';
+import { getFileExtension } from './DependencyFactory';
 //import * as Babel_Core from '@babel/core'
 
 /**
@@ -26,6 +27,20 @@ export var isLibrary:boolean
 export var usingTerser:boolean = false;
 
 export var useDebug:boolean;
+
+export var extensions:Array<string> = Panel.extensions
+
+export function isJs(filename:string){
+    let rc
+
+    if(extensions.includes(getFileExtension(filename))){
+        rc = false
+    }
+    else{
+        rc = true
+    }
+    return rc
+}
 
 /**Creates a Star or Neutron Star from entry point.
  *  

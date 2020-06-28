@@ -1,5 +1,5 @@
 Arguments: 
-  C:\Program Files\nodejs\node.exe C:\Users\alex\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js add -D @babe/cli
+  C:\Program Files\nodejs\node.exe C:\Users\alex\AppData\Roaming\npm\node_modules\yarn\bin\yarn.js add @types/babel__types
 
 PATH: 
   C:\Program Files (x86)\Common Files\Oracle\Java\javapath;C:\ProgramData\Oracle\Java\javapath;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files (x86)\Common Files\Acronis\VirtualFile\;C:\Program Files (x86)\Common Files\Acronis\VirtualFile64\;C:\Program Files (x86)\Common Files\Acronis\FileProtector\;C:\Program Files (x86)\Common Files\Acronis\FileProtector64\;C:\Program Files (x86)\Common Files\Acronis\SnapAPI\;C:\Program Files\WorldPainter;C:\Program Files (x86)\GtkSharp\2.12\bin;C:\Program Files\NVIDIA Corporation\NVIDIA NGX;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\NVIDIA Corporation\NVIDIA NvDLISR;C:\Program Files\Git\cmd;C:\Program Files\nodejs\;C:\Program Files\dotnet\;C:\Users\alex\AppData\Local\Microsoft\WindowsApps;C:\Users\alex\AppData\Local\Microsoft\WindowsApps;C:\Users\alex\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\alex\AppData\Local\GitHubDesktop\bin;C:\Users\alex\AppData\Roaming\npm
@@ -14,7 +14,7 @@ Platform:
   win32 x64
 
 Trace: 
-  Error: https://registry.yarnpkg.com/@babe%2fcli: Not found
+  Error: https://registry.yarnpkg.com/@types%2fbabel__types: Not found
       at Request.params.callback [as _callback] (C:\Users\alex\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:66987:18)
       at Request.self.callback (C:\Users\alex\AppData\Roaming\npm\node_modules\yarn\lib\cli.js:140748:22)
       at Request.emit (events.js:315:20)
@@ -37,7 +37,7 @@ npm manifest:
       "cleanup": "prettier --write dep-graph.json",
       "roll": "rollup -c",
       "minify": "terser out/vortex.bundle.js --compress -o out/vortex.min.js",
-      "babel":"babel web --out-dir bin"
+      "babel": "babel test/web --out-dir test/bin"
     },
     "private": true,
     "dependencies": {
@@ -71,7 +71,7 @@ npm manifest:
       "typescript": "^3.9.5"
     },
     "devDependencies": {
-      "@babel/cli": "^7.10.1",
+      "@babel/cli": "^7.10.3",
       "@rollup/plugin-commonjs": "^13.0.0",
       "aws-sdk": "^2.695.0",
       "lodash": "^4.17.15",
@@ -90,10 +90,10 @@ Lockfile:
   # yarn lockfile v1
   
   
-  "@babel/cli@^7.10.1":
-    version "7.10.1"
-    resolved "https://registry.yarnpkg.com/@babel/cli/-/cli-7.10.1.tgz#b6e5cd43a17b8f639442ab027976408ebe6d79a0"
-    integrity sha512-cVB+dXeGhMOqViIaZs3A9OUAe4pKw4SBNdMw6yHJMYR7s4TB+Cei7ThquV/84O19PdIFWuwe03vxxES0BHUm5g==
+  "@babel/cli@^7.10.3":
+    version "7.10.3"
+    resolved "https://registry.yarnpkg.com/@babel/cli/-/cli-7.10.3.tgz#4ea83bd997d2a41c78d07263ada3ec466fb3764b"
+    integrity sha512-lWB3yH5/fWY8pi2Kj5/fA+17guJ9feSBw5DNjTju3/nRi9sXnl1JPh7aKQOSvdNbiDbkzzoGYtsr46M8dGmXDQ==
     dependencies:
       commander "^4.0.1"
       convert-source-map "^1.1.0"

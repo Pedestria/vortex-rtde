@@ -15,6 +15,9 @@ import { BabelSettings} from "./Options.js";
 import {isProduction, isLibrary} from './Main'
 import { queue, loadEntryFromQueue } from "./GraphGenerator.js";
 import * as sourceMap from 'source-map'
+import { CSSDependency } from "./dependencies/CSSDependency.js";
+import ImportLocation from "./ImportLocation.js";
+import { FileImportLocation } from "./FIleImportLocation.js";
 
 function fixDependencyName(name:string){
     let NASTY_CHARS = "\\./@^$#*&!%-"
@@ -677,6 +680,10 @@ function WebAppCompile (Graph:VortexGraph){
                 TransformImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep)
             }
             TransformExportsFromAST(loadEntryFromQueue(dep.name.includes('./') ? dep.name : dep.libLoc).ast,dep)
+        } else if(dep instanceof CSSDependency){
+            for(let impLoc of dep.importLocations){
+                injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+            }
         }
     }
 
@@ -746,6 +753,7 @@ function WebAppCompile (Graph:VortexGraph){
     let factory = `
     //Named Exports For Module
     var loadedModules = [];
+    var loadedStyles = [];
     var loadedExportsByModule = {}; 
     //Shuttle Module Loader
     //Finds exports and returns them under fake namespace.
@@ -758,7 +766,7 @@ function WebAppCompile (Graph:VortexGraph){
         var mod = {
           exports: {}
         };
-        modules[mod_name](shuttle, mod.exports);
+        modules[mod_name](shuttle, mod.exports,loadedStyles);
   
         var o = new Object(mod_name);
         Object.defineProperty(o, 'cachedExports', {
@@ -791,7 +799,7 @@ class Shuttle {
     //[shuttle,_exports_]
 
     addModuleToBuffer(entry:string,evalModule:t.Statement|Array<t.Statement>){
-        let func = t.functionExpression(null,[t.identifier('shuttle'),t.identifier('shuttle_exports')],t.blockStatement(isProduction ? evalModule : [evalModule]),false,false)
+        let func = t.functionExpression(null,[t.identifier('shuttle'),t.identifier('shuttle_exports'),t.identifier('gLOBAL_STYLES')],t.blockStatement(isProduction ? evalModule : [evalModule]),false,false)
         this.buffer.properties.push(t.objectProperty(t.stringLiteral(entry),t.callExpression(t.identifier(''),[func])))
     }
 
@@ -1041,4 +1049,21 @@ function stripNodeProcess(ast:t.File){
             }
         }
     })
+}
+
+const CSSInjector = template("if(!gLOBAL_STYLES.includes(DEPNAME)){var style = document.createElement('style'); style.innerHTML=CSS;document.head.appendChild(style);gLOBAL_STYLES.push(DEPNAME)}")
+
+
+function injectCSSDependencyIntoAST(ast:t.File,dep:CSSDependency,currentImpLoc:FileImportLocation){
+    traverse(ast,{
+        ImportDeclaration: function(path){
+            if(path.node.source.value === currentImpLoc.relativePathToDep){
+                path.remove()
+            }
+        }
+    })
+
+    let style = CSSInjector({DEPNAME:t.stringLiteral(dep.name),CSS:t.stringLiteral(dep.stylesheet)})
+    ast.program.body.push(style)
+
 }

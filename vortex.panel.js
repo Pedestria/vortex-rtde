@@ -4,6 +4,7 @@ module.exports = {
     bundleMode:'star',
     useTerser:false,
     start:'./test/web/Main.jsx',
-    output:'./out/bundle.js'
+    output:'./out/bundle.js',
+    extensions: ['.css','.png']
 
 }

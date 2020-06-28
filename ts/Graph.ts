@@ -34,7 +34,7 @@ export class VortexGraph {
     }
 
     /**
-     * Checks to see if dependency has already been added to Graph. (Type sensitive!!) 
+     * Checks to see if dependency has already been added to Graph. __Type sensitive!!__ 
      * @param {Dependency} Dependency Dependency to check for 
      * @returns {boolean} True or False
      */
@@ -54,8 +54,12 @@ export class VortexGraph {
      */
     update(newDependency:Dependency){
         for (let dep of this.Star){
-            if(newDependency instanceof ModuleDependency && dep instanceof ModuleDependency){
-                ModuleDependencyUpdater(newDependency,dep)
+            if(dep.name == newDependency.name) {
+                for(let newImpLoc of newDependency.importLocations){
+                    if(dep.testForImportLocation(newImpLoc.name) == false){
+                        dep.importLocations.push(newImpLoc)
+                    }
+                }
             }
         }
     }
@@ -65,25 +69,4 @@ export class VortexGraph {
         this.Star.splice(index)
     }
 
-}
-
-/**
- * The Updater for Module Dependencies
- * @param {ModuleDependency} newDependency The __New__ Dependency 
- * @param {ModuleDependency} dep The Dependency to cross check
- */
-
-function ModuleDependencyUpdater(newDependency:ModuleDependency,dep:ModuleDependency){
-    if(dep.name == newDependency.name) {
-        // for(let newMod of newDependency.acquiredModules){
-        //     if(dep.testForModule(newMod) == false){
-        //         dep.acquiredModules.push(newMod)
-        //     }
-        // }
-        for(let newImpLoc of newDependency.importLocations){
-            if(dep.testForImportLocation(newImpLoc.name) == false){
-                dep.importLocations.push(newImpLoc)
-            }
-        }
-    }
 }
