@@ -52,7 +52,7 @@ export class QueueEntry {
  * 
  */
 
-export default function GenerateGraph(entry:string): VortexGraph {
+export default async function GenerateGraph(entry:string): Promise<VortexGraph> {
 
     const node_modules:string = 'node_modules'
 
@@ -128,7 +128,6 @@ export default function GenerateGraph(entry:string): VortexGraph {
         //console.log(LocalizedResolve('./test/baha.js','../pooper/colop/mama.js'))
         return Graph
 }
-
 
 function GraphDepsAndModsForCurrentFile(entry:QueueEntry,Graph:VortexGraph){
     EsModuleGrapher.SearchAndGraph(entry,Graph)

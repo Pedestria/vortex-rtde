@@ -26,29 +26,28 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
     let str = './'
 
     if(Dependency instanceof ModuleDependency){
-
-        if (Dependency.name.includes(str)){
-            //If local file, then resolve it to root dir.
-            Dependency.updateName(LocalizedResolve(CurrentFile,addJsExtensionIfNecessary(Dependency.name)))
-            if(Dependency instanceof EsModuleDependency || Dependency instanceof CjsModuleDependency){
-                if(isInQueue(Dependency.name)){
-                    Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
-                }
-                else{
-                    let file = fs.readFileSync(Dependency.name).toString()
-                    if(!isLibrary){
-                        file = transformSync(file,BabelSettings).code
+            if (Dependency.name.includes(str)){
+                //If local file, then resolve it to root dir.
+                Dependency.updateName(LocalizedResolve(CurrentFile,addJsExtensionIfNecessary(Dependency.name)))
+                    if(Dependency instanceof EsModuleDependency || Dependency instanceof CjsModuleDependency){
+                        if(isInQueue(Dependency.name)){
+                            Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
+                        }
+                        else{
+                            let file = fs.readFileSync(Dependency.name).toString()
+                            if(!isLibrary){
+                                file = transformSync(file,BabelSettings).code
+                            }
+                            addEntryToQueue(new QueueEntry(Dependency.name,Babel.parse(file,{"sourceType":'module'})))
+                            Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
+                        }
                     }
-                    addEntryToQueue(new QueueEntry(Dependency.name,Babel.parse(file,{"sourceType":'module'})))
-                    Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
+            }
+            else{
+                // Else Find library bundle location
+                if(Dependency instanceof ModuleDependency){
+                    Dependency.libLoc = resolveLibBundle(Dependency.name)
                 }
-            }
-        }
-        else{
-            // Else Find library bundle location
-            if(Dependency instanceof ModuleDependency){
-                Dependency.libLoc = resolveLibBundle(Dependency.name)
-            }
         }
     }
 

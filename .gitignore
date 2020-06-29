@@ -1,11 +1,1 @@
-node_modules/
-
-lib/
-
-cache/
-
-test/vortex/
-
-out/
-
-
+node_modules

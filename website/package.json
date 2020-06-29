@@ -1,0 +1,25 @@
+{
+  "name": "vortex-web",
+  "version": "0.0.0",
+  "main": "index.js",
+  "author": "Alex Topper",
+  "license": "MIT",
+  "private": true,
+  "devDependencies": {
+    "@babel/core": "^7.10.3",
+    "@babel/generator": "^7.10.3",
+    "@babel/parser": "^7.10.3",
+    "@babel/traverse": "^7.10.3",
+    "@babel/types": "^7.10.3",
+    "chalk": "^4.1.0",
+    "cli-spinners": "^2.3.0",
+    "fs-extra": "^9.0.1",
+    "ora": "^4.0.4",
+    "resolve": "^1.17.0",
+    "terser": "^4.8.0"
+  },
+  "dependencies": {
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1"
+  }
+}

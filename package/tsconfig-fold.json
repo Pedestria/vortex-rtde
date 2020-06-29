@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "outDir": "./test/vortex/",
+        "module": "es6",
+        "noImplicitAny": true,
+        "target": "esnext",
+    },
+    "include": [
+        "ts/**/*"
+    ],
+    "exclude": [
+        "node_modules"
+    ]
+
+}

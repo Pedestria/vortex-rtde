@@ -17,7 +17,8 @@ import { queue, loadEntryFromQueue } from "./GraphGenerator.js";
 import * as sourceMap from 'source-map'
 import { CSSDependency } from "./dependencies/CSSDependency.js";
 import ImportLocation from "./ImportLocation.js";
-import { FileImportLocation } from "./FIleImportLocation.js";
+import { FileImportLocation } from "./FileImportLocation.js";
+import chalk = require("chalk");
 
 function fixDependencyName(name:string){
     let NASTY_CHARS = "\\./@^$#*&!%-"
@@ -48,7 +49,7 @@ function fixDependencyName(name:string){
  * Creates a Star depending on the global config
  * @param {VortexGraph} Graph The Dependency Graph created by the Graph Generator 
  */
-export default function Compile(Graph:VortexGraph){
+export default async function Compile(Graph:VortexGraph){
 
     let finalBundle
 
@@ -115,21 +116,23 @@ function LibCompile(Graph:VortexGraph){
                     }
                 }
             }
-            if(libB.isInQueue(dep.name)){
-                if(dep.importLocations[0].modules[0].type === ModuleTypes.EsNamespaceProvider){
-                    convertToNamespace(libB.loadEntryFromQueue(dep.name).ast,dep.importLocations[0])
-                }
-                removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep,libB)
-            }
-            else{
-                //Libraries are skipped completely in Lib Bundle
-                if(dep.name.includes('./')){
-                    let filename = fs.readFileSync(dep.name).toString()
-                    libB.addEntryToQueue(new BundleEntry(dep.name,Babel.parse(filename,{"sourceType":'module'})))
+            if(dep.outBundle !== true){
+                if(libB.isInQueue(dep.name)){
                     if(dep.importLocations[0].modules[0].type === ModuleTypes.EsNamespaceProvider){
                         convertToNamespace(libB.loadEntryFromQueue(dep.name).ast,dep.importLocations[0])
                     }
                     removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep,libB)
+                }
+                else{
+                    //Libraries are skipped completely in Lib Bundle
+                    if(dep.name.includes('./')){
+                        let filename = fs.readFileSync(dep.name).toString()
+                        libB.addEntryToQueue(new BundleEntry(dep.name,Babel.parse(filename,{"sourceType":'module'})))
+                        if(dep.importLocations[0].modules[0].type === ModuleTypes.EsNamespaceProvider){
+                            convertToNamespace(libB.loadEntryFromQueue(dep.name).ast,dep.importLocations[0])
+                        }
+                        removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep,libB)
+                    }
                 }
             }
         }
@@ -296,9 +299,24 @@ function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDepen
         traverse(ast,{ 
             ImportDeclaration: function(path) {
                 //Removes imports regardless if dep is lib or local file.
-                if(path.node.source.value === impLoc.relativePathToDep){
-                    path.remove()
-                }
+                //console.log(impLoc.relativePathToDep)
+                // if(path.node.trailingComments === undefined){
+                    if(path.node.source.value === impLoc.relativePathToDep){
+                        path.remove()
+                    }
+                // }      //Vortex retain feature
+                // else if(path.node.trailingComments[0].value === 'vortexRetain' && dep.outBundle === true){
+                //     if(dep.name.includes('./')){
+                //         libBund.addEntryToLibs(dep.name,impLoc.relativePathToDep);
+                //         path.remove()
+                //     }else{
+                //         throw new Error(chalk.redBright(`SyntaxError: Cannot use "vortexRetain" keyword on libraries. Line:${impLoc.line} File:${impLoc.name}`))
+                //     }
+                // } else if(path.node.trailingComments[0].value !== 'vortexRetain') {
+                //     if(path.node.source.value === impLoc.relativePathToDep){
+                //         path.remove()
+                //     }
+                // }
             },
             // MemberExpression: function(path) {
             //     //Visits if dep is NOT a lib but is a EsNamespaceProvider
@@ -1058,12 +1076,9 @@ function injectCSSDependencyIntoAST(ast:t.File,dep:CSSDependency,currentImpLoc:F
     traverse(ast,{
         ImportDeclaration: function(path){
             if(path.node.source.value === currentImpLoc.relativePathToDep){
-                path.remove()
+                path.replaceWith(CSSInjector({DEPNAME:t.stringLiteral(dep.name),CSS:t.stringLiteral(dep.stylesheet)}))
             }
         }
     })
-
-    let style = CSSInjector({DEPNAME:t.stringLiteral(dep.name),CSS:t.stringLiteral(dep.stylesheet)})
-    ast.program.body.push(style)
 
 }

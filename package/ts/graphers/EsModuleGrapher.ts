@@ -12,8 +12,7 @@ import { exportDefaultSpecifier } from "@babel/types";
 import { resolveDependencyType } from "../DependencyFactory.js";
 import ImportLocation from "../ImportLocation.js";
 import { isJs } from "../Main.js";
-import { strict } from "assert";
-import { FileImportLocation } from "../FIleImportLocation.js";
+import { FileImportLocation } from "../FileImportLocation.js";
 
 /**Searchs and Graphs JS code for ECMAScript Module Dependencies
  * 
@@ -49,7 +48,13 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
                 }
                 //console.log(modules)
                 let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.source.value)
-                Transport(new EsModuleDependency(path.node.source.value,currentImpLoc),Graph,entry.name,currentImpLoc)
+                let dep = new EsModuleDependency(path.node.source.value,currentImpLoc)
+                // if(path.node.trailingComments !== undefined){
+                //     if(path.node.trailingComments[0].value === 'vortexRetain'){
+                //         dep.outBundle = true
+                //     }
+                // }
+                Transport(dep,Graph,entry.name,currentImpLoc)
 
         } else{
             //For Non-Module Dependencies.
