@@ -78,6 +78,7 @@ export default async function GenerateGraph(entry:string): Promise<VortexGraph> 
     
     for (let dep of Graph.Star){
       if(dep instanceof ModuleDependency){
+          if(dep.outBundle !== true){
             let str = './'
             if (loadedFilesCache.includes(dep.name) == false){
                 if (dep.name.includes(str) == true) {
@@ -115,6 +116,7 @@ export default async function GenerateGraph(entry:string): Promise<VortexGraph> 
                                 }
                             }
                             loadedFilesCache.push(dep.name)
+                        }
                     }
                 }
             }

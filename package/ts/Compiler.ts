@@ -138,7 +138,8 @@ function LibCompile(Graph:VortexGraph){
         }
     }
 
-    //console.log(libB.queue)
+
+    console.log(libB.queue)
     let finalAr = libB.queue.reverse()
     finalBundle += `/*NODE_REQUIRES*/ \n`
     finalBundle += libB.libs.join('\n')
@@ -300,23 +301,23 @@ function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDepen
             ImportDeclaration: function(path) {
                 //Removes imports regardless if dep is lib or local file.
                 //console.log(impLoc.relativePathToDep)
-                // if(path.node.trailingComments === undefined){
+                if(path.node.trailingComments === undefined){
                     if(path.node.source.value === impLoc.relativePathToDep){
                         path.remove()
                     }
-                // }      //Vortex retain feature
-                // else if(path.node.trailingComments[0].value === 'vortexRetain' && dep.outBundle === true){
-                //     if(dep.name.includes('./')){
-                //         libBund.addEntryToLibs(dep.name,impLoc.relativePathToDep);
-                //         path.remove()
-                //     }else{
-                //         throw new Error(chalk.redBright(`SyntaxError: Cannot use "vortexRetain" keyword on libraries. Line:${impLoc.line} File:${impLoc.name}`))
-                //     }
-                // } else if(path.node.trailingComments[0].value !== 'vortexRetain') {
-                //     if(path.node.source.value === impLoc.relativePathToDep){
-                //         path.remove()
-                //     }
-                // }
+                }      //Vortex retain feature
+                else if(path.node.trailingComments[0].value === 'vortexRetain' && dep.outBundle === true){
+                    if(dep.name.includes('./')){
+                        libBund.addEntryToLibs(impLoc.relativePathToDep,impLoc.modules[0].name);
+                        path.remove()
+                    }else{
+                        throw new Error(chalk.redBright(`SyntaxError: Cannot use "vortexRetain" keyword on libraries. Line:${impLoc.line} File:${impLoc.name}`))
+                    }
+                } else if(path.node.trailingComments[0].value !== 'vortexRetain') {
+                    if(path.node.source.value === impLoc.relativePathToDep){
+                        path.remove()
+                    }
+                }
             },
             // MemberExpression: function(path) {
             //     //Visits if dep is NOT a lib but is a EsNamespaceProvider

@@ -13,3 +13,24 @@
 - Build Interpreter For Browser(To interpret Star created by Compiler. Not used in production/neutron-star mode)
 
 - Build LiveUpdate mechanism. (Can push as little as a few lines to Star or can push whole new libraries or divisions of code.)
+
+- Build docs webpage.
+
+## Bundler Key Syntax Words (Only for library mode):
+
+### vortexExpose
+
+```javascript
+export {exampleFunc} /*vortexExpose*/
+``` 
+
+Vortex will expose export so other JS file can accsess it.
+
+### vortexRetain
+
+```javascript
+Import Example from './example.js' /*vortexRetain*/
+```
+
+Vortex will outsource the import and will NOT include it in the bundle.
+

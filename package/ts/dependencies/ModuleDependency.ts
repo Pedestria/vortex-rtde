@@ -12,11 +12,11 @@ export default class ModuleDependency extends Dependency {
 
     acquiredModules:Array<Module>
     libLoc:string|Array<string>
-    //outBundle:boolean
+    outBundle:boolean
 
     constructor(name:string,initImportLocation?:MDImportLocation){
         super(name,initImportLocation)
-        //this.outBundle = false
+        this.outBundle = false
         //this.acquiredModules = acquiredModules
     }
 

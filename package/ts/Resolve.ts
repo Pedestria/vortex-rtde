@@ -40,7 +40,7 @@ export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:st
 export function resolveLibBundle(nodeLibName:string){
     //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
     let minified = new RegExp('min')
-    let STD_NODE_LIBS = ['path','fs','module']
+    let STD_NODE_LIBS = ['path','fs','module','os']
 
     if(STD_NODE_LIBS.includes(nodeLibName)){
         return 'node.js'

@@ -5,13 +5,14 @@ import Compile from './Compiler.js';
 import { stage1, stage2, stage3, finish } from './Log.js';
 import * as terser from 'terser'
 import * as path from 'path'
-import Panel = require('../vortex.panel.js') /*vortexRetain*/ 
+import * as Panel from '../vortex.panel.js'/*vortexRetain*/ 
 import * as chalk from 'chalk';
 import { transformSync } from '@babel/core';
 import { BabelSettings } from './Options';
 import { getFileExtension } from './DependencyFactory';
 import * as cliSpinners from 'cli-spinners'
 import * as ora from 'ora'
+import * as os from 'os'
 //import * as Babel_Core from '@babel/core'
 
 /**
@@ -49,6 +50,12 @@ export function isJs(filename:string){
  */ 
 
 function createStarPackage (){
+
+    let entry = Panel.start
+
+    if(os.platform() === 'win32'){
+        entry = amendEntryPoint(Panel.start)
+    }
 
     const spinner2 = ora('1. Opening the Portal')
     const spinner3 = ora('2. Vortex Commencing')
@@ -90,7 +97,7 @@ function createStarPackage (){
 
     spinner2.spinner = cliSpinners.arc;
     spinner2.start()
-    GenerateGraph(Panel.start).then(graph => {
+    GenerateGraph(entry).then(graph => {
         spinner2.succeed()
         spinner3.start()
         return Compile(graph)
@@ -188,3 +195,16 @@ async function regularPackage(outputFilename:string,yourCredits,bundle:string){
 }
 
 createStarPackage();
+
+function amendEntryPoint(entry:string){
+
+    let shortEntry = entry.slice(2)
+
+    while(shortEntry.includes('/')){
+        let i = shortEntry.indexOf('/')
+        let a = shortEntry.slice(0,i)
+        let b = shortEntry.slice(i+1)
+        shortEntry = `${a}\\${b}`
+    }
+    return `./${shortEntry}`
+}

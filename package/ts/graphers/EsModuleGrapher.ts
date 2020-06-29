@@ -49,11 +49,11 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
                 //console.log(modules)
                 let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.source.value)
                 let dep = new EsModuleDependency(path.node.source.value,currentImpLoc)
-                // if(path.node.trailingComments !== undefined){
-                //     if(path.node.trailingComments[0].value === 'vortexRetain'){
-                //         dep.outBundle = true
-                //     }
-                // }
+                if(path.node.trailingComments !== undefined){
+                    if(path.node.trailingComments[0].value === 'vortexRetain'){
+                        dep.outBundle = true
+                    }
+                }
                 Transport(dep,Graph,entry.name,currentImpLoc)
 
         } else{

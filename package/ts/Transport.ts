@@ -26,6 +26,7 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
     let str = './'
 
     if(Dependency instanceof ModuleDependency){
+        if(Dependency.outBundle !== true){
             if (Dependency.name.includes(str)){
                 //If local file, then resolve it to root dir.
                 Dependency.updateName(LocalizedResolve(CurrentFile,addJsExtensionIfNecessary(Dependency.name)))
@@ -48,6 +49,7 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
                 if(Dependency instanceof ModuleDependency){
                     Dependency.libLoc = resolveLibBundle(Dependency.name)
                 }
+            } 
         }
     }
 

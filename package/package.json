@@ -1,9 +1,9 @@
 {
   "name": "Vortex_RTDE",
-  "version": "0.0.3",
+  "version": "0.4.1",
   "author": "Alex Topper",
   "license": "MIT",
-  "description": "The LiveUpdate Bundler For ALL Purposes.",
+  "description": "A real time web application/js library development environment.",
   "scripts": {
     "cleanup": "prettier --write dep-graph.json",
     "roll": "rollup -c",
