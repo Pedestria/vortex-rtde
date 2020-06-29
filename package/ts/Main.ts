@@ -49,7 +49,7 @@ export function isJs(filename:string){
  *  
  */ 
 
-function createStarPackage (){
+async function createStarPackage (){
 
     let entry = Panel.start
 
@@ -97,29 +97,24 @@ function createStarPackage (){
 
     spinner2.spinner = cliSpinners.arc;
     spinner2.start()
-    GenerateGraph(entry).then(graph => {
-        spinner2.succeed()
-        spinner3.start()
-        return Compile(graph)
-    }).then(bundle => {
-        if(usingTerser){
-            spinner3.succeed()
-            spinner4.start()
-            return terserPackage(outputFilename,yourCredits,bundle)
+    let Graph = await GenerateGraph(entry)
+    spinner2.succeed();
+    spinner3.start();
+    let bundle = await Compile(Graph)
+    let filename
+    if(usingTerser){
+        spinner3.succeed();
+        spinner4.start();
+        filename = terserPackage(outputFilename,yourCredits,bundle);
+        console.log(chalk.yellowBright(`Successfully Created Neutron Star! (${await filename})`))
+    }
+    else{
+        spinner3.succeed();
+        filename = regularPackage(outputFilename,yourCredits,bundle);
+        console.log(chalk.redBright(`Successfully Created Star (${await filename})`))
 
-        }else{
-            return regularPackage(outputFilename,yourCredits,bundle)
-        }
-    }).then(filename => {
-        if(usingTerser){
-            spinner4.succeed()
-            console.log(chalk.bold.yellowBright(`Successfully Created Neutron Star! (${filename})`))
-        }else{
-            spinner3.succeed()
-            console.log(chalk.bold.redBright(`Successfully Created Star! (${filename})`))
-        }
-        process.exit()
-    })
+    }
+    
 }
 
 

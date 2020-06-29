@@ -1,10 +1,10 @@
 module.exports = {
 
-    type:'library',
+    type:'app',
     bundleMode:'star',
     useTerser:false,
-    start:'./test/vortex/Main.js',
-    output:'./out/vortex.js',
+    start:'./test/web/Main.jsx',
+    output:'./out/bundle.js',
     extensions: ['.css','.png']
 
 }
