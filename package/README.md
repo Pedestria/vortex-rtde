@@ -1,6 +1,6 @@
 # V0RTEX 
 
-## (Getting closer to a RTDE(Real Time Development Environment), but is now OFFICIAL a Js Bundler)
+## (Getting closer to a RTDE(Real Time Development Environment), but is now OFFICIALLY a JS Bundler)
 
 ## Checklist:
 
@@ -24,7 +24,7 @@
 export {exampleFunc} /*vortexExpose*/
 ``` 
 
-Vortex will expose export so other JS file can accsess it.
+Vortex will expose export so other JS files can access it.
 
 ### vortexRetain
 
