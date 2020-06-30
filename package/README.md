@@ -29,7 +29,7 @@ Vortex will expose export so other JS files can access it.
 ### vortexRetain
 
 ```javascript
-Import Example from './example.js' /*vortexRetain*/
+import Example from './example.js' /*vortexRetain*/
 ```
 
 Vortex will outsource the import and will NOT include it in the bundle.
