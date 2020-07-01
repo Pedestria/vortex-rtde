@@ -1,6 +1,12 @@
+@font-face {
+    font-family: Avenir;
+    src: url('./fonts/AvenirLTStd-Medium.otf') format(otf);
+}
+
 h1{
     font-size: larger;
     color: blue;
+    font-family: Avenir;
 }
 
 body{
@@ -10,4 +16,5 @@ body{
 h2{
     color: yellow;
     font-size: 50px;
+    font-family: Avenir;
 }

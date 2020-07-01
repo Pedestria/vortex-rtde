@@ -29,6 +29,8 @@ export var isLibrary:boolean
  */
 export var usingTerser:boolean = false;
 
+export var outputFile:string = Panel.output
+
 export var useDebug:boolean;
 
 export var extensions:Array<string> = Panel.extensions

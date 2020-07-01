@@ -12,13 +12,17 @@ import Module from './Module'
 import ModuleDependency from "./dependencies/ModuleDependency.js";
 import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
 import { BabelSettings} from "./Options.js";
-import {isProduction, isLibrary, amendEntryPoint} from './Main'
+import {isProduction, isLibrary, amendEntryPoint, outputFile} from './Main'
 import { queue, loadEntryFromQueue } from "./GraphGenerator.js";
 import * as sourceMap from 'source-map'
 import { CSSDependency } from "./dependencies/CSSDependency.js";
 import ImportLocation from "./ImportLocation.js";
 import { FileImportLocation } from "./FileImportLocation.js";
 import chalk = require("chalk");
+import { VortexError, VortexErrorType } from "./VortexError.js";
+import { FileDependency } from "./dependencies/FileDependency.js";
+import { LocalizedResolve } from "./Resolve.js";
+import * as path from 'path'
 
 function fixDependencyName(name:string){
     let NASTY_CHARS = "\\./@^$#*&!%-"
@@ -49,7 +53,7 @@ function fixDependencyName(name:string){
  * Creates a Star depending on the global config
  * @param {VortexGraph} Graph The Dependency Graph created by the Graph Generator 
  */
-export default async function Compile(Graph:VortexGraph){
+export default async function Compile(Graph:VortexGraph): Promise<string>{
 
     let finalBundle
 
@@ -311,7 +315,7 @@ function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDepen
                         libBund.addEntryToLibs(impLoc.relativePathToDep,impLoc.modules[0].name);
                         path.remove()
                     }else{
-                        throw new Error(chalk.redBright(`SyntaxError: Cannot use "vortexRetain" keyword on libraries. Line:${impLoc.line} File:${impLoc.name}`))
+                        throw new VortexError(`Cannot use "vortexRetain" keyword on libraries. Line:${impLoc.line} File:${impLoc.name}`,VortexErrorType.StarSyntaxError)
                     }
                 } else if(path.node.trailingComments[0].value !== 'vortexRetain') {
                     if(path.node.source.value === impLoc.relativePathToDep){
@@ -694,6 +698,10 @@ function WebAppCompile (Graph:VortexGraph){
 
    //Transforms exports and Imports on all parsed Queue entries.
 
+   var assetsFolder = './assets'
+
+   var dir = LocalizedResolve(outputFile,assetsFolder)
+
     for(let dep of Graph.Star){
         if(dep instanceof ModuleDependency){
             for(let impLoc of dep.importLocations){
@@ -703,6 +711,14 @@ function WebAppCompile (Graph:VortexGraph){
         } else if(dep instanceof CSSDependency){
             for(let impLoc of dep.importLocations){
                 injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+            }
+        } else if(dep instanceof FileDependency){
+            let newName = `${dir}/${path.basename(dep.name)}`
+            let localNewName = `${assetsFolder}/${path.basename(dep.name)}`
+            fs.ensureDirSync(dir)
+            fs.copyFileSync(dep.name,newName)
+            for(let impLoc of dep.importLocations){
+                resolveFileDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc,localNewName)
             }
         }
     }
@@ -1076,6 +1092,12 @@ function stripNodeProcess(ast:t.File){
 
 const CSSInjector = template("if(!gLOBAL_STYLES.includes(DEPNAME)){var style = document.createElement('style'); style.innerHTML=CSS;document.head.appendChild(style);gLOBAL_STYLES.push(DEPNAME)}")
 
+/**Injects CSS into import location
+ * 
+ * @param {t.File} ast Abstract Syntax Tree (ESTree Format)
+ * @param {CSSDependency} dep CSS Dependency
+ * @param {FileImportLocation} currentImpLoc CUrrent File Import Location
+ */
 
 function injectCSSDependencyIntoAST(ast:t.File,dep:CSSDependency,currentImpLoc:FileImportLocation){
     traverse(ast,{
@@ -1085,5 +1107,17 @@ function injectCSSDependencyIntoAST(ast:t.File,dep:CSSDependency,currentImpLoc:F
             }
         }
     })
-
 }
+
+
+function resolveFileDependencyIntoAST(ast:t.File,dep:FileDependency,currentImpLoc:FileImportLocation,newFileName:string){
+
+    traverse(ast,{
+        ImportDeclaration: function(path){
+            if(path.node.source.value === currentImpLoc.relativePathToDep){
+                path.replaceWith(t.variableDeclaration('var',[t.variableDeclarator(t.identifier(currentImpLoc.localName),t.stringLiteral(newFileName))]))
+            }
+        }
+    })
+}
+

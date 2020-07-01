@@ -9,14 +9,14 @@ export default class Module {
     /**
      * Type of Module 
      */
-    type:number
+    type:ModuleTypes
     /**
      * 
      * @param {string} name Name of Module
      * @param {ModuleTypes} type Type of Module
      */
 
-    constructor(name:string,type:number)
+    constructor(name:string,type:ModuleTypes)
     {
         this.name = name
         this.type = type
