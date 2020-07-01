@@ -97,7 +97,7 @@ async function createStarPackage (){
 
     spinner2.spinner = cliSpinners.arc;
     spinner2.start()
-    let Graph = await GenerateGraph(entry)
+    let Graph = await GenerateGraph(entry,os.platform() === 'win32'? amendEntryPoint2(Panel.start) : Panel.start)
     spinner2.succeed();
     spinner3.start();
     let bundle = await Compile(Graph)
@@ -106,6 +106,7 @@ async function createStarPackage (){
         spinner3.succeed();
         spinner4.start();
         filename = terserPackage(outputFilename,yourCredits,bundle);
+        spinner4.succeed();
         console.log(chalk.yellowBright(`Successfully Created Neutron Star! (${await filename})`))
     }
     else{
@@ -200,6 +201,19 @@ function amendEntryPoint(entry:string){
         let a = shortEntry.slice(0,i)
         let b = shortEntry.slice(i+1)
         shortEntry = `${a}\\${b}`
+    }
+    return `./${shortEntry}`
+}
+
+function amendEntryPoint2(entry:string){
+
+    let shortEntry = entry.slice(2)
+
+    while(shortEntry.includes('/')){
+        let i = shortEntry.indexOf('/')
+        let a = shortEntry.slice(0,i)
+        let b = shortEntry.slice(i+1)
+        shortEntry = `${a}\\\\${b}`
     }
     return `./${shortEntry}`
 }

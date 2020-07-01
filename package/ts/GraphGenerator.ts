@@ -52,13 +52,15 @@ export class QueueEntry {
  * 
  */
 
-export default async function GenerateGraph(entry:string): Promise<VortexGraph> {
+export default async function GenerateGraph(entry:string,modEntry:string): Promise<VortexGraph> {
 
     const node_modules:string = 'node_modules'
 
     //let resolvedEntry = path.resolve(entry)
 
     let Graph = new VortexGraph(entry)
+
+    Graph.shuttleEntry = modEntry;
     
     let loadedFilesCache:Array<string> = []
 

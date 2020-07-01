@@ -11,6 +11,7 @@ export class VortexGraph {
      * The starting file
      */
         entryPoint:string
+        shuttleEntry:string
     /**
      * List of ALL Dependencys for app/library
      */

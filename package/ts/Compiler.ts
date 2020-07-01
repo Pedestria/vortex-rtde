@@ -12,7 +12,7 @@ import Module from './Module'
 import ModuleDependency from "./dependencies/ModuleDependency.js";
 import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
 import { BabelSettings} from "./Options.js";
-import {isProduction, isLibrary} from './Main'
+import {isProduction, isLibrary, amendEntryPoint} from './Main'
 import { queue, loadEntryFromQueue } from "./GraphGenerator.js";
 import * as sourceMap from 'source-map'
 import { CSSDependency } from "./dependencies/CSSDependency.js";
@@ -679,6 +679,7 @@ function getExposures(exportNode:t.ExportNamedDeclaration){
 //
 //
 
+
 const ModuleEvalTemplate = template('eval(CODE)')
 
 /**
@@ -769,6 +770,9 @@ function WebAppCompile (Graph:VortexGraph){
      * Factory Shuttle Module Loader (Vortex's Official Module Loader for the browser!)
      */
 
+
+
+
     let factory = `
     //Named Exports For Module
     var loadedModules = [];
@@ -802,7 +806,7 @@ function WebAppCompile (Graph:VortexGraph){
     //Calls EntryPoint to Initialize
   
   
-    return shuttle('${Graph.entryPoint}');`
+    return shuttle("${Graph.shuttleEntry}");`
 
     let parsedFactory = Babel.parse(factory,{allowReturnOutsideFunction:true}).program.body
 

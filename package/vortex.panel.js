@@ -1,10 +1,10 @@
 module.exports = {
 
     type:'app',
-    bundleMode:'star',
-    useTerser:false,
+    bundleMode:'neutronstar',
+    useTerser:true,
     start:'./test/web/Main.jsx',
-    output:'./out/bundle.js',
+    output:'./out/birdbundle.js',
     extensions: ['.css','.png']
 
 }
