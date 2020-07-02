@@ -1,33 +1,108 @@
 (function(modules){
-    //Named Exports For Module
-    var shuttle_exports = {}
-    //Default Export For Module
-    var shuttle_default = {}
+  var loadedModules = [];
+  var loadedStyles = [];
+  var loadedExportsByModule = {}; 
 
-    //Shuttle (New Module Definition)
-    //Finds exports and returns them under fake namespace.
-    function shuttle(mod_name){
-        var namespace = {
-            named:{},
-            default:{}
-        }
-        modules[mod_name](shuttle,namespace.named = shuttle_exports,namespace.default = shuttle_default)
-        return namespace
+  var loadedPlanets = [];
+
+  var local_modules = modules
+  
+  //Shuttle Module Loader
+  //Finds exports and returns them under fake namespace.
+
+  function shuttle(mod_name) {
+
+    //If module has already been loaded, load the exports that were cached away.
+    if (loadedModules.includes(mod_name)) {
+      return loadedExportsByModule[mod_name].cachedExports;
+    } else {
+      var mod = {
+        exports: {}
+      };
+
+      local_modules[mod_name](shuttle, mod.exports, loadedStyles);
+      var o = new Object(mod_name);
+      Object.defineProperty(o, 'cachedExports', {
+        value: mod.exports,
+        writable: false
+      });
+      Object.defineProperty(loadedExportsByModule, mod_name, {
+        value: o
+      });
+      loadedModules.push(mod_name);
+      return mod.exports;
     }
+  }
 
-    //Calls Entrypoint to Initialize
-    modules["./module2"](shuttle,shuttle_exports,shuttle_default)
+  // SML's version of ES Dynamic Import (Returns entry point module export of planet)
+  
+  shuttle.planet = function(planet_name) {
+
+    return new Promise(function(resolve,reject){
+        if(loadedPlanets.includes(planet_name)){
+            return loadedPlanetEntryExports[planet_name].cachedExports;
+        }
+        else{
+            var planet = document.createElement('script');
+            planet.src = planet_name;
+            document.body.appendChild(planet);
+            planet.addEventListener('load',function(){
+                planetLoaded().then(
+                    function(exports){
+                        resolve(exports)
+                    })
+            },false)
+
+            var entryPoint
+
+            function planetLoaded(){
+                return new Promise(function(resolve,reject){
+                    console.log('Loading from '+planet_name)
+                    shuttle.override(planetmodules)
+                    entryPoint = entry
+                    resolve(shuttle(entryPoint))
+                })
+            }
+
+        }
+    })
+
+      
+  }
+
+  shuttle.override = function(mods){
+      local_modules = mods
+  }
+  
+  
+  
+  //Calls EntryPoint to Initialize
+
+
+  return shuttle("./module2");
 
 }({
-    "./module1": (function(shuttle,shuttle_exports,shuttle_default){
+    "./module1": (function(shuttle,shuttle_exports){
         "use strict"
-        console.log("module1"); function LogMe(){console.log("Named Export Call");};function defCall(name){console.log(name);}; shuttle_exports.LogMe = LogMe; shuttle_default.export = defCall;
+        console.log("module1"); 
+        function LogMe(){console.log("Named Export Call");};
+        function defCall(name){console.log(name);}; 
+        shuttle_exports.LogMe = LogMe; 
+        shuttle_exports.default = defCall; 
+        shuttle.planet('./planet.js').then(function(entry_module){
+            entry_module.welcome()
+        })
     }),
-    "./module2": (function(shuttle,shuttle_exports,shuttle_default){
+    "./module2": (function(shuttle,shuttle_exports){
         "use strict"
-        console.log("module2"); var _module1 = shuttle("./module1"); var _assign = shuttle("object-assign"); console.log(_assign.default.export({foo: 0}, {bar: 1}, undefined,null)); _module1.named.LogMe(); _module1.default.export("Default Export Call With Param");
+        console.log("module2"); 
+        var _module1 = shuttle("./module1"); 
+        var _assign = shuttle("object-assign"); 
+        console.log(_assign.default({foo: 0}, {bar: 1}, undefined,null)); 
+        _module1.LogMe(); 
+        _module1.default("Default Export Call With Param");
     }),
-    "object-assign": (function(shuttle,shuttle_exports,shuttle_default){
+    "object-assign": (function(shuttle,shuttle_exports){
                 /*
         object-assign
         (c) Sindre Sorhus
@@ -92,7 +167,7 @@
             }
         }
 
-        shuttle_default.export = shouldUseNative() ? Object.assign : function (target, source) {
+        shuttle_exports.default = shouldUseNative() ? Object.assign : function (target, source) {
             var from;
             var to = toObject(target);
             var symbols;

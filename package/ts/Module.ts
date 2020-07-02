@@ -45,19 +45,19 @@ export enum ModuleTypes {
     /**
      * Named CommonJS Module
      */
-    CjsModule = 2,
+    CjsModule = 3,
     /**
      * Defualt CommonJs Module
      */
-    CjsDefaultModule = 3,
+    CjsDefaultModule = 4,
     /**
      * Default CommonJS Module Executed on Call. 
      * __(module.exports = () => {--MODULE CODE HERE--})__
      */
-    CjsDefaultFunction = 4,
+    CjsDefaultFunction = 5,
     /**
      * CommonJS Namespace __(const -- = require(--))__
      */
-    CjsNamespaceProvider = 5,
+    CjsNamespaceProvider = 6,
 
 }

@@ -6,6 +6,7 @@ export class QuarkLibTable{
 
     addEntry(entry:QuarkLibEntry){
         this.QuarkLibs.push(entry)
+        return this
     }
 
     findEntryByName(entryName:string){
