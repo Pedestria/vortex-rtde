@@ -4,6 +4,7 @@
         "module": "es6",
         "noImplicitAny": true,
         "target": "esnext",
+        "esModuleInterop": true
     },
     "include": [
         "ts/**/*"

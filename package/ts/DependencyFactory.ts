@@ -6,7 +6,6 @@ import { FileImportLocation } from "./FIleImportLocation"
 import { FileDependency } from "./dependencies/FileDependency"
 import Dependency from "./Dependency"
 import {extensions} from "./Main"
-import * as chalk from 'chalk'
 import { VortexError, VortexErrorType } from "./VortexError"
 
 export function getFileExtension(filename:string){
@@ -35,6 +34,9 @@ export function resolveDependencyType(name:string,initImportLoc:FileImportLocati
             resolvedDependency = new CSSDependency(LocalizedResolve(currentFile,name),initImportLoc,fs.readFileSync(LocalizedResolve(currentFile,name)).toString())       
             break;  
         case '.png'||'.jpeg':
+            resolvedDependency = new FileDependency(LocalizedResolve(currentFile,name),initImportLoc)
+            break;
+        case '.otf'||'.woff'||'.ttf':
             resolvedDependency = new FileDependency(LocalizedResolve(currentFile,name),initImportLoc)
             break;
     }

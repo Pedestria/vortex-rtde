@@ -5,13 +5,15 @@ import Compile from './Compiler.js';
 import { stage1, stage2, stage3, finish } from './Log.js';
 import * as terser from 'terser'
 import * as path from 'path'
-import * as Panel from '../vortex.panel.js'/*vortexRetain*/ 
-import * as chalk from 'chalk';
+
+import Panel from '../vortex.panel.js' /*vortexRetain*/ 
+
+import chalk from 'chalk';
 import { transformSync } from '@babel/core';
 import { BabelSettings } from './Options';
 import { getFileExtension } from './DependencyFactory';
-import * as cliSpinners from 'cli-spinners'
-import * as ora from 'ora'
+import cliSpinners from 'cli-spinners'
+import ora from 'ora'
 import * as os from 'os'
 //import * as Babel_Core from '@babel/core'
 
@@ -19,7 +21,7 @@ import * as os from 'os'
  * If checked True, then Vortex will bundle with NO debug tools.
  * If checked False, then Vortex will bundle with debug tools.
  */
-export var isProduction:boolean;
+export var isProduction:boolean
 /**
  * If checked true, Vortex will consider your program a library instead of a web application.
  */
@@ -27,9 +29,13 @@ export var isLibrary:boolean
 /**
  * If checked true, Terser will be used to minify production bundle. (Can NOT be used on development bundles.) (Labels it Neutron Star)
  */
-export var usingTerser:boolean = false;
+export var usingTerser:boolean = Panel.useTerser !== null? Panel.useTerser : false;
 
 export var outputFile:string = Panel.output
+
+/**If checked true, Vortex will encode File Dependency names with uuids.
+ */
+export var encodeFilenames:boolean = Panel.encodeFilenames !== null? Panel.encodeFilenames : true
 
 export var useDebug:boolean;
 
@@ -53,17 +59,25 @@ export function isJs(filename:string){
 
 async function createStarPackage (){
 
-    let entry = Panel.start
-
-    if(os.platform() === 'win32'){
-        entry = amendEntryPoint(Panel.start)
-    }
+    //SPINNERS -->
 
     const spinner2 = ora('1. Opening the Portal')
     const spinner3 = ora('2. Vortex Commencing')
     spinner3.spinner = cliSpinners.bouncingBar;
     const spinner4 = ora('3. Hypercompressing ')
     spinner4.spinner = cliSpinners.star;
+
+
+    //CONFIG -->
+
+    //Defaults to false when no input is given.
+
+    let entry = Panel.start
+
+    if(os.platform() === 'win32'){
+        entry = amendEntryPoint(Panel.start)
+    }
+
 
     let outputFilename = Panel.output;
 
@@ -73,75 +87,44 @@ async function createStarPackage (){
         isProduction = true
     }
 
-    if(Panel.useTerser == true && !isProduction){
+    if(usingTerser === true && !isProduction){
         throw new Error(chalk.redBright('ERROR: Can not use terser on regular star!'))
     }
-    //Assignment to config from Panel
 
-    usingTerser = Panel.useTerser
     if(Panel.type === 'app'){
         isLibrary = false
     } else if(Panel.type === 'library'){
         isLibrary = true
     }
 
-    
-    // if (isProduction){
-    //     process.env.NODE_ENV = 'production'
-    // }
-    // else{
-    //     process.env.NODE_ENV = 'development'
-    // }
-    //Logger.Log();
+    //PROGRAM -->
 
-    // fs.writeJsonSync('./out/tree.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"sourceType":"module"}))
+    
     let yourCredits = fs.readJSONSync('./package.json',{encoding:'utf-8'})
 
     spinner2.spinner = cliSpinners.arc;
     spinner2.start()
-    let Graph = await GenerateGraph(entry,os.platform() === 'win32'? amendEntryPoint2(Panel.start) : Panel.start)
+    let Graph = await GenerateGraph(entry,os.platform() === 'win32'? amendEntryPoint2(Panel.start) : Panel.start).catch(err => {console.log(err);process.exit(1);})
     spinner2.succeed();
     spinner3.start();
-    let bundle = await Compile(Graph)
+    let bundle = await Compile(Graph).catch(err => {console.log(err);process.exit(1);})
     let filename
     if(usingTerser){
         spinner3.succeed();
         spinner4.start();
-        filename = terserPackage(outputFilename,yourCredits,bundle);
+        filename = terserPackage(outputFilename,yourCredits,bundle).catch(err => {console.log(err);process.exit(1);})
         spinner4.succeed();
         console.log(chalk.yellowBright(`Successfully Created Neutron Star! (${await filename})`))
     }
     else{
         spinner3.succeed();
-        filename = regularPackage(outputFilename,yourCredits,bundle);
+        filename = regularPackage(outputFilename,yourCredits,bundle).catch(err => {console.log(err);process.exit(1);})
         console.log(chalk.redBright(`Successfully Created Star (${await filename})`))
 
     }
     
 }
 
-
-
-
-    // fs.writeJson('./vortex-depGraph.json',Graph, err => {
-    //     if (err) return console.error(err)
-    //     console.log('Wrote Star Graph to dep-graph.json ')
-    //   })
-
-    // process.exit(0)
-
-    // let buffer = fs.readFileSync('./test/func.js').toString()
-
-    // let parsedCode = Babel.parse(buffer)
-
-    // fs.writeJson('./debug.json',parsedCode, err => {
-    //   if (err) return console.error(err)
-    //   console.log('Wrote debug to ./debug.json ')
-    // })
-
-    
-
-    //console.log(Graph.display());
 
 async function terserPackage(outputFilename:string,yourCredits,bundle:string){
     if(isLibrary){

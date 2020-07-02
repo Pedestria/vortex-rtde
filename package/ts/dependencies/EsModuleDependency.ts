@@ -1,5 +1,5 @@
 import Module, { ModuleTypes } from '../Module'
-import * as chalk from 'chalk'
+import chalk from 'chalk'
 import ModuleDependency from "./ModuleDependency.js";
 import MDImportLocation from "../MDImportLocation.js";
 import traverse from "@babel/traverse";

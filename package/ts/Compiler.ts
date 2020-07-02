@@ -18,11 +18,12 @@ import * as sourceMap from 'source-map'
 import { CSSDependency } from "./dependencies/CSSDependency.js";
 import ImportLocation from "./ImportLocation.js";
 import { FileImportLocation } from "./FileImportLocation.js";
-import chalk = require("chalk");
 import { VortexError, VortexErrorType } from "./VortexError.js";
 import { FileDependency } from "./dependencies/FileDependency.js";
 import { LocalizedResolve } from "./Resolve.js";
 import * as path from 'path'
+import * as css from 'css'
+import { encodeFilenames } from './Main'
 
 function fixDependencyName(name:string){
     let NASTY_CHARS = "\\./@^$#*&!%-"
@@ -709,12 +710,15 @@ function WebAppCompile (Graph:VortexGraph){
             }
             TransformExportsFromAST(loadEntryFromQueue(dep.name.includes('./') ? dep.name : dep.libLoc).ast,dep)
         } else if(dep instanceof CSSDependency){
+            let nCSS = resolveCSSDependencies(dep,assetsFolder)
+            dep.stylesheet = nCSS
             for(let impLoc of dep.importLocations){
                 injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
             }
         } else if(dep instanceof FileDependency){
-            let newName = `${dir}/${path.basename(dep.name)}`
-            let localNewName = `${assetsFolder}/${path.basename(dep.name)}`
+            let outFile = encodeFilenames? `${dep.uuid}${path.extname(dep.name)}` : path.basename(dep.name)
+            let newName = `${dir}/${outFile}`
+            let localNewName = `${assetsFolder}/${outFile}`
             fs.ensureDirSync(dir)
             fs.copyFileSync(dep.name,newName)
             for(let impLoc of dep.importLocations){
@@ -1119,5 +1123,45 @@ function resolveFileDependencyIntoAST(ast:t.File,dep:FileDependency,currentImpLo
             }
         }
     })
+}
+
+function replaceFileDependencyIntoCSS(ast:css.Stylesheet,fileDep:string,newName:string){
+
+    for(let rule of ast.stylesheet.rules){
+        if(rule.type === 'font-face'){ 
+            for(let dec of rule.declarations){
+                if(dec.property === 'src' && dec.value.includes(path.basename(fileDep))){
+                    let a = dec.value.slice(0,4)
+                    let b = dec.value.slice(dec.value.indexOf(')'))
+                    dec.value = `${a}'${newName}'${b}`
+                }
+            }
+        }
+    }
+
+}
+
+function resolveCSSDependencies(dep:CSSDependency,assets_folder:string){
+
+    //console.log(dep.dependencies)
+
+    let parsedCss = css.parse(dep.stylesheet)
+
+    let outputDest = LocalizedResolve(outputFile,assets_folder)
+
+    fs.ensureDirSync(outputDest)
+
+
+    for(let d of dep.dependencies){
+        if(d instanceof FileDependency){
+            let outFile = encodeFilenames? `${d.uuid}${path.extname(d.name)}` : path.basename(d.name)
+            let newName = `${assets_folder}/${outFile}`
+            fs.copyFileSync(d.name,`${outputDest}/${outFile}`)
+            replaceFileDependencyIntoCSS(parsedCss,d.name,newName)
+        }
+    }
+
+    return css.stringify(parsedCss)
+
 }
 

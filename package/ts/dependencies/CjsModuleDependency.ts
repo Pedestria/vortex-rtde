@@ -1,6 +1,6 @@
 import ModuleDependency from "./ModuleDependency.js"
 import Module, { ModuleTypes } from '../Module'
-import * as chalk from 'chalk'
+import chalk from 'chalk'
 import MDImportLocation from "../MDImportLocation.js";
 import traverse from "@babel/traverse";
 import { QueueEntry } from "../GraphGenerator.js"

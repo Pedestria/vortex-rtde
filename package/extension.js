@@ -1,5 +1,7 @@
 const fs = require('fs-extra')
 const path = require('path')
+const css = require('css')
+const { includes } = require('lodash')
 
 function amendEntryPoint(entry){
 
@@ -27,4 +29,10 @@ function fixEntryPoint(entry){
     return `./${shortEntry}`
 }
 
-console.log(fixEntryPoint('./test\\poop\\nana.js'))
+let ast = css.parse(fs.readFileSync('./test/web/styles.css','utf-8'),{source:'./test/web/styles.css'})
+
+console.log(ast.stylesheet.rules[0])
+
+replaceFileDependencyIntoCSS(ast,'./fonts/AvenirLTStd-Medium.otf','./assets/AvenirLTStd-Medium.otf')
+
+console.log(ast.stylesheet.rules[0])

@@ -10,6 +10,9 @@ import ModuleDependency from './dependencies/ModuleDependency.js'
 import {BabelSettings } from './Options.js'
 import {isProduction, isLibrary} from './Main'
 import { transform, transformSync, transformFileSync } from '@babel/core'
+import { CSSDependency } from './dependencies/CSSDependency.js'
+import * as css from 'css'
+import * as CSSGrapher from './graphers/CSSGrapher'
 //import * as terser from 'terser'
 
 export var queue:Array<QueueEntry> = []
@@ -37,8 +40,8 @@ export function loadEntryFromQueue(entryName:string){
 
 export class QueueEntry {
     name:string
-    ast:t.File
-    constructor(name:string,parsedCode:t.File){
+    ast:t.File|css.Stylesheet
+    constructor(name:string,parsedCode:t.File|css.Stylesheet){
         this.name = name
         this.ast = parsedCode
     }
@@ -120,6 +123,18 @@ export default async function GenerateGraph(entry:string,modEntry:string): Promi
                             loadedFilesCache.push(dep.name)
                         }
                     }
+                }
+            }
+        } else if(dep instanceof CSSDependency){
+            if(loadedFilesCache.includes(dep.name) == false){
+                if(isInQueue(dep.name)){
+                    CSSGrapher.SearchAndGraph(loadEntryFromQueue(dep.name).ast,dep)
+                }
+                else{
+                    let sheet = css.parse(fs.readFileSync(dep.name).toString(),{source:dep.name})
+                    let entry = new QueueEntry(dep.name,sheet)
+                    addEntryToQueue(entry)
+                    CSSGrapher.SearchAndGraph(loadEntryFromQueue(dep.name).ast,dep)
                 }
             }
         }

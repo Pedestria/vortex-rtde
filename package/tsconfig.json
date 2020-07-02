@@ -4,6 +4,9 @@
         "module": "commonjs",
         "noImplicitAny": true,
         "target": "esnext",
+        "declaration":true,
+        "declarationDir": "./types",
+        "esModuleInterop": true
     },
     "include": [
         "ts/**/*"
