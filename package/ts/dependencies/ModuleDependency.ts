@@ -11,7 +11,7 @@ import MDImportLocation from "../MDImportLocation.js";
 export default class ModuleDependency extends Dependency {
 
     acquiredModules:Array<Module>
-    libLoc:string|Array<string>
+    libLoc:string
     outBundle:boolean
 
     constructor(name:string,initImportLocation?:MDImportLocation){

@@ -4,6 +4,7 @@
   var loadedExportsByModule = {}; 
 
   var loadedPlanets = [];
+  var loadedPlanetEntryExports = {}
 
   var local_modules = modules
   
@@ -40,7 +41,7 @@
 
     return new Promise(function(resolve,reject){
         if(loadedPlanets.includes(planet_name)){
-            return loadedPlanetEntryExports[planet_name].cachedExports;
+            resolve(loadedPlanetEntryExports[planet_name].cachedExports);
         }
         else{
             var planet = document.createElement('script');
@@ -49,7 +50,17 @@
             planet.addEventListener('load',function(){
                 planetLoaded().then(
                     function(exports){
-                        resolve(exports)
+                        loadedPlanets.push(planet_name);
+                        var o = new Object(planet_name);
+                        Object.defineProperty(o, 'cachedExports', {
+                            value: exports,
+                            writable: false
+                        });
+                        Object.defineProperty(loadedPlanetEntryExports, planet_name, {
+                            value: o
+                        });
+
+                        resolve(exports);
                     })
             },false)
 
@@ -57,10 +68,10 @@
 
             function planetLoaded(){
                 return new Promise(function(resolve,reject){
-                    console.log('Loading from '+planet_name)
-                    shuttle.override(planetmodules)
-                    entryPoint = entry
-                    resolve(shuttle(entryPoint))
+                    console.log('Loading from '+planet_name);
+                    shuttle.override(planetmodules);
+                    entryPoint = entry;
+                    resolve(shuttle(entryPoint));
                 })
             }
 

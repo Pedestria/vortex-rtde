@@ -21,7 +21,7 @@ import { BabelSettings } from "./Options.js";
  * @param {string} CurrentFile Current file being loading from. 
  * @param {MDImportLocation} CurrentMDImpLoc Curret Module Dependency Import Location
  */
-export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation){
+export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,planetName?:string){
 
     let str = './'
 
@@ -53,10 +53,22 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
         }
     }
 
-    if (Graph.searchFor(Dependency)){
-        Graph.update(Dependency)
-    }
-    else{
-        Graph.add(Dependency);
+    //If transporting to Star 
+
+    if(planetName === undefined){
+        if (Graph.searchFor(Dependency)){
+            Graph.update(Dependency)
+        }
+        else{
+            Graph.add(Dependency);
+        }
+        //Else transport to planet if currently graphing for one.
+    } else{
+        if(Graph.searchForOnPlanet(Dependency,planetName)){
+            Graph.updateOnPlanet(Dependency,planetName);
+        }
+        else{
+            Graph.addToPlanet(Dependency,planetName);
+        }
     }
 }

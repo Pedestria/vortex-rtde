@@ -1,3 +1,20 @@
 CSSDependency: 
 
 Import './example.css'  --> var style = document.createElement('style');style.innerHTML = cssContent;document.head.appendChild(style);
+
+Shuttle Module Defintion:
+
+
+//var lib = shuttle("lib") --> Intializes Library
+//lib.b() --> Named Import from lib
+//lib.default() --> Default Import from lib
+
+//shuttle_exports.b = b --> Named Export
+//shuttle_exports.default = a --> Default Export
+
+//shuttle.planet('planet1').then(function(entry_module){
+    ACCESS ENTRY POINT EXPORTS HERE!!
+}) 
+--> Planet Import(Async Import/Dynamic Import)
+
+'planet1' = Planet Name (Entry module is defined in the planet bundle itself!)

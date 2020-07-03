@@ -39,7 +39,7 @@ export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:st
 
 export function resolveLibBundle(nodeLibName:string){
     //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
-    let minified = new RegExp('min')
+    let minified = 'min'
     let STD_NODE_LIBS = ['path','fs','module','os']
 
     if(STD_NODE_LIBS.includes(nodeLibName)){
@@ -50,14 +50,15 @@ export function resolveLibBundle(nodeLibName:string){
     if(bundles instanceof Array)
     {
         for(let lib of bundles){
-            if (lib.match(minified) && isProduction){
+            if (lib.includes(minified) && isProduction){
                 return lib
             }
-            else if(lib.match(minified) == null && isProduction == false){
+            else if(lib.includes(minified) == false && isProduction == false){
                 return lib
             }
         }
     }
+    else{
     // else{
         // if(isProduction){
         //     let fileName = path.basename(bundles,'.js')
@@ -72,6 +73,7 @@ export function resolveLibBundle(nodeLibName:string){
         // }
         // else{
             return bundles
+    }
         // }
 }
 

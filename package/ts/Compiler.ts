@@ -4,7 +4,7 @@ import EsModuleDependency from "./dependencies/EsModuleDependency.js";
 import generate from "@babel/generator";
 import traverse from "@babel/traverse";
 import * as Babel from "@babel/parser";
-import { template, transformFile, transformFileSync, transformFromAstSync } from "@babel/core";
+import { template} from "@babel/core";
 import * as t from '@babel/types';
 import MDImportLocation from "./MDImportLocation.js";
 import { ModuleTypes } from "./Module.js";
@@ -12,7 +12,7 @@ import Module from './Module'
 import ModuleDependency from "./dependencies/ModuleDependency.js";
 import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
 import { BabelSettings} from "./Options.js";
-import {isProduction, isLibrary, amendEntryPoint, outputFile} from './Main'
+import {isProduction, isLibrary, outputFile} from './Main'
 import { queue, loadEntryFromQueue } from "./GraphGenerator.js";
 import * as sourceMap from 'source-map'
 import { CSSDependency } from "./dependencies/CSSDependency.js";
@@ -24,6 +24,7 @@ import { LocalizedResolve } from "./Resolve.js";
 import * as path from 'path'
 import * as css from 'css'
 import { encodeFilenames } from './Main'
+import { Planet } from "./Planet.js";
 
 function fixDependencyName(name:string){
     let NASTY_CHARS = "\\./@^$#*&!%-"
@@ -51,21 +52,24 @@ function fixDependencyName(name:string){
 }
 
 /**
- * Creates a Star depending on the global config
+ * Creates a Star/Solar System depending on the global config/async imports.
  * @param {VortexGraph} Graph The Dependency Graph created by the Graph Generator 
+ * @returns {Promise<Object[]>} An Array of Bundle Code Objects
  */
-export default async function Compile(Graph:VortexGraph): Promise<string>{
+export default async function Compile(Graph:VortexGraph): Promise<Array<Object>>{
 
-    let finalBundle
+    let final
 
     if(isLibrary){
-        finalBundle = LibCompile(Graph)
+        //Returns a single bundle code object
+        final = LibCompile(Graph)
     }
     else{
-        finalBundle = WebAppCompile(Graph)
+        //Returns single/many bundle code object/s.
+        final = WebAppCompile(Graph)
     }
 
-    return finalBundle
+    return final
 
     // let finalLib = LibCompile(Graph)
 
@@ -155,7 +159,14 @@ function LibCompile(Graph:VortexGraph){
     }
     finalBundle += `\n /*NODE_EXPORTS*/ \n`
     finalBundle += libB.exports.join('\n')
-    return finalBundle
+    
+    var o = new Object('star')
+    Object.defineProperty(o,'code',{
+        value:finalBundle,
+        writable:false
+    })
+
+    return [o]
     //console.log(code)
     //return libB.code
 
@@ -690,12 +701,25 @@ const ModuleEvalTemplate = template('eval(CODE)')
 /**
  * Compiles Graph into browser compatible application
  * @param {VortexGraph} Graph 
- * @returns {string} WebApp Bundle
+ * @returns {Object[]} WebApp Bundle
  */
 
 function WebAppCompile (Graph:VortexGraph){
 
    let shuttle = new Shuttle();
+
+   /**
+    * Transformed Exports from File/lib
+    */
+   let transdExps:Array<string> = []
+   /**
+    * Resolved CSSs 
+    */
+   let resolveCSS:Array<string> = []
+   /**
+    * Resolved Files
+    */
+   let resolvedFiles:Array<string> = []
 
    //Transforms exports and Imports on all parsed Queue entries.
 
@@ -703,15 +727,23 @@ function WebAppCompile (Graph:VortexGraph){
 
    var dir = LocalizedResolve(outputFile,assetsFolder)
 
+   // Transform Star
+
     for(let dep of Graph.Star){
         if(dep instanceof ModuleDependency){
             for(let impLoc of dep.importLocations){
                 TransformImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep)
             }
-            TransformExportsFromAST(loadEntryFromQueue(dep.name.includes('./') ? dep.name : dep.libLoc).ast,dep)
+            if(transdExps.includes(dep.name) == false){
+                TransformExportsFromAST(loadEntryFromQueue(dep.name.includes('./') ? dep.name : dep.libLoc).ast,dep)
+                transdExps.push(dep.name)
+            }
         } else if(dep instanceof CSSDependency){
-            let nCSS = resolveCSSDependencies(dep,assetsFolder)
-            dep.stylesheet = nCSS
+            if(resolveCSS.includes(dep.name) == false){
+                let nCSS = resolveCSSDependencies(dep,assetsFolder)
+                resolveCSS.push(dep.name)
+                dep.stylesheet = nCSS
+            }
             for(let impLoc of dep.importLocations){
                 injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
             }
@@ -719,16 +751,72 @@ function WebAppCompile (Graph:VortexGraph){
             let outFile = encodeFilenames? `${dep.uuid}${path.extname(dep.name)}` : path.basename(dep.name)
             let newName = `${dir}/${outFile}`
             let localNewName = `${assetsFolder}/${outFile}`
-            fs.ensureDirSync(dir)
-            fs.copyFileSync(dep.name,newName)
+            if(resolvedFiles.includes(dep.name) == false){
+                fs.ensureDirSync(dir)
+                fs.copyFileSync(dep.name,newName)
+                resolvedFiles.push(dep.name)
+            }
             for(let impLoc of dep.importLocations){
                 resolveFileDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc,localNewName)
             }
         }
     }
 
+    // Transform Planets (Will crosscheck with already transformed files)
 
+    for(let planet of Graph.Planets){
+        //Transforms: import(**) to shuttle.planet(**) syntax
+        for(let impLoc of planet.importedAt){
+            TransformAsyncImportFromAST(loadEntryFromQueue(impLoc).ast,planet)
+        }
+
+        if(transdExps.includes(planet.entryModule) == false){
+            TransformExportsFromAST(loadEntryFromQueue(planet.entryModule).ast,planet.entryDependency)
+            transdExps.push(planet.entryModule)
+        }
+        
+        for(let dep of planet.modules){
+            if(dep instanceof ModuleDependency){
+                for(let impLoc of dep.importLocations){
+                    TransformImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep)
+                }
+                if(transdExps.includes(dep.name) == false){
+                    TransformExportsFromAST(loadEntryFromQueue(dep.name.includes('./') ? dep.name : dep.libLoc).ast,dep)
+                    transdExps.push(dep.name)
+                }
+            } else if(dep instanceof CSSDependency){
+                if(resolveCSS.includes(dep.name) == false){
+                    let nCSS = resolveCSSDependencies(dep,assetsFolder)
+                    resolveCSS.push(dep.name)
+                    dep.stylesheet = nCSS
+                }
+                for(let impLoc of dep.importLocations){
+                    injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+                }
+            } else if(dep instanceof FileDependency){
+                let outFile = encodeFilenames? `${dep.uuid}${path.extname(dep.name)}` : path.basename(dep.name)
+                let newName = `${dir}/${outFile}`
+                let localNewName = `${assetsFolder}/${outFile}`
+                if(resolvedFiles.includes(dep.name) == false){
+                    fs.ensureDirSync(dir)
+                    fs.copyFileSync(dep.name,newName)
+                    resolvedFiles.push(dep.name)
+                }
+                for(let impLoc of dep.importLocations){
+                    resolveFileDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc,localNewName)
+                }
+            }
+        }
+    }
+
+    /**Names of ALL modules added to buffers. (Includes Planets)
+     * 
+     */
     let bufferNames:Array<string> = []
+
+    //
+    // Star Foldup.
+    //
 
     // Pushes entrypoint into buffer to be compiled.
 
@@ -764,36 +852,67 @@ function WebAppCompile (Graph:VortexGraph){
                     }
                 }
             }
-        }
+    }
+    
+    //
+    // Planet Foldup
+    //
+
+    let PlanetShuttles:Array<Shuttle> = []
+
+    
+    for(let planet of Graph.Planets){
+        let local_shuttle = new Shuttle()
+        local_shuttle.name = planet.name
+        local_shuttle.entry = planet.entryModule
+
+        const entry = loadEntryFromQueue(planet.entryModule)
+        stripNodeProcess(entry.ast)
+        const COMP = generate(entry.ast,{sourceMaps:false})
+        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${entry.name} \n`)})
+        local_shuttle.addModuleToBuffer(planet.entryModule,mod)
+        bufferNames.push(planet.entryModule)
+
+        //Pushing modules into buffer to be compiled.
+
+        for(let dep of planet.modules){
+            if(dep instanceof ModuleDependency){
+                if(dep.libLoc !== undefined){
+                        if(bufferNames.includes(dep.libLoc) == false){
+                            const entry = loadEntryFromQueue(dep.libLoc)
+                            stripNodeProcess(entry.ast)
+                            const COMP = generate(entry.ast,{sourceMaps:false})
+                            const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${entry.name} \n`)})
+                            local_shuttle.addModuleToBuffer(dep.libLoc,mod)
+                            bufferNames.push(dep.libLoc)
+                        }
+                    }
+                    else{
+                        if(bufferNames.includes(dep.name) == false){
+                            const entry = loadEntryFromQueue(dep.name)
+                            stripNodeProcess(entry.ast)
+                            const COMP = generate(entry.ast,{sourceMaps:false})
+                            const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL:${entry.name} \n`)})
+                            local_shuttle.addModuleToBuffer(dep.name,mod)
+                            bufferNames.push(dep.name)
+                        }
+                    }
+                }
+            }
+        
+        PlanetShuttles.push(local_shuttle)
+    }
 
 
-    // if(dep.libLoc !== undefined){
-    //     const mod = ModuleEvalTemplate({CODE:t.stringLiteral(generate(loadEntryFromQueue(dep.libLoc).ast).code)})
-    //     shuttle.addModuleToBuffer(dep.libLoc,mod)
-    // }
-    // else{
-    //     const mod = ModuleEvalTemplate({CODE:t.stringLiteral(generate(loadEntryFromQueue(dep.name).ast).code)})
-    //     shuttle.addModuleToBuffer(dep.name,mod)
-    // }
+    
 
 
-    //let finalCode = generate(shuttle.buffer).code
-    //let tempAST = Babel.parse(generate(t.variableDeclaration('var',[t.variableDeclarator(t.identifier('_NAMESPACE'),shuttle.buffer)])).code)
-
-    // for(let prop of tempAST.program.body[0].declarations[0].init.properties){
-    //     prop.value.extra = {}
-    //     prop.value.extra.parenthesized = true
-    //     prop.value.extra.parenStart = prop.value.start-1
-    // }
 
     /**
      * Factory Shuttle Module Loader (Vortex's Official Module Loader for the browser!)
+     * If there are no planets, export top factory. IF there are, export bottom factory with Promises.
      */
-
-
-
-
-    let factory = `
+    let factory = Graph.Planets.length === 0 ? `
     //Named Exports For Module
     var loadedModules = [];
     var loadedStyles = [];
@@ -826,17 +945,134 @@ function WebAppCompile (Graph:VortexGraph){
     //Calls EntryPoint to Initialize
   
   
-    return shuttle("${Graph.shuttleEntry}");`
+    return shuttle("${Graph.shuttleEntry}");` : `var loadedModules = [];
+    var loadedStyles = [];
+    var loadedExportsByModule = {}; 
+  
+    var loadedPlanets = [];
+    var loadedPlanetEntryExports = {}
+  
+    var local_modules = modules
+    
+    //Shuttle Module Loader
+    //Finds exports and returns them under fake namespace.
+  
+    function shuttle(mod_name) {
+  
+      //If module has already been loaded, load the exports that were cached away.
+      if (loadedModules.includes(mod_name)) {
+        return loadedExportsByModule[mod_name].cachedExports;
+      } else {
+        var mod = {
+          exports: {}
+        };
+  
+        local_modules[mod_name](shuttle, mod.exports, loadedStyles);
+        var o = new Object(mod_name);
+        Object.defineProperty(o, 'cachedExports', {
+          value: mod.exports,
+          writable: false
+        });
+        Object.defineProperty(loadedExportsByModule, mod_name, {
+          value: o
+        });
+        loadedModules.push(mod_name);
+        return mod.exports;
+      }
+    }
+  
+    // SML's version of ES Dynamic Import (Returns entry point module export of planet)
+    
+    shuttle.planet = function(planet_name) {
+  
+      return new Promise(function(resolve,reject){
+          if(loadedPlanets.includes(planet_name)){
+              resolve(loadedPlanetEntryExports[planet_name].cachedExports);
+          }
+          else{
+              var planet = document.createElement('script');
+              planet.src = planet_name;
+              document.body.appendChild(planet);
+              planet.addEventListener('load',function(){
+                  planetLoaded().then(
+                      function(exports){
+                          loadedPlanets.push(planet_name);
+                          var o = new Object(planet_name);
+                          Object.defineProperty(o, 'cachedExports', {
+                              value: exports,
+                              writable: false
+                          });
+                          Object.defineProperty(loadedPlanetEntryExports, planet_name, {
+                              value: o
+                          });
+  
+                          resolve(exports);
+                      })
+              },false)
+  
+              var entryPoint
+  
+              function planetLoaded(){
+                  return new Promise(function(resolve,reject){
+                      console.log('Loading from '+planet_name);
+                      shuttle.override(planetmodules);
+                      entryPoint = entry;
+                      resolve(shuttle(entryPoint));
+                  })
+              }
+  
+          }
+      })
+  
+        
+    }
+  
+    shuttle.override = function(mods){
+        local_modules = mods
+    }
+    
+    
+    
+    //Calls EntryPoint to Initialize
+  
+  
+    return shuttle("${Graph.shuttleEntry}");`;
 
     let parsedFactory = Babel.parse(factory,{allowReturnOutsideFunction:true}).program.body
 
     let finalCode = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier("modules")],t.blockStatement(parsedFactory),false,false),[shuttle.buffer])])),{compact: isProduction? true : false}).code;
 
-    return finalCode
+    let codeEntries:Array<Object> = []
+
+    let o = new Object("star");
+    Object.defineProperty(o,'code', {
+        value: finalCode,
+        writable:false
+    })
+
+    codeEntries.push(o)
+
+    for(let _shuttle of PlanetShuttles){
+
+        let code = generate(t.program([t.variableDeclaration('var',[t.variableDeclarator(t.identifier('entry'),t.stringLiteral(_shuttle.entry)),t.variableDeclarator(t.identifier('planetmodules'),_shuttle.buffer)])])).code
+
+        let o = new Object(_shuttle.name)
+        Object.defineProperty(o,'code',{
+            value: code,
+            writable:false
+        })
+
+        codeEntries.push(o)
+    }
+
+    return codeEntries
+
+
 }
 
 class Shuttle {
-
+    name:string
+    entry:string
     buffer = t.objectExpression([])
 
     //[shuttle,_exports_]
@@ -906,6 +1142,8 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
                                     //If library but NOT default import from lib
                                     if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type !== ModuleTypes.EsDefaultModule){
                                         path.replaceWith(t.memberExpression(t.identifier(namespace),t.identifier(path.node.name)))
+                                    }else if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type === ModuleTypes.EsDefaultModule){
+                                        path.replaceWith(t.memberExpression(t.identifier(namespace),t.identifier('default')))
                                     }
                                     //if NOT library at all
                                 } else{
@@ -1006,7 +1244,7 @@ function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
         let defaultExport:string
         traverse(ast,{
             ExportNamedDeclaration: function(path){
-                if(path.node.declaration !== undefined){
+                if(path.node.declaration !== undefined && path.node.declaration !== null){
                     if(path.node.declaration.type === 'FunctionDeclaration'){
                         exportsToBeRolled.push(path.node.declaration.id.name)
                     }
@@ -1018,7 +1256,14 @@ function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
                 }
                 else{
                     for(let exp of path.node.specifiers){
-                        exportsToBeRolled.push(exp.exported.name)
+                        if(exp.type === 'ExportSpecifier'){
+                            if(exp.exported.name === 'default'){
+                                defaultExport = exp.local.name
+                            }
+                            else{
+                                exportsToBeRolled.push(exp.exported.name)
+                            }
+                        }
                     }
                     path.remove()
                 }
@@ -1113,6 +1358,13 @@ function injectCSSDependencyIntoAST(ast:t.File,dep:CSSDependency,currentImpLoc:F
     })
 }
 
+/**Resolves File Dependency name with new name from a given AST.
+ * 
+ * @param {t.File} ast Abstract Syntax Tree (ESTree Format)
+ * @param {FileDependency} dep Dependency to resolve
+ * @param {FileImportLocation} currentImpLoc Current Import Location
+ * @param {string} newFileName New name to resolve dependency under
+ */
 
 function resolveFileDependencyIntoAST(ast:t.File,dep:FileDependency,currentImpLoc:FileImportLocation,newFileName:string){
 
@@ -1124,6 +1376,14 @@ function resolveFileDependencyIntoAST(ast:t.File,dep:FileDependency,currentImpLo
         }
     })
 }
+
+/**Similar to {@link resolveFileDependencyIntoAST}, but only applies for CSS files. 
+ * 
+ * 
+ * @param {css.Stylesheet} ast Abstract Syntax Tree (CSS Parser Format) 
+ * @param {string} fileDep 
+ * @param {string} newName 
+ */
 
 function replaceFileDependencyIntoCSS(ast:css.Stylesheet,fileDep:string,newName:string){
 
@@ -1140,6 +1400,12 @@ function replaceFileDependencyIntoCSS(ast:css.Stylesheet,fileDep:string,newName:
     }
 
 }
+
+/**Resolves/Transforms CSS's Dependencies.
+ * 
+ * @param {CSSDependency} dep 
+ * @param {string} assets_folder 
+ */
 
 function resolveCSSDependencies(dep:CSSDependency,assets_folder:string){
 
@@ -1163,5 +1429,29 @@ function resolveCSSDependencies(dep:CSSDependency,assets_folder:string){
 
     return css.stringify(parsedCss)
 
+}
+
+/**Transforms Async Import (ES Dynamic Import Syntax) to be used by Shuttle Module Loader
+ * @example
+ * 
+ * import(**) // Into This -->
+ * 
+ * shuttle.planet(**)
+ * 
+ * 
+ * @param {t.File} ast Abstract Syntax Tree 
+ * @param {Planet} planet 
+ */
+
+
+function TransformAsyncImportFromAST(ast:t.File,planet:Planet){
+
+    traverse(ast,{
+        CallExpression: function(path){
+            if(path.node.callee.type === "Import" && path.node.arguments[0].value === planet.originalName){
+                path.replaceWith(t.callExpression(t.memberExpression(t.identifier("shuttle"),t.identifier("planet")),[t.stringLiteral(planet.name)]))
+            }
+        }
+    })
 }
 

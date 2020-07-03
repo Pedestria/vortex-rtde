@@ -15,6 +15,7 @@ import { getFileExtension } from './DependencyFactory';
 import cliSpinners from 'cli-spinners'
 import ora from 'ora'
 import * as os from 'os'
+import { assignDependencyType } from './Planet';
 //import * as Babel_Core from '@babel/core'
 
 /**
@@ -53,7 +54,7 @@ export function isJs(filename:string){
     return rc
 }
 
-/**Creates a Star or Neutron Star from entry point.
+/**Creates a Star/Neutron Star/Solar System from entry point.
  *  
  */ 
 
@@ -107,75 +108,147 @@ async function createStarPackage (){
     let Graph = await GenerateGraph(entry,os.platform() === 'win32'? amendEntryPoint2(Panel.start) : Panel.start).catch(err => {console.log(err);process.exit(1);})
     spinner2.succeed();
     spinner3.start();
-    let bundle = await Compile(Graph).catch(err => {console.log(err);process.exit(1);})
-    let filename
+
+    //Assign Entry Dependency For Planets
+    for(let planet of Graph.Planets){
+        planet = assignDependencyType(planet)
+    }
+    let bundles = await Compile(Graph).catch(err => {console.log(err);process.exit(1);})
     if(usingTerser){
         spinner3.succeed();
         spinner4.start();
-        filename = terserPackage(outputFilename,yourCredits,bundle).catch(err => {console.log(err);process.exit(1);})
+        await terserPackage(outputFilename,yourCredits,bundles).catch(err => {console.log(err);process.exit(1);})
         spinner4.succeed();
-        console.log(chalk.yellowBright(`Successfully Created Neutron Star! (${await filename})`))
-    }
-    else{
+
+        if(bundles.length === 1){
+            console.log(chalk.yellowBright('Successfully Created Neutron Star!'))
+        }
+        else {
+            console.log(chalk.greenBright(`Planets Created: \n `))
+            for(let bundle of bundles){
+                if(bundle.valueOf() !== 'star'){
+                    console.log(chalk.magentaBright(` \n ${bundle.valueOf().toString()}`))
+                }
+            }
+        }
+    } else{
+        await regularPackage(outputFilename,yourCredits,bundles).catch(err => {console.log(err);process.exit(1);})
         spinner3.succeed();
-        filename = regularPackage(outputFilename,yourCredits,bundle).catch(err => {console.log(err);process.exit(1);})
-        console.log(chalk.redBright(`Successfully Created Star (${await filename})`))
+        if(bundles.length === 1){
+            console.log(chalk.rgb(252, 160, 20)('Successfully Created Star!'))
+        }
+        else{
+            console.log(chalk.rgb(252, 160, 20)('Successfully Created Star! \n'))
+            console.log(chalk.greenBright(`Planets Created: \n `))
+            for(let bundle of bundles){
+                if(bundle.valueOf() !== 'star'){
+                    console.log(chalk.yellowBright(` \n ${bundle.valueOf().toString()}`))
+                }
+            }
+        }
 
     }
+
+    //     filename = terserPackage(outputFilename,yourCredits,bundle).catch(err => {console.log(err);process.exit(1);})
+    //     spinner4.succeed();
+    //     console.log(chalk.yellowBright(`Successfully Created Neutron Star! (${await filename})`))
+    // }
+    // else{
+    //     spinner3.succeed();
+    //     filename = regularPackage(outputFilename,yourCredits,bundle).catch(err => {console.log(err);process.exit(1);})
+    //     console.log(chalk.redBright(`Successfully Created Star (${await filename})`))
+
+    // }
     
 }
 
+/**Packages bundles to files + minifies with Terser 
+ * 
+ * @param {string} outputFilename Star output file
+ * @param yourCredits Credit JSON
+ * @param {Object[]} bundleObjects Bundle Code Objects outputed by Compiler
+ */
 
-async function terserPackage(outputFilename:string,yourCredits,bundle:string){
+async function terserPackage(outputFilename:string,yourCredits,bundleObjects:Array<Object>){
     if(isLibrary){
         let credits = `/*NEUTRON-STAR*/ \n /*${yourCredits.name} ${yourCredits.version} _MINIFIED_ \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
             //console.log(credits)
-            let minBundle = terser.minify(bundle,{compress:true,mangle:true}).code
+            for(let bundle of bundleObjects){
+                if(bundle.valueOf() === 'star'){
+                    var minBundle = terser.minify(bundle.code,{compress:true,mangle:true}).code
+                }
+            }
             let output = credits + minBundle
             //console.log(output)
 
-            let newFilename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
+            let newMainFilename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
             fs.ensureDirSync(path.dirname(outputFilename) + '/')
-            fs.writeFileSync(newFilename,output)
-            return newFilename
+            fs.writeFileSync(newMainFilename,output)
 
     }
     else{
         let credits = `/*NEUTRON-STAR*/ \n /*BUNDLED BY VORTEX*/ \n`
-            let minBundle = terser.minify(bundle,{compress:true,mangle:true}).code
+        let planetCredits = `/*PLANET*/ \n /*BUNDLED BY VORTEX*/ \n`
 
-            let output = credits + minBundle
+        fs.ensureDirSync(path.dirname(outputFilename) + '/')
 
-            let newFilename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
+        for(let bundle of bundleObjects){
+            let filename:string
+            if(bundle.valueOf() === 'star'){
+                filename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
 
-            fs.ensureDirSync(path.dirname(outputFilename) + '/')
-            fs.writeFileSync(newFilename,output)
-            return newFilename
+                let mini = terser.minify(bundle.code,{compress:true,mangle:true}).code
+
+                let finalB = credits + mini
+                fs.writeFileSync(filename,finalB)
+            } else{
+                filename = path.dirname(outputFilename) + '/' + bundle.valueOf().toString()
+
+                let mini = terser.minify(bundle.code,{compress:true,mangle:true}).code
+
+                let finalB = planetCredits + mini
+                fs.writeFileSync(filename,finalB)
+            }
+        }
+
     }
     
 
 }
 
-async function regularPackage(outputFilename:string,yourCredits,bundle:string){
+async function regularPackage(outputFilename:string,yourCredits,bundleObjects:Array<Object>){
         if(isLibrary){
-        // let bundle = Compile(Graph);
-        ///let transformed = Babel_Core.transformSync(bundle,{sourceType:'module',presets:['@babel/preset-env']}).code
+            let finBund
+            for(let bundle of bundleObjects){
+                if(bundle.valueOf() === 'star'){
+                    finBund = bundle.code
+                }
+            }
                 let credits = `/*STAR*/ \n /*${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
                 fs.ensureDirSync(path.dirname(outputFilename) + '/')
-                fs.writeFileSync(outputFilename,credits + bundle)
-                return outputFilename
+                fs.writeFileSync(outputFilename,credits + finBund)
         } 
-        else{
-                let credits = isProduction? `/*NEUTRON-STAR*/ \n /*BUNDLED BY VORTEX*/ \n` : `/*STAR*/ \n /*BUNDLED BY VORTEX*/ \n`
-                let finalBundle = credits + bundle;
-                fs.ensureDirSync(path.dirname(outputFilename) + '/')
-                fs.writeFileSync(outputFilename,finalBundle)
-                return outputFilename
+        else {
+            let credits = isProduction? `/*NEUTRON-STAR*/ \n /*BUNDLED BY VORTEX*/ \n` : `/*STAR*/ \n /*BUNDLED BY VORTEX*/ \n`
+            let planetCredits = `/*PLANET*/ \n /*BUNDLED BY VORTEX*/ \n`
+            fs.ensureDirSync(path.dirname(outputFilename) + '/')
+
+            for(let bundle of bundleObjects){
+                let filename:string
+                if(bundle.valueOf() === 'star'){
+                    filename = outputFilename
+    
+                    let finalB = credits + bundle.code
+                    fs.writeFileSync(filename,finalB)
+                } else{
+                    filename = path.dirname(outputFilename) + '/' + bundle.valueOf().toString()
+
+                    let finalB = planetCredits + bundle.code
+                    fs.writeFileSync(filename,finalB)
+                }
+            }
         }
-
 }
-
-createStarPackage();
 
 function amendEntryPoint(entry:string){
 
@@ -202,3 +275,7 @@ function amendEntryPoint2(entry:string){
     }
     return `./${shortEntry}`
 }
+
+createStarPackage();
+//fs.writeJSONSync('out/importcool.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"plugins":["dynamicImport"],"sourceType":"module"}))
+

@@ -21,7 +21,7 @@ import { FileImportLocation } from "../FileImportLocation.js";
  */
 
 
-export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
+export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:string){
 
     traverse(entry.ast,{
         ImportDeclaration: function(path) {
@@ -54,13 +54,13 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
                         dep.outBundle = true
                     }
                 }
-                Transport(dep,Graph,entry.name,currentImpLoc)
+                Transport(dep,Graph,entry.name,currentImpLoc,planetName)
 
         } else{
             //For Non-Module Dependencies.
             let impLoc = new FileImportLocation(entry.name,path.node.loc.start.line,path.node.source.value,path.node.specifiers[0] !== undefined? path.node.specifiers[0].local.name : null);
             let dep = resolveDependencyType(path.node.source.value,impLoc,entry.name)
-            Transport(dep,Graph,entry.name)
+            Transport(dep,Graph,entry.name,null,planetName)
         }
     }
     })

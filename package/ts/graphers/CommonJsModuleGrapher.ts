@@ -15,7 +15,7 @@ import { QueueEntry } from "../GraphGenerator.js";
  * @param {VortexGraph} Graph 
  */
 
-export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
+export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:string){
 
     // fs.writeJson('./debug.json',jsCode, err => {
     //         if (err) return console.error(err)
@@ -38,7 +38,7 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
                             }
                             //console.log(path.node.declarations[0].init.arguments[0].value)
                             let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.init.arguments[0].value)
-                            Transport(new CjsModuleDependency(path.node.init.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc)
+                            Transport(new CjsModuleDependency(path.node.init.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName)
                         }
                     }
             }},
@@ -49,7 +49,7 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
                         if(path.node.expression.right.callee.name === 'require') {
                             modules.push(new Module(path.node.expression.right.arguments[0].value,ModuleTypes.CjsNamespaceProvider))
                             let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.expression.right.arguments[0].value)
-                            Transport(new CjsModuleDependency(path.node.expression.right.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc)
+                            Transport(new CjsModuleDependency(path.node.expression.right.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName)
                         }
                     }
                 }
@@ -57,13 +57,13 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph){
                     if(path.node.expression.callee.type === 'Identifier' && path.node.expression.callee.name == 'require'){
                         modules.push(new Module('_Default_',ModuleTypes.CjsDefaultModule))
                         let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.expression.arguments[0].value)
-                        Transport(new CjsModuleDependency(path.node.expression.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc)
+                        Transport(new CjsModuleDependency(path.node.expression.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName)
                     }
                     if(path.node.expression.callee.type === 'CallExpression'){
                         if (path.node.expression.callee.callee.name === 'require'){
                             modules.push(new Module('_DefaultFunction_',ModuleTypes.CjsDefaultFunction));
                             let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.expression.callee.arguments[0].value)
-                            Transport(new CjsModuleDependency(path.node.expression.callee.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc)
+                            Transport(new CjsModuleDependency(path.node.expression.callee.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName)
                         }
                     }
                 }

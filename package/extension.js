@@ -1,7 +1,6 @@
 const fs = require('fs-extra')
 const path = require('path')
 const css = require('css')
-const { includes } = require('lodash')
 
 function amendEntryPoint(entry){
 
@@ -29,10 +28,39 @@ function fixEntryPoint(entry){
     return `./${shortEntry}`
 }
 
-let ast = css.parse(fs.readFileSync('./test/web/styles.css','utf-8'),{source:'./test/web/styles.css'})
+let array = []
 
-console.log(ast.stylesheet.rules[0])
 
-replaceFileDependencyIntoCSS(ast,'./fonts/AvenirLTStd-Medium.otf','./assets/AvenirLTStd-Medium.otf')
+var o = new Object('star')
+Object.defineProperty(o,'code',{
+    value:"HI I AM CODE!",
+    writable:false
+})
+array.push(o)
 
-console.log(ast.stylesheet.rules[0])
+var o2 = new Object('star2')
+Object.defineProperty(o2,'code',{
+    value:"HI I AM CODE 2!",
+    writable:false
+})
+
+array.push(o2)
+
+var o3 = new Object('star3')
+Object.defineProperty(o3,'code',{
+    value:"HI I AM CODE 3!",
+    writable:false
+})
+
+array.push(o3)
+
+for(let bundle of array){
+    if(bundle.valueOf() === 'star3'){
+        console.log(bundle.code)
+    }
+    else{
+        console.log(bundle.valueOf().toString())
+    }
+}
+
+
