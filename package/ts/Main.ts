@@ -6,16 +6,17 @@ import { stage1, stage2, stage3, finish } from './Log.js';
 import * as terser from 'terser'
 import * as path from 'path'
 
-import Panel from '../vortex.panel.js' /*vortexRetain*/ 
+import * as Panel from '../vortex.panel.js' /*vortexRetain*/ 
 
-import chalk from 'chalk';
+import * as chalk from 'chalk';
 import { transformSync } from '@babel/core';
 import { BabelSettings } from './Options';
 import { getFileExtension } from './DependencyFactory';
 import cliSpinners from 'cli-spinners'
-import ora from 'ora'
+import * as ora from 'ora'
 import * as os from 'os'
 import { assignDependencyType } from './Planet';
+import { VortexError, VortexErrorType } from './VortexError';
 //import * as Babel_Core from '@babel/core'
 
 /**
@@ -43,15 +44,23 @@ export var useDebug:boolean;
 export var extensions:Array<string> = Panel.extensions
 
 export function isJs(filename:string){
-    let rc
 
-    if(extensions.includes(getFileExtension(filename))){
-        rc = false
+    if(path.basename(filename) === filename){
+        return true
     }
-    else{
-        rc = true
+    else if(extensions.includes(getFileExtension(filename))){
+        return false
     }
-    return rc
+    else if(filename.includes('./') && path.extname(filename) === ''){
+        return true
+    }
+    else if(filename.includes('.js') || filename.includes('.mjs') || filename.includes('.') == false){
+        return true
+    }
+    else {
+        throw new VortexError(`Cannot resolve extension: "${getFileExtension(filename)}" If you wish to include this in your Solar System, include it in the resolvable extensions option in the vortex.panel.js`,VortexErrorType.PortalPanelError)
+    }
+
 }
 
 /**Creates a Star/Neutron Star/Solar System from entry point.

@@ -6,7 +6,7 @@
         "target": "esnext",
         "declaration":true,
         "declarationDir": "./types",
-        "esModuleInterop": true
+        "esModuleInterop": false
     },
     "include": [
         "ts/**/*"

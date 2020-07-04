@@ -1,5 +1,4 @@
-import('module')
-
+Object.defineProperty(exports,'__esModule')
 
 
 

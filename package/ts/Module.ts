@@ -60,4 +60,6 @@ export enum ModuleTypes {
      */
     CjsNamespaceProvider = 6,
 
+    CjsInteropRequire = 7,
+
 }

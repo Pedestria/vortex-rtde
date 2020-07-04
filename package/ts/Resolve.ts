@@ -6,6 +6,7 @@ import * as fs from 'fs-extra'
 import {DefaultQuarkTable, QuarkLibEntry} from './QuarkTable'
 import {isProduction} from  './Main'
 import * as chalk from 'chalk'
+import { ParseSettings } from './Options'
 
 /**Resolves dependency location based off of Import Location
  * __(To allow Node File System to read/verify imported modules)__
@@ -39,7 +40,6 @@ export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:st
 
 export function resolveLibBundle(nodeLibName:string){
     //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
-    let minified = 'min'
     let STD_NODE_LIBS = ['path','fs','module','os']
 
     if(STD_NODE_LIBS.includes(nodeLibName)){
@@ -49,12 +49,16 @@ export function resolveLibBundle(nodeLibName:string){
     let bundles = ResolveLibrary(nodeLibName)
     if(bundles instanceof Array)
     {
-        for(let lib of bundles){
-            if (lib.includes(minified) && isProduction){
-                return lib
+        for(let bund of bundles){
+            if(isProduction){
+                if(bund.includes('min') || bund.includes('prod')){
+                    return addJsExtensionIfNecessary(bund)
+                } 
             }
-            else if(lib.includes(minified) == false && isProduction == false){
-                return lib
+            else{
+                if(!bund.includes('min') && !bund.includes('prod')){
+                    return addJsExtensionIfNecessary(bund)
+                }
             }
         }
     }
@@ -104,7 +108,7 @@ function LibraryRelayVerify(packageIndexDirname:string){
 
     let regexp = new RegExp('./')
 
-    const jsCode = Babel.parse(buffer,{"sourceType":"module"})
+    const jsCode = Babel.parse(buffer,ParseSettings)
 
     let libBundles:Array<string> = []
 
@@ -139,130 +143,9 @@ function fixLibraryPath(pathToFile:string){
     }
 }
 
-function isQuarky(entryPoint:string){
-
-    const buffer = fs.readFileSync(entryPoint,'utf-8').toString();
-
-    let regexp = new RegExp('./')
-
-    const jsCode = Babel.parse(buffer,{"sourceType":"module"})
-
-    traverse(jsCode,{
-        enter(path){
-
-            if (path.node.type === 'VariableDeclaration') {
-                if (path.node.declarations[0].init !== null){
-                    if (path.node.declarations[0].init.type === 'CallExpression') {
-                        if(path.node.declarations[0].init.callee.name === 'require') {
-                            if(path.node.declarations[0].id.type === 'ObjectPattern'){
-                                for (let namedRequires of path.node.declarations[0].id.properties){
-                                    //console.log(namedRequires.value)
-                                    if(testForLocalFileRequires(LocalizedResolve(entryPoint,namedRequires.value))){
-                                        return true
-                                    }
-                                }
-                            }
-                            else{
-                                if(testForLocalFileRequires(LocalizedResolve(entryPoint,path.node.declarations[0].init.arguments[0].value))){
-                                    return true
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (path.node.type === 'ExpressionStatement') {
-                if (path.node.expression.type === 'AssignmentExpression') {
-                    if(path.node.expression.left.type === 'MemberExpression' && path.node.expression.right.type === 'CallExpression'){
-                        if(path.node.expression.right.callee.name === 'require') {
-                            if(testForLocalFileRequires(LocalizedResolve(entryPoint,path.node.expression.right.arguments[0].value))){
-                                return true
-                            }
-                        }
-                    }
-                }
-                if(path.node.expression.type === 'CallExpression'){
-                    if(path.node.expression.callee.type === 'CallExpression'){
-                        if (path.node.expression.callee.callee.name === 'require'){
-                            if(testForLocalFileRequires(LocalizedResolve(entryPoint,path.node.expression.callee.arguments[0].value))){
-                                return true
-                            }
-                        }
-                    }
-                }
-            }
-
-        }
-    })
-    return false
-}
-
-function testForLocalFileRequires(filename:string){
-
-    console.log(filename)
-
-    const buffer = fs.readFileSync(addJsExtensionIfNecessary(filename),'utf-8').toString();
-
-    let regexp = new RegExp('./')
-
-    const jsCode = Babel.parse(buffer,{"sourceType":"module"})
-
-
-    traverse(jsCode,{
-        enter(path){
-
-            if (path.node.type === 'VariableDeclaration') {
-                //console.log(path.node)
-                let modules = []
-                if (path.node.declarations[0].init.type === 'CallExpression') {
-                    if(path.node.declarations[0].init.callee.name === 'require') {
-                        if(path.node.declarations[0].id.type === 'ObjectPattern'){
-                            for (let namedRequires of path.node.declarations[0].id.properties){
-                                if(namedRequires.value.match(regexp) !== null){
-                                    return true
-                                }
-                            }
-                        }
-                        else{
-                            if(path.node.declarations[0].init.arguments[0].value.match(regexp) !== null){
-                                return true
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (path.node.type === 'ExpressionStatement') {
-                if (path.node.expression.type === 'AssignmentExpression') {
-                    if(path.node.expression.left.type === 'MemberExpression' && path.node.expression.right.type === 'CallExpression'){
-                        if(path.node.expression.right.callee.name === 'require') {
-                            if(path.node.expression.right.arguments[0].value.match(regexp) !== null){
-                                return true
-                            }
-                        }
-                    }
-                }
-                if(path.node.expression.type === 'CallExpression'){
-                    if(path.node.expression.callee.type === 'CallExpression'){
-                        if (path.node.expression.callee.callee.name === 'require'){
-                            if(path.node.expression.callee.arguments[0].value.match(regexp) !== null){
-                                return true
-                            }
-                        }
-                    }
-                }
-            }
-
-        }
-    })
-    return false
-}
-
 export function addJsExtensionIfNecessary(file:string){
 
-    let jsExt = new RegExp('.js')
-    if(file.match(jsExt) !== null){
+    if(file.includes('.js') || file.includes('.mjs')){
         return file
     }
     else{

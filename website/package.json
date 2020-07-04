@@ -15,10 +15,12 @@
     "@babel/types": "^7.10.3",
     "chalk": "^4.1.0",
     "cli-spinners": "^2.3.0",
+    "css": "^3.0.0",
     "fs-extra": "^9.0.1",
     "ora": "^4.0.4",
     "resolve": "^1.17.0",
-    "terser": "^4.8.0"
+    "terser": "^4.8.0",
+    "uuid": "^8.2.0"
   },
   "dependencies": {
     "react": "^16.13.1",

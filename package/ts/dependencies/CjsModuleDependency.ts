@@ -1,11 +1,11 @@
 import ModuleDependency from "./ModuleDependency.js"
 import Module, { ModuleTypes } from '../Module'
-import chalk from 'chalk'
 import MDImportLocation from "../MDImportLocation.js";
 import traverse from "@babel/traverse";
 import { QueueEntry } from "../GraphGenerator.js"
 //import Dependency from "../Dependency.js";
 import {findModulesUnderNamespace,searchForModuleUnderNamespace} from './NamespaceSearch'
+import { VortexError, VortexErrorType } from "../VortexError.js";
 
 /** CommonJS Dependency that contain exported Modules 
  * @extends ModuleDependency
@@ -69,7 +69,7 @@ export default class CjsModuleDependency extends ModuleDependency{
         //console.log(currentImpLoc)
 
 
-        let NonExtError = new Error(chalk.redBright('Non Existant Modules Imported from ' + entry.name))
+        let NonExtError = new VortexError('Non Existant Modules Imported from ' + entry.name,VortexErrorType.StarSyntaxError)
 
         for(let mod of currentImpLoc.modules){
             if(dummyImpLoc.testForModule(mod) == false){

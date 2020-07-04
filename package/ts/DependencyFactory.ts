@@ -23,10 +23,6 @@ export function getFileExtension(filename:string){
 
 export function resolveDependencyType(name:string,initImportLoc:FileImportLocation,currentFile:string){
 
-    if(!extensions.includes(getFileExtension(name))){
-        throw new VortexError(`Cannot resolve extension ${getFileExtension(name)}.`,VortexErrorType.PortalPanelError)
-    }
-
     let resolvedDependency:Dependency
 
     switch(getFileExtension(name)){

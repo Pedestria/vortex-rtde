@@ -1,10 +1,10 @@
 import Module, { ModuleTypes } from '../Module'
-import chalk from 'chalk'
 import ModuleDependency from "./ModuleDependency.js";
 import MDImportLocation from "../MDImportLocation.js";
 import traverse from "@babel/traverse";
 import { QueueEntry } from "../GraphGenerator.js";
 import {findModulesUnderNamespace,searchForModuleUnderNamespace} from './NamespaceSearch'
+import { VortexError, VortexErrorType } from '../VortexError';
 
 /**ECMAScript Dependency that contain exported Modules.
  * @extends ModuleDependency
@@ -81,7 +81,7 @@ export default class EsModuleDependency extends ModuleDependency {
 
         //console.log(confModExp,confModImp)
 
-        let NonExtError = new Error(chalk.redBright('Non Existent Modules Imported from ' + entry.name))
+        let NonExtError = new VortexError('Non Existent Modules Imported from ' + entry.name,VortexErrorType.StarSyntaxError)
 
         for(let mod of currentImpLoc.modules){
             if(dummyImpLoc.testForModule(mod) == false){

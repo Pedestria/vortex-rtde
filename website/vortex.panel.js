@@ -5,6 +5,7 @@ module.exports = {
     useTerser:false,
     start:'./src/Main.jsx',
     output:'./client/dist/bundle.js',
-    extensions: ['.css','.png']
+    extensions: ['.css','.png','.otf'],
+    encodeFilenames:true
 
 }

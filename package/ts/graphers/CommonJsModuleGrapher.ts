@@ -39,6 +39,14 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:st
                             //console.log(path.node.declarations[0].init.arguments[0].value)
                             let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.init.arguments[0].value)
                             Transport(new CjsModuleDependency(path.node.init.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName)
+                        } else if (path.node.init.callee.name === '_interopDefault'){
+                            if(path.node.init.arguments[0].type === 'CallExpression'){
+                                if(path.node.init.arguments[0].callee.name === 'require'){
+                                    modules.push(new Module(path.node.id.name,ModuleTypes.CjsInteropRequire))
+                                    let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.init.arguments[0].arguments[0].value);
+                                    Transport(new CjsModuleDependency(path.node.init.arguments[0].arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName)
+                                }
+                            }
                         }
                     }
             }},

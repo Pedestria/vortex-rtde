@@ -1054,7 +1054,7 @@ function WebAppCompile (Graph:VortexGraph){
 
     for(let _shuttle of PlanetShuttles){
 
-        let code = generate(t.program([t.variableDeclaration('var',[t.variableDeclarator(t.identifier('entry'),t.stringLiteral(_shuttle.entry)),t.variableDeclarator(t.identifier('planetmodules'),_shuttle.buffer)])])).code
+        let code = generate(t.program([t.variableDeclaration('var',[t.variableDeclarator(t.identifier('entry'),t.stringLiteral(_shuttle.entry)),t.variableDeclarator(t.identifier('planetmodules'),_shuttle.buffer)])]),{compact: isProduction? true : false}).code
 
         let o = new Object(_shuttle.name)
         Object.defineProperty(o,'code',{
@@ -1174,7 +1174,7 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
             })
         } else if(dep instanceof CjsModuleDependency){
 
-            if(currentImpLoc.modules[0].type === ModuleTypes.CjsNamespaceProvider){
+            if(currentImpLoc.modules[0].type === ModuleTypes.CjsNamespaceProvider || currentImpLoc.modules[0].type === ModuleTypes.CjsInteropRequire){
                 traverse(ast,{
                     VariableDeclaration: function(path){
                         for(let dec of path.node.declarations){
@@ -1184,6 +1184,10 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
                                         dec.id.name = namespace
                                         dec.init.callee.name = 'shuttle'
                                         dec.init.arguments[0].value = dep.name.includes('./')? dep.name : dep.libLoc
+                                    } else if (dec.init.callee.type === 'Identifier' && dec.init.callee.name === '_interopDefault' && dec.init.arguments[0].type === 'CallExpression' && dec.init.arguments[0].callee.name === 'require' && dec.init.arguments[0].arguments[0].value === currentImpLoc.relativePathToDep){
+                                        dec.init.arguments[0].callee.name = 'shuttle'
+                                        dec.id.name = namespace
+                                        dec.init.arguments[0].arguments[0].value = dep.name.includes('./')? dep.name : dep.libLoc
                                     }
                                 }
                             }
@@ -1307,7 +1311,21 @@ function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
                     if(path.node.object.type === 'Identifier'){
                         if(path.node.object.name === 'exports'){
                             path.node.object.name = 'shuttle_exports'
+                        } else if(path.node.object.name === 'module'){
+                            path.node.object.name = 'shuttle_exports'
+                            if(path.node.property.name === 'exports'){
+                                path.node.property.name = 'default'
+                            }
                         }
+                    }
+                }
+            },
+            Identifier: function(path){
+                if(path.parent.type !== 'MemberExpression'){
+                    if(path.node.name === 'exports'){
+                        path.node.name = 'shuttle_exports'
+                    } else if(path.node.name === 'module'){
+                        path.node.name = 'shuttle_exports'
                     }
                 }
             }
@@ -1317,7 +1335,7 @@ function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
 
 /** __WARNING: THIS WILL SOON BE DEPRECATED!!__
  * 
- * Strips process.node functions/conditionals from the code.
+ * Strips process.node functions/conditionals from the code. (Also strips Object.defineProperty(exports,_esModule))
  * 
  * @param {t.File} ast Abstract Syntax Tree (ESTree Format)
  */
@@ -1334,6 +1352,16 @@ function stripNodeProcess(ast:t.File){
                         }
                     }
                 }
+            }
+        },
+        CallExpression: function(path){
+            if(path.node.callee.type === 'MemberExpression' && path.node.callee.object.type === "Identifier" && path.node.callee.object.name === 'Object' && path.node.callee.property.name === 'defineProperty' && path.node.arguments[0].type === 'Identifier' && path.node.arguments[0].name === 'exports'){
+                path.remove()
+            }
+        },
+        MemberExpression: function(path){
+            if(path.node.object.type === 'Identifier' && path.node.object.name === 'process' && path.node.property.name === 'env'){
+                path.replaceWith(t.stringLiteral(isProduction? 'production' : 'development'))
             }
         }
     })

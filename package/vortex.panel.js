@@ -3,7 +3,7 @@ module.exports = {
     bundleMode:'star',
     useTerser:false,
     start:'./test/web/Main.jsx',
-    output:'./out/birdbundle.js',
+    output:'./out/webapp.js',
     extensions: ['.css','.png','.otf'],
     encodeFilenames:true
 

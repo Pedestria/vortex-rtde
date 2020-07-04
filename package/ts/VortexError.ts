@@ -1,4 +1,4 @@
-import chalk from 'chalk'
+import * as chalk from 'chalk'
 
 export class VortexError extends Error{
     constructor(error_message:string,type:VortexErrorType) {

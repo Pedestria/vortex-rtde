@@ -1,2 +1,2 @@
 @ECHO off
-node vortex/vortex.js
+node vortex/vortex.min.js

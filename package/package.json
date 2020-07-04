@@ -39,6 +39,7 @@
     "es6-promise": "^4.2.8",
     "fs-extra": "^9.0.1",
     "glob": "^7.1.6",
+    "loose-envify": "^1.4.0",
     "ora": "^4.0.4",
     "prettier": "^2.0.5",
     "resolve": "^1.17.0",
@@ -56,6 +57,7 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "rollup": "^2.16.1",
-    "vue": "^2.6.11"
+    "vue": "^2.6.11",
+    "vue-template-compiler": "^2.6.11"
   }
 }

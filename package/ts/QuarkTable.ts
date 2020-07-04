@@ -33,4 +33,4 @@ export class QuarkLibEntry{
 }
 
 export var DefaultQuarkTable = new QuarkLibTable
-DefaultQuarkTable.addEntry(new QuarkLibEntry('aws-sdk',['./node_modules/aws-sdk/dist/aws-sdk.js','./node_modules/aws-sdk/dist/aws-sdk.min.js']))
+DefaultQuarkTable.addEntry(new QuarkLibEntry('aws-sdk',['./node_modules/aws-sdk/dist/aws-sdk.min.js','./node_modules/aws-sdk/dist/aws-sdk.js']))

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom'
 const OtherThing = React.lazy(() => import('./Com.jsx'))
 import './styles.css'
 import Logo from '../img/1200px-React-icon.png'
+import './HelloVue'
 
 class MainComponent extends Component{
 

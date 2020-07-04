@@ -16,6 +16,8 @@
 
 - Build docs webpage.
 
+- Fix miscopy of File Dependency
+
 ## Bundler Key Syntax Words (Only for library mode):
 
 ### vortexExpose
