@@ -2,8 +2,11 @@ const fs = require('fs-extra')
 const path = require('path')
 const css = require('css')
 const chalk = require('chalk')
-const Babel = require('@babel/parser')
-const envify = require('loose-envify/loose-envify')
+// const Babel = require('@babel/parser')
+// const VueTemplate = require('vue-template-compiler')
+// const compiler = require('@vue/component-compiler-utils')
+// const {transformSync} = require('@babel/core')
+// const sass = require('node-sass')
 
 function amendEntryPoint(entry){
 
@@ -62,7 +65,35 @@ async function isJs(filename){
 //isJs('../ogpoe/esmoep/mbeos').catch(err => { console.log(err)}).then( result => {console.log(result)})
 //console.log(path.extname('../gopp/mama')
 
-fs.writeJSONSync('./vuetest.json',Babel.parse(fs.readFileSync('./test/func.js').toString()))
+// const result = VueTemplate.parseComponent(fs.readFileSync('./test/component.vue').toString())
 
+
+// //console.log(result.script.content)
+// const {render} = VueTemplate.compileToFunctions(result.template.content)
+
+// fs.writeFileSync('./vuefunc.js',render.toString())
+// console.log('Success!')
+// if(result.styles[0].lang === 'scss'){
+//     var final = sass.renderSync({data:result.styles[0].content})
+//     console.log(final.css.toString())
+// }
+
+function LocalizedResolve(rootFileDirToEntry,dependencyLocalDir){
+
+    if(rootFileDirToEntry == dependencyLocalDir){
+        return rootFileDirToEntry
+    }
+    else if(path.dirname(dependencyLocalDir) == './'){
+        return dependencyLocalDir
+    }
+
+    let dirname = path.dirname(rootFileDirToEntry)
+    let localFilePath = dependencyLocalDir
+
+    return './' + path.join(dirname,localFilePath)
+
+}
+
+console.log(LocalizedResolve('./ts/live/Bundle.ts','../../vortex.panel.js'))
 
 

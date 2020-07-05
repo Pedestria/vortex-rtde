@@ -3,7 +3,7 @@
         /**
          * Type of program to bundle for
          */
-        type:'app'|'library'
+        type:'app'|'library'|'live'
         /**
          * The Mode of which to bundle the program in.
          */

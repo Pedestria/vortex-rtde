@@ -62,4 +62,6 @@ export enum ModuleTypes {
 
     CjsInteropRequire = 7,
 
+    EsDefaultNamespaceProvider = 8,
+
 }

@@ -49,6 +49,9 @@ export function resolveLibBundle(nodeLibName:string){
     let bundles = ResolveLibrary(nodeLibName)
     if(bundles instanceof Array)
     {
+        if(bundles.length === 1){
+            return addJsExtensionIfNecessary(bundles[0])
+        }
         for(let bund of bundles){
             if(isProduction){
                 if(bund.includes('min') || bund.includes('prod')){

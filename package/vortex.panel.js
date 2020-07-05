@@ -1,6 +1,6 @@
 module.exports = {
     type:'app',
-    bundleMode:'star',
+    bundleMode:'neutronstar',
     useTerser:false,
     start:'./test/web/Main.jsx',
     output:'./out/webapp.js',

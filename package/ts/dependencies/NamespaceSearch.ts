@@ -1,6 +1,7 @@
 import traverse from '@babel/traverse'
 import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
+import { isProduction } from '../Main';
 
 export function findModulesUnderNamespace(file:string,Namespace:string){
  
@@ -50,4 +51,27 @@ export function searchForModuleUnderNamespace(file:string,Module:string,Namespac
             }
         })
     return rc
+}
+
+export function searchForDefaultNamespace(file:string,Namespace:string): boolean{ 
+    const buffer = fs.readFileSync(file).toString()
+
+    const jsCode = Babel.parse(buffer,{"sourceType":"module"})
+
+    let rc = false
+
+    traverse(jsCode, {
+        MemberExpression: function(path){
+            if(path.node.object.type === "Identifier" && path.node.object.name === 'module' && path.node.property.name === 'exports' && path.parent.type === 'AssignmentExpression' && path.parent.right.type === 'Identifier' && path.parent.right.name === Namespace){
+                rc = true
+            } else if(isProduction){
+                if(path.node.object.type === "Identifier" && path.node.object.name === 'module' && path.node.property.name === 'exports' && path.parent.type === 'AssignmentExpression'){
+                    rc = true
+                }
+            }
+        }
+    })
+
+    return rc
+
 }

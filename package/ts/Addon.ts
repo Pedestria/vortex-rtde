@@ -1,38 +1,39 @@
+
 /**
  * Vortex Addon Interface
  */
-class VortexAddon {
+export class VortexAddon {
 
     name:string
-    overrides:Array<VortexContexualOverride>
+    handler:ExportsHandler
     /**
      * 
      * @param {string} name Addon Name
-     * @param {VortexContexualOverride[]} overrides Overrides Provided by Addon
      */
-    constructor(name:string,overrides:Array<VortexContexualOverride>){
+    constructor(name:string, handler:ExportsHandler){
         this.name = name;
-        this.overrides = overrides;
-
+        this.handler = handler
     }
+} 
 
-}
+export class ExportsHandler {
 
-class VortexContexualOverride {
-    type:OverrideType
-
-    constructor(type:OverrideType){
-        this.type = type
+    exports:{
+        extend: {
+            jsExtensions:Array<string>
+            extensions:Array<string>
+        }
+        override: {
+            compileExtensions: {
+                jsExtension:boolean
+                extension:string
+                compiler:Function
+            }
+            reloadExtensions: {
+                jsExtension:boolean
+                extension:string
+                compiler:Function
+            }
+        }
     }
-
-
-}
-
-enum OverrideType {
-    COMPILER = 1,
-    GRAPH_GENERATOR = 2,
-    DEPENDENCY = 3,
-    IMPORT_LOCATION = 4,
-    MODULE_TYPES = 5,
-
 }

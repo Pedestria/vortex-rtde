@@ -12,6 +12,8 @@ import { isInQueue, loadEntryFromQueue, addEntryToQueue, QueueEntry } from "./Gr
 import { isLibrary } from "./Main.js";
 import { transformSync } from "@babel/core";
 import { BabelSettings } from "./Options.js";
+import { ModuleTypes } from "./Module.js";
+import { searchForDefaultNamespace } from "./dependencies/NamespaceSearch.js";
 //import MDImportLocation from "./MDImportLocation.js";
 
 /**Transports the given dependency to given Graph.
@@ -48,6 +50,11 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
                 // Else Find library bundle location
                 if(Dependency instanceof ModuleDependency){
                     Dependency.libLoc = resolveLibBundle(Dependency.name)
+                    if(Dependency instanceof EsModuleDependency && CurrentMDImpLoc.modules[0].type === ModuleTypes.EsDefaultModule){
+                        if(searchForDefaultNamespace(Dependency.libLoc,CurrentMDImpLoc.modules[0].name)){
+                            CurrentMDImpLoc.modules[0].type = ModuleTypes.EsDefaultNamespaceProvider
+                        }
+                    }
                 }
             } 
         }

@@ -285,6 +285,10 @@ function amendEntryPoint2(entry:string){
     return `./${shortEntry}`
 }
 
-createStarPackage();
+if(Panel.type !== 'live'){
+    createStarPackage();
+} else if(Panel.type === 'live'){
+    
+}
 //fs.writeJSONSync('out/importcool.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"plugins":["dynamicImport"],"sourceType":"module"}))
 

@@ -18,6 +18,8 @@
 
 - Fix miscopy of File Dependency
 
+- Fix namespace ModuleDependency Transform ( For when default export is used as namespace) 
+
 ## Bundler Key Syntax Words (Only for library mode):
 
 ### vortexExpose

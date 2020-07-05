@@ -1140,9 +1140,9 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
                             if(currentImpLoc.indexOfModuleByName(path.node.name) !== null){
                                 if(dep.name.includes('./') == false){
                                     //If library but NOT default import from lib
-                                    if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type !== ModuleTypes.EsDefaultModule){
+                                    if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type !== ModuleTypes.EsDefaultModule && currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type !== ModuleTypes.EsDefaultNamespaceProvider){
                                         path.replaceWith(t.memberExpression(t.identifier(namespace),t.identifier(path.node.name)))
-                                    }else if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type === ModuleTypes.EsDefaultModule){
+                                    }else if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type === ModuleTypes.EsDefaultModule || currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type === ModuleTypes.EsDefaultNamespaceProvider){
                                         path.replaceWith(t.memberExpression(t.identifier(namespace),t.identifier('default')))
                                     }
                                     //if NOT library at all
@@ -1166,6 +1166,9 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
                                 let defaultMod = currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.object.name)]
                                 if(defaultMod.type === ModuleTypes.EsDefaultModule && defaultMod.name === path.node.object.name){
                                     path.replaceWith(t.memberExpression(t.identifier(namespace),path.node.property))
+                                } else if(defaultMod.type === ModuleTypes.EsDefaultNamespaceProvider && defaultMod.name === path.node.object.name){
+                                    // IF Namespace is the default export and is used as new or call expression elsewhere.
+                                    path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('default')),path.node.property))
                                 }
                             }
                         }
@@ -1302,6 +1305,10 @@ function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
                             }
                             else if(path.node.left.object.name === 'module' && path.node.left.property.name === 'exports'){
                                 path.replaceWith(ShuttleExportDefault({EXPORT:path.node.right.type === 'Identifier' ? path.node.right.name : path.node.right}))
+
+                            } else if(path.node.left.object.name === 'freeModule' && path.node.left.property.name === 'exports'){
+                                //Vue.js template compiler polyfill fix.. (For dependency 'he')
+                                path.node.left.property.name = 'default'
                             }
                         }
                     }
