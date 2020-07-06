@@ -64,7 +64,10 @@ export function searchForDefaultNamespace(file:string,Namespace:string): boolean
         MemberExpression: function(path){
             if(path.node.object.type === "Identifier" && path.node.object.name === 'module' && path.node.property.name === 'exports' && path.parent.type === 'AssignmentExpression' && path.parent.right.type === 'Identifier' && path.parent.right.name === Namespace){
                 rc = true
-            } else if(isProduction){
+            } else if(path.node.object.type === "Identifier" && path.node.object.name === 'module' && path.node.property.name === 'exports' && path.parent.type === 'AssignmentExpression' && path.parent.right.type === 'CallExpression' && path.parent.right.callee.type === 'Identifier' && path.parent.right.callee.name === 'factory'){
+                rc = true
+            }
+            else if(isProduction){
                 if(path.node.object.type === "Identifier" && path.node.object.name === 'module' && path.node.property.name === 'exports' && path.parent.type === 'AssignmentExpression'){
                     rc = true
                 }

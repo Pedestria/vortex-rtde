@@ -43,6 +43,8 @@ export var useDebug:boolean;
 
 export var extensions:Array<string> = Panel.extensions
 
+export var polyfillPromise:boolean = Panel.polyfillPromise
+
 export function isJs(filename:string){
 
     if(path.basename(filename) === filename){
@@ -204,7 +206,7 @@ async function terserPackage(outputFilename:string,yourCredits,bundleObjects:Arr
         for(let bundle of bundleObjects){
             let filename:string
             if(bundle.valueOf() === 'star'){
-                filename = path.dirname(outputFilename) + '/' + path.basename(outputFilename,'.js') + '.min.js'
+                filename = outputFilename
 
                 let mini = terser.minify(bundle.code,{compress:true,mangle:true}).code
 

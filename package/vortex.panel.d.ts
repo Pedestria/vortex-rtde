@@ -28,6 +28,11 @@
          * Whether Vortex should encode filenames with uuids.
          */
         encodeFilenames:boolean
+
+        /**
+         * Whether Vortex should polyfill the es6 promise. __(Used with Planet imports!)__
+         */
+        polyfillPromise:boolean
     }
 
     export = Panel;

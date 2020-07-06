@@ -822,8 +822,8 @@ function WebAppCompile (Graph:VortexGraph){
 
     const entry = loadEntryFromQueue(Graph.entryPoint)
     stripNodeProcess(entry.ast)
-    const COMP = generate(entry.ast,{sourceMaps:false})
-    const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${entry.name} \n`)})
+    const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+    const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n  //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
     shuttle.addModuleToBuffer(Graph.entryPoint,mod)
     bufferNames.push(Graph.entryPoint)
 
@@ -835,8 +835,8 @@ function WebAppCompile (Graph:VortexGraph){
                     if(bufferNames.includes(dep.libLoc) == false){
                         const entry = loadEntryFromQueue(dep.libLoc)
                         stripNodeProcess(entry.ast)
-                        const COMP = generate(entry.ast,{sourceMaps:false})
-                        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${entry.name} \n`)})
+                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+                        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                         shuttle.addModuleToBuffer(dep.libLoc,mod)
                         bufferNames.push(dep.libLoc)
                     }
@@ -845,8 +845,8 @@ function WebAppCompile (Graph:VortexGraph){
                     if(bufferNames.includes(dep.name) == false){
                         const entry = loadEntryFromQueue(dep.name)
                         stripNodeProcess(entry.ast)
-                        const COMP = generate(entry.ast,{sourceMaps:false})
-                        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL:${entry.name} \n`)})
+                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+                        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code  + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                         shuttle.addModuleToBuffer(dep.name,mod)
                         bufferNames.push(dep.name)
                     }
@@ -868,8 +868,8 @@ function WebAppCompile (Graph:VortexGraph){
 
         const entry = loadEntryFromQueue(planet.entryModule)
         stripNodeProcess(entry.ast)
-        const COMP = generate(entry.ast,{sourceMaps:false})
-        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${entry.name} \n`)})
+        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
         local_shuttle.addModuleToBuffer(planet.entryModule,mod)
         bufferNames.push(planet.entryModule)
 
@@ -881,8 +881,8 @@ function WebAppCompile (Graph:VortexGraph){
                         if(bufferNames.includes(dep.libLoc) == false){
                             const entry = loadEntryFromQueue(dep.libLoc)
                             stripNodeProcess(entry.ast)
-                            const COMP = generate(entry.ast,{sourceMaps:false})
-                            const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${entry.name} \n`)})
+                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+                            const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                             local_shuttle.addModuleToBuffer(dep.libLoc,mod)
                             bufferNames.push(dep.libLoc)
                         }
@@ -891,8 +891,8 @@ function WebAppCompile (Graph:VortexGraph){
                         if(bufferNames.includes(dep.name) == false){
                             const entry = loadEntryFromQueue(dep.name)
                             stripNodeProcess(entry.ast)
-                            const COMP = generate(entry.ast,{sourceMaps:false})
-                            const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL:${entry.name} \n`)})
+                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+                            const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                             local_shuttle.addModuleToBuffer(dep.name,mod)
                             bufferNames.push(dep.name)
                         }
@@ -1340,7 +1340,7 @@ function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
     }
 }
 
-/** __WARNING: THIS WILL SOON BE DEPRECATED!!__
+/** 
  * 
  * Strips process.node functions/conditionals from the code. (Also strips Object.defineProperty(exports,_esModule))
  * 
@@ -1349,18 +1349,6 @@ function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
 
 function stripNodeProcess(ast:t.File){
     traverse(ast,{
-        IfStatement: function(path){
-            //Removes any if statement having any relation with NodeJs process!
-            if(path.node.test.type === 'BinaryExpression'){
-                if(path.node.test.left.type === 'MemberExpression'){
-                    if(path.node.test.left.object.type === 'MemberExpression'){
-                        if(path.node.test.left.object.object.name === 'process'){
-                            path.replaceWithMultiple(path.node.consequent.body)
-                        }
-                    }
-                }
-            }
-        },
         CallExpression: function(path){
             if(path.node.callee.type === 'MemberExpression' && path.node.callee.object.type === "Identifier" && path.node.callee.object.name === 'Object' && path.node.callee.property.name === 'defineProperty' && path.node.arguments[0].type === 'Identifier' && path.node.arguments[0].name === 'exports'){
                 path.remove()
@@ -1368,6 +1356,8 @@ function stripNodeProcess(ast:t.File){
         },
         MemberExpression: function(path){
             if(path.node.object.type === 'Identifier' && path.node.object.name === 'process' && path.node.property.name === 'env'){
+                path.replaceWith(t.stringLiteral(isProduction? 'production' : 'development'))
+            } else if(path.node.object.type === 'MemberExpression' && path.node.object.object.type === 'Identifier' && path.node.object.object.name === 'process' && path.node.object.property.name === 'env' && path.node.property.name === 'NODE_ENV'){
                 path.replaceWith(t.stringLiteral(isProduction? 'production' : 'development'))
             }
         }

@@ -50,9 +50,12 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
                 // Else Find library bundle location
                 if(Dependency instanceof ModuleDependency){
                     Dependency.libLoc = resolveLibBundle(Dependency.name)
-                    if(Dependency instanceof EsModuleDependency && CurrentMDImpLoc.modules[0].type === ModuleTypes.EsDefaultModule){
-                        if(searchForDefaultNamespace(Dependency.libLoc,CurrentMDImpLoc.modules[0].name)){
-                            CurrentMDImpLoc.modules[0].type = ModuleTypes.EsDefaultNamespaceProvider
+                    if(CurrentMDImpLoc.modules[0] !== undefined){
+                        if(Dependency instanceof EsModuleDependency && CurrentMDImpLoc.modules[0].type === ModuleTypes.EsDefaultModule){
+                            if(searchForDefaultNamespace(Dependency.libLoc,CurrentMDImpLoc.modules[0].name)){
+                                CurrentMDImpLoc.modules[0].type = ModuleTypes.EsDefaultNamespaceProvider
+                                console.log(CurrentMDImpLoc.modules[0].name)
+                            }
                         }
                     }
                 }

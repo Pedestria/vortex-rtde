@@ -8,7 +8,7 @@ import * as Babel from '@babel/parser'
 import Dependency from './Dependency.js'
 import ModuleDependency from './dependencies/ModuleDependency.js'
 import {BabelSettings, ParseSettings } from './Options.js'
-import {isProduction, isLibrary} from './Main'
+import {isProduction, isLibrary, polyfillPromise} from './Main'
 import { transform, transformSync, transformFileSync } from '@babel/core'
 import { CSSDependency } from './dependencies/CSSDependency.js'
 import * as css from 'css'
@@ -76,7 +76,12 @@ export default async function GenerateGraph(entry:string,modEntry:string): Promi
         entryFile = transformSync(fs.readFileSync(modEnt).toString(),BabelSettings).code
     }
 
+    if(polyfillPromise){
+        
+    }
+
     let entryAst = Babel.parse(entryFile,ParseSettings)
+
 
     addEntryToQueue(new QueueEntry(entry,entryAst))
     GraphDepsAndModsForCurrentFile(loadEntryFromQueue(modEnt),Graph);
