@@ -1,5 +1,5 @@
-import ImportLocation from "./ImportLocation.js";
-import Module from "./Module.js";
+import ImportLocation from "../ImportLocation.js";
+import Module from "../Module.js";
 
 export default class MDImportLocation extends ImportLocation{
 

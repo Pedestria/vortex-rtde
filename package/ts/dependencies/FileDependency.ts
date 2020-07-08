@@ -1,5 +1,5 @@
 import Dependency from "../Dependency";
-import { FileImportLocation } from "../FileImportLocation";
+import { FileImportLocation } from "../importlocations/FileImportLocation";
 import * as uuid from 'uuid'
 
 /**A Non JS Dependency

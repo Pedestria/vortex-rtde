@@ -5,7 +5,7 @@ import ModuleDependency from "./dependencies/ModuleDependency.js";
 import EsModuleDependency from "./dependencies/EsModuleDependency.js";
 import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
 import ImportLocation from "./ImportLocation.js";
-import MDImportLocation from "./MDImportLocation.js";
+import MDImportLocation from "./importlocations/MDImportLocation.js";
 import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
 import { isInQueue, loadEntryFromQueue, addEntryToQueue, QueueEntry } from "./GraphGenerator.js";

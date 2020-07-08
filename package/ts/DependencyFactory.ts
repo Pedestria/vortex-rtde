@@ -2,7 +2,7 @@ import { CSSDependency } from "./dependencies/CSSDependency"
 import ImportLocation from "./ImportLocation"
 import * as fs from 'fs-extra'
 import { LocalizedResolve } from "./Resolve"
-import { FileImportLocation } from "./FIleImportLocation"
+import { FileImportLocation } from "./importlocations/FileImportLocation"
 import { FileDependency } from "./dependencies/FileDependency"
 import Dependency from "./Dependency"
 import {extensions} from "./Main"

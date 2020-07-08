@@ -1,6 +1,6 @@
 import Module, { ModuleTypes } from '../Module'
 import ModuleDependency from "./ModuleDependency.js";
-import MDImportLocation from "../MDImportLocation.js";
+import MDImportLocation from "../importlocations/MDImportLocation.js";
 import traverse from "@babel/traverse";
 import { QueueEntry } from "../GraphGenerator.js";
 import {findModulesUnderNamespace,searchForModuleUnderNamespace} from './NamespaceSearch'

@@ -6,7 +6,7 @@ import traverse from "@babel/traverse";
 import * as Babel from "@babel/parser";
 import { template} from "@babel/core";
 import * as t from '@babel/types';
-import MDImportLocation from "./MDImportLocation.js";
+import MDImportLocation from "./importlocations/MDImportLocation.js";
 import { ModuleTypes } from "./Module.js";
 import Module from './Module'
 import ModuleDependency from "./dependencies/ModuleDependency.js";
@@ -17,7 +17,7 @@ import { queue, loadEntryFromQueue } from "./GraphGenerator.js";
 import * as sourceMap from 'source-map'
 import { CSSDependency } from "./dependencies/CSSDependency.js";
 import ImportLocation from "./ImportLocation.js";
-import { FileImportLocation } from "./FileImportLocation.js";
+import { FileImportLocation } from "./importlocations/FileImportLocation.js";
 import { VortexError, VortexErrorType } from "./VortexError.js";
 import { FileDependency } from "./dependencies/FileDependency.js";
 import { LocalizedResolve } from "./Resolve.js";

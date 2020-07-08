@@ -4,7 +4,7 @@ import * as fs from 'fs-extra'
 import Module, { ModuleTypes } from "../Module.js";
 import CjsModuleDependency from "../dependencies/CjsModuleDependency.js";
 import { Transport } from "../Transport.js";
-import MDImportLocation from "../MDImportLocation.js";
+import MDImportLocation from "../importlocations/MDImportLocation.js";
 import traverse from "@babel/traverse";
 import * as t from '@babel/types'
 import { QueueEntry } from "../GraphGenerator.js";

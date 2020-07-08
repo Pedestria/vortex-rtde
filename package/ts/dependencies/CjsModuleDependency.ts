@@ -1,6 +1,6 @@
 import ModuleDependency from "./ModuleDependency.js"
 import Module, { ModuleTypes } from '../Module'
-import MDImportLocation from "../MDImportLocation.js";
+import MDImportLocation from "../importlocations/MDImportLocation.js";
 import traverse from "@babel/traverse";
 import { QueueEntry } from "../GraphGenerator.js"
 //import Dependency from "../Dependency.js";

@@ -6,13 +6,13 @@ import Module, { ModuleTypes } from "../Module.js";
 import EsModuleDependency from '../dependencies/EsModuleDependency'
 //import { minifyIfProduction } from "../GraphGenerator.js";
 import { Transport } from "../Transport.js";
-import MDImportLocation from "../MDImportLocation.js";
+import MDImportLocation from "../importlocations/MDImportLocation.js";
 import { QueueEntry } from "../GraphGenerator.js";
 import { exportDefaultSpecifier } from "@babel/types";
 import { resolveDependencyType } from "../DependencyFactory.js";
 import ImportLocation from "../ImportLocation.js";
 import { isJs } from "../Main.js";
-import { FileImportLocation } from "../FileImportLocation.js";
+import { FileImportLocation } from "../importlocations/FileImportLocation.js";
 
 /**Searchs and Graphs JS code for ECMAScript Module Dependencies
  * 

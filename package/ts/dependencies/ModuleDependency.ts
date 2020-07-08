@@ -1,6 +1,6 @@
 import Dependency from "../Dependency.js";
 import Module from "../Module.js";
-import MDImportLocation from "../MDImportLocation.js";
+import MDImportLocation from "../importlocations/MDImportLocation.js";
 
 /**
  * A JavaScript Dependency where modules are acquired from.

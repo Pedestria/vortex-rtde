@@ -1,4 +1,4 @@
-import ImportLocation from "./ImportLocation";
+import ImportLocation from "../ImportLocation";
 
 export class FileImportLocation extends ImportLocation{
 

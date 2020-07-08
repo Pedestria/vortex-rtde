@@ -1,7 +1,7 @@
 import * as css from 'css'
 import { Transport } from '../Transport'
 import { FileDependency } from '../dependencies/FileDependency'
-import { FileImportLocation } from '../FileImportLocation'
+import { FileImportLocation } from '../importlocations/FileImportLocation'
 import { VortexGraph } from '../Graph'
 import { resolveDependencyType } from '../DependencyFactory'
 import { CSSDependency } from '../dependencies/CSSDependency'
