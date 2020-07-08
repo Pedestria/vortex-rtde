@@ -33,7 +33,7 @@ Shuttle Module Defintion:
 //shuttle.planetCluster(['planet0','planet1'], function(planet0,planet1) {
 
 }) -->
-Planet Cluster Impot (Async Import via AMD Define)
+Planet Cluster Import (Async Import via AMD Define)
 
 'planet0','planet1' = Planet Name (Entry module is defined in the planet bundle itself!)
 
