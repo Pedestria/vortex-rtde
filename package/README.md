@@ -7,7 +7,7 @@
 
 - Expand Non-JS support.
 
-- Add Support for other Module Dependency types. (AMD Modules, and UMD Modules)
+- Add Support for UMD Modules (Add more support for AMD Define Modules)
 
 - Build LivePush
 
