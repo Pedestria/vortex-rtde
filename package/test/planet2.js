@@ -2,7 +2,7 @@ var entry = "./module7"
 var planetmodules = {
     "./module6": (function(shuttle,shuttle_exports){
         var _mod4 = shuttle('./module4')
-        _mod4.welcome()
+        _mod4.default()
         
     }),
     "./module7": (function(shuttle,shuttle_exports){

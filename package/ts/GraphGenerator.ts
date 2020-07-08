@@ -77,7 +77,7 @@ export default async function GenerateGraph(entry:string,modEntry:string): Promi
     }
 
     if(polyfillPromise){
-        
+         entryFile = "import promisePolyfill from 'es6-promise' \n promisePolyfill.polyfill() \n" + entryFile
     }
 
     let entryAst = Babel.parse(entryFile,ParseSettings)
@@ -102,7 +102,7 @@ export default async function GenerateGraph(entry:string,modEntry:string): Promi
                     else{
                         let file = fs.readFileSync(modName).toString()
 
-                        if(!isLibrary){
+                        if(!isLibrary && file.includes('./')){
                             file = transformSync(file,BabelSettings).code
                         }
 
@@ -236,11 +236,11 @@ function GraphDepsAndModsForCurrentFile(entry:QueueEntry,Graph:VortexGraph,plane
     PlanetGrapher.SearchAndGraph(entry,Graph)
 }
 
-function GraphDepsForLib(dep:Dependency,Graph:VortexGraph){
-    if(dep instanceof ModuleDependency){
-        GraphDepsAndModsForCurrentFile(resolveLibBundle(dep.name),Graph)
-    }
-}
+// function GraphDepsForLib(dep:Dependency,Graph:VortexGraph){
+//     if(dep instanceof ModuleDependency){
+//         GraphDepsAndModsForCurrentFile(resolveLibBundle(dep.name),Graph)
+//     }
+// }
 
 
 

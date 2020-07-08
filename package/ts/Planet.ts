@@ -6,7 +6,7 @@ import EsModuleDependency from "./dependencies/EsModuleDependency"
 import CjsModuleDependency from "./dependencies/CjsModuleDependency"
 
 /**
- * A module container that is loaded asynchronously (via dynamic import)
+ * A module container that is loaded asynchronously (via dynamic import or AMD Define)
  */
 
 export class Planet {
@@ -14,7 +14,7 @@ export class Planet {
     entryModule:string
     originalName:string
     entryDependency:Dependency
-    importedAt:Array<string> = []
+    importedAt:Array<PlanetImportLocation> = []
     modules:Array<Dependency> = []
 
     constructor(name:string,entryModule:string){
@@ -78,4 +78,23 @@ export function assignDependencyType(planet:Planet) : Planet{
     }
 
 
+}
+
+export class PlanetClusterMapObject{
+
+    importedAt:Array<string> = []
+    planetsByOriginalName:Array<string>
+    planetsByNewName:Array<string>
+
+}
+
+export class PlanetImportLocation {
+
+    name:string
+    clusterImport:boolean
+
+    constructor(name:string,clusterImport:boolean){
+        this.name = name
+        this.clusterImport = clusterImport
+    }
 }

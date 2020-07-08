@@ -1,6 +1,3 @@
-import promisePolyfill from 'es6-promise'
-promisePolyfill.polyfill()
-
 import React, {Component, Suspense} from 'react'
 import ReactDOM from 'react-dom'
 const OtherThing = React.lazy(() => import('./Com.jsx'))

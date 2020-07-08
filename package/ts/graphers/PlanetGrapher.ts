@@ -2,17 +2,24 @@ import traverse from '@babel/traverse'
 import * as t from '@babel/types'
 import { QueueEntry } from '../GraphGenerator';
 import { VortexGraph } from '../Graph';
-import { Planet } from '../Planet';
+import { Planet, PlanetClusterMapObject, PlanetImportLocation } from '../Planet';
 import { LocalizedResolve, resolveLibBundle } from '../Resolve';
 
 function namePlanet(Graph:VortexGraph){
     return `planet_${Graph.Planets.length}.js`
 }
 
+/**Searchs code of provided entry and Graphs Planets from ES Dynamic Imports and AMD Define Imports.
+ * 
+ * @param {QueueEntry} entry 
+ * @param {VortexGraph} Graph 
+ */
+
 export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph){
 
     traverse(entry.ast, {
         CallExpression: function(path){
+            //Dynamic Import Grapher
             if(path.node.callee.type === "Import"){
                 let name = path.node.arguments[0].value
                 let ent:string
@@ -24,14 +31,49 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph){
                 }
 
                 if(Graph.planetExists(ent)){
-                    Graph.Planets[Graph.indexOfPlanet(ent)].importedAt.push(entry.name)
+                    Graph.Planets[Graph.indexOfPlanet(ent)].importedAt.push(new PlanetImportLocation(entry.name,false))
                 }
                 else{
                     let planet = new Planet(namePlanet(Graph),ent)
                     planet.originalName = path.node.arguments[0].value
                     Graph.Planets.push(planet)
-                    Graph.Planets[Graph.indexOfPlanet(ent)].importedAt.push(entry.name)
+                    Graph.Planets[Graph.indexOfPlanet(ent)].importedAt.push(new PlanetImportLocation(entry.name,false))
                 }
+            }// AMD Define Grapher
+             else if(path.node.callee.type === "Identifier" && path.node.callee.name === 'define' && path.node.arguments[0].type === 'ArrayExpression') {
+                 let originalNames:Array<string> = []
+                 let newNames:Array<string> = []
+                 if(path.node.arguments[0].type === 'ArrayExpression'){
+                    for(let imprt of path.node.arguments[0].elements){
+                            //imprt is a String Literal in this case!
+                            let name:string = imprt.value
+                            let ent:string
+
+                            if(name.includes('./')){
+                                ent = LocalizedResolve(entry.name,name)
+                            } else{
+                                ent = resolveLibBundle(name)
+                            }
+
+                            if(Graph.planetExists(ent)){
+                                Graph.Planets[Graph.indexOfPlanet(ent)].importedAt.push(new PlanetImportLocation(entry.name,true))
+                            }
+                            else{
+                                let planet = new Planet(namePlanet(Graph),ent)
+                                planet.originalName = imprt.value
+                                planet.inCluster = true
+                                originalNames.push(planet.originalName)
+                                newNames.push(planet.name)
+                                Graph.Planets.push(planet)
+                                Graph.Planets[Graph.indexOfPlanet(ent)].importedAt.push(new PlanetImportLocation(entry.name,true))
+                            }
+                    }
+                }
+                let PlanetClusterMapObj = new PlanetClusterMapObject();
+                PlanetClusterMapObj.importedAt.push(entry.name);
+                PlanetClusterMapObj.planetsByOriginalName = originalNames;
+                PlanetClusterMapObj.planetsByNewName = newNames;
+                Graph.PlanetClusterMap.push(PlanetClusterMapObj)
             }
         }
     })

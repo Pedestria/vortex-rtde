@@ -24,7 +24,8 @@ import { LocalizedResolve } from "./Resolve.js";
 import * as path from 'path'
 import * as css from 'css'
 import { encodeFilenames } from './Main'
-import { Planet } from "./Planet.js";
+import { Planet, PlanetClusterMapObject } from "./Planet.js";
+import * as _ from 'lodash';
 
 function fixDependencyName(name:string){
     let NASTY_CHARS = "\\./@^$#*&!%-"
@@ -766,9 +767,12 @@ function WebAppCompile (Graph:VortexGraph){
 
     for(let planet of Graph.Planets){
         //Transforms: import(**) to shuttle.planet(**) syntax
-        for(let impLoc of planet.importedAt){
-            TransformAsyncImportFromAST(loadEntryFromQueue(impLoc).ast,planet)
-        }
+            for(let impLoc of planet.importedAt){
+                // If current import location is NOT a cluster import
+                if(!impLoc.clusterImport) {
+                    TransformAsyncImportFromAST(loadEntryFromQueue(impLoc.name).ast,planet)
+                }
+            }
 
         if(transdExps.includes(planet.entryModule) == false){
             TransformExportsFromAST(loadEntryFromQueue(planet.entryModule).ast,planet.entryDependency)
@@ -809,6 +813,14 @@ function WebAppCompile (Graph:VortexGraph){
         }
     }
 
+    //AMD Define Transform
+
+    for(let planetClusterMapObj of Graph.PlanetClusterMap){
+        for(let imploc of planetClusterMapObj.importedAt){
+            TransformAsyncClusterImportFromAST(loadEntryFromQueue(imploc).ast,planetClusterMapObj)
+        }
+    }
+
     /**Names of ALL modules added to buffers. (Includes Planets)
      * 
      */
@@ -822,7 +834,7 @@ function WebAppCompile (Graph:VortexGraph){
 
     const entry = loadEntryFromQueue(Graph.entryPoint)
     stripNodeProcess(entry.ast)
-    const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+    const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
     const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n  //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
     shuttle.addModuleToBuffer(Graph.entryPoint,mod)
     bufferNames.push(Graph.entryPoint)
@@ -835,7 +847,7 @@ function WebAppCompile (Graph:VortexGraph){
                     if(bufferNames.includes(dep.libLoc) == false){
                         const entry = loadEntryFromQueue(dep.libLoc)
                         stripNodeProcess(entry.ast)
-                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
                         const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                         shuttle.addModuleToBuffer(dep.libLoc,mod)
                         bufferNames.push(dep.libLoc)
@@ -845,7 +857,7 @@ function WebAppCompile (Graph:VortexGraph){
                     if(bufferNames.includes(dep.name) == false){
                         const entry = loadEntryFromQueue(dep.name)
                         stripNodeProcess(entry.ast)
-                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
                         const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code  + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                         shuttle.addModuleToBuffer(dep.name,mod)
                         bufferNames.push(dep.name)
@@ -868,7 +880,7 @@ function WebAppCompile (Graph:VortexGraph){
 
         const entry = loadEntryFromQueue(planet.entryModule)
         stripNodeProcess(entry.ast)
-        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
         const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
         local_shuttle.addModuleToBuffer(planet.entryModule,mod)
         bufferNames.push(planet.entryModule)
@@ -881,7 +893,7 @@ function WebAppCompile (Graph:VortexGraph){
                         if(bufferNames.includes(dep.libLoc) == false){
                             const entry = loadEntryFromQueue(dep.libLoc)
                             stripNodeProcess(entry.ast)
-                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
                             const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                             local_shuttle.addModuleToBuffer(dep.libLoc,mod)
                             bufferNames.push(dep.libLoc)
@@ -891,7 +903,7 @@ function WebAppCompile (Graph:VortexGraph){
                         if(bufferNames.includes(dep.name) == false){
                             const entry = loadEntryFromQueue(dep.name)
                             stripNodeProcess(entry.ast)
-                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:`../${entry.name}`})
+                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
                             const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                             local_shuttle.addModuleToBuffer(dep.name,mod)
                             bufferNames.push(dep.name)
@@ -1029,6 +1041,20 @@ function WebAppCompile (Graph:VortexGraph){
   
     shuttle.override = function(mods){
         local_modules = mods
+    }
+
+    shuttle.planetCluster = function(planets_array,callback){
+        function defineCluster(){
+          return new Promise(function(resolve, reject){
+              var moduleObjects = planets_array.map(function(planet) { return shuttle.planet(planet)})
+              Promise.all(moduleObjects).then(function(module_objs) {
+                resolve(module_objs)
+              })
+          })
+      }
+        defineCluster().then(function (moduleObjects) {
+            callback.apply(null,moduleObjects)
+        })
     }
     
     
@@ -1459,9 +1485,9 @@ function resolveCSSDependencies(dep:CSSDependency,assets_folder:string){
 /**Transforms Async Import (ES Dynamic Import Syntax) to be used by Shuttle Module Loader
  * @example
  * 
- * import(**) // Into This -->
+ * import('module') // Into This -->
  * 
- * shuttle.planet(**)
+ * shuttle.planet('planet.js')
  * 
  * 
  * @param {t.File} ast Abstract Syntax Tree 
@@ -1478,5 +1504,22 @@ function TransformAsyncImportFromAST(ast:t.File,planet:Planet){
             }
         }
     })
+}
+
+function TransformAsyncClusterImportFromAST(ast:t.File,planetClusterMap:PlanetClusterMapObject){
+    traverse(ast, {
+        CallExpression: function(path){
+            if(path.node.callee.type === 'Identifier' && path.node.callee.name === 'define' && path.node.arguments[0].type === 'ArrayExpression') {
+                let args:Array<string> = path.node.arguments[0].elements.map(argumnt => argumnt.value)
+                // If there is NO difference between args and module names.
+                if(_.difference(args,planetClusterMap.planetsByOriginalName).length === 0){
+                    //Converts strings to Stringliterals
+                    let planetNameNodes:Array<t.StringLiteral> = planetClusterMap.planetsByNewName.map(value => t.stringLiteral(value))
+                    path.replaceWith(t.callExpression(t.memberExpression(t.identifier("shuttle"),t.identifier("planetCluster")),[t.arrayExpression(planetNameNodes),path.node.arguments[1]]))
+                }
+            }
+        }
+    })
+
 }
 

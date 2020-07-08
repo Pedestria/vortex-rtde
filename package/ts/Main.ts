@@ -17,6 +17,7 @@ import * as ora from 'ora'
 import * as os from 'os'
 import { assignDependencyType } from './Planet';
 import { VortexError, VortexErrorType } from './VortexError';
+
 //import * as Babel_Core from '@babel/core'
 
 /**
@@ -115,15 +116,19 @@ async function createStarPackage (){
     let yourCredits = fs.readJSONSync('./package.json',{encoding:'utf-8'})
 
     spinner2.spinner = cliSpinners.arc;
-    spinner2.start()
+    spinner2.start();
+
     let Graph = await GenerateGraph(entry,os.platform() === 'win32'? amendEntryPoint2(Panel.start) : Panel.start).catch(err => {console.log(err);process.exit(1);})
     spinner2.succeed();
+    console.log(Graph)
     spinner3.start();
 
     //Assign Entry Dependency For Planets
     for(let planet of Graph.Planets){
         planet = assignDependencyType(planet)
     }
+
+
     let bundles = await Compile(Graph).catch(err => {console.log(err);process.exit(1);})
     if(usingTerser){
         spinner3.succeed();
@@ -287,10 +292,12 @@ function amendEntryPoint2(entry:string){
     return `./${shortEntry}`
 }
 
-if(Panel.type !== 'live'){
-    createStarPackage();
-} else if(Panel.type === 'live'){
+createStarPackage()
+
+// if(Panel.type !== 'live'){
+//     createStarPackage();
+// } else if(Panel.type === 'live'){
     
-}
+// }
 //fs.writeJSONSync('out/importcool.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"plugins":["dynamicImport"],"sourceType":"module"}))
 

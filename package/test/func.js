@@ -1,4 +1,6 @@
-Object.defineProperty(exports,'__esModule')
+define(['lodash','jquery'], function(_,$) {
+    
+})
 
 
 

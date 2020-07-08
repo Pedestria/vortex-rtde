@@ -2,12 +2,13 @@ import traverse from '@babel/traverse'
 import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
 import { isProduction } from '../Main';
+import { ParseSettings } from '../Options';
 
 export function findModulesUnderNamespace(file:string,Namespace:string){
  
     const buffer = fs.readFileSync(file,'utf-8').toString();
 
-    const jsCode = Babel.parse(buffer,{"sourceType":"module"})
+    const jsCode = Babel.parse(buffer,ParseSettings)
 
     let modules:Array<string> = []
 
@@ -28,11 +29,11 @@ export function findModulesUnderNamespace(file:string,Namespace:string){
 
 }
 
-export function searchForModuleUnderNamespace(file:string,Module:string,Namespace:string):boolean{
+export function searchForModuleUnderNamespace(file:string,Module:string,Namespace:string){
 
     const buffer = fs.readFileSync(file,'utf-8').toString();
 
-    const jsCode = Babel.parse(buffer,{"sourceType":"module"})
+    const jsCode = Babel.parse(buffer,ParseSettings)
 
     let rc = false
 
@@ -53,10 +54,10 @@ export function searchForModuleUnderNamespace(file:string,Module:string,Namespac
     return rc
 }
 
-export function searchForDefaultNamespace(file:string,Namespace:string): boolean{ 
+export function searchForDefaultNamespace(file:string,Namespace:string){ 
     const buffer = fs.readFileSync(file).toString()
 
-    const jsCode = Babel.parse(buffer,{"sourceType":"module"})
+    const jsCode = Babel.parse(buffer,ParseSettings)
 
     let rc = false
 

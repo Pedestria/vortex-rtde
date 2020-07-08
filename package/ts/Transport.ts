@@ -54,7 +54,7 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
                         if(Dependency instanceof EsModuleDependency && CurrentMDImpLoc.modules[0].type === ModuleTypes.EsDefaultModule){
                             if(searchForDefaultNamespace(Dependency.libLoc,CurrentMDImpLoc.modules[0].name)){
                                 CurrentMDImpLoc.modules[0].type = ModuleTypes.EsDefaultNamespaceProvider
-                                console.log(CurrentMDImpLoc.modules[0].name)
+                                // console.log(CurrentMDImpLoc.modules[0].name)
                             }
                         }
                     }

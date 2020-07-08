@@ -24,7 +24,7 @@ import { FileImportLocation } from "../FileImportLocation.js";
 export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:string){
 
     traverse(entry.ast,{
-        ImportDeclaration: function(path) {
+        ImportDeclaration:function(path) {
             if(isJs(path.node.source.value)){
                 let modules = []
                 //console.log(path.node);

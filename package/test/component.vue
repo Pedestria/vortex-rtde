@@ -1,33 +1,28 @@
 <template>
-  <div id="app">
+<div id="confusing">
+  <div class="col">
       {{message}}
   </div>
+</div>
 </template>
 
 <script>
-var $render = function anonymous(
-) {
-with(this){return _c('div',{attrs:{"id":"app"}},[_v("\n    "+_s(message)+"\n")])}
-}
 export default {
     data () {
         return{
-            message: 'Hello From Vortex and Vue.js (File Component)'
+            message: 'Hello From Vortex and Vue.js (File Component) SCOPED'
         }
     },
-    render:$render
-
-     
-
 }
 </script>
 
-<style lang="scss">
+<style lang="css">
 
-$a:"div";
-
-#{$a}{
+#confusing .col{
     font-family: Avenir;
     font-size: 50px;
+    color:red;
 }
-</style>
+
+</style>>
+

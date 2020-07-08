@@ -84,11 +84,27 @@
   shuttle.override = function(mods){
       local_modules = mods
   }
+
+  shuttle.planetCluster = function(planets_array,callback){
+      function defineCluster(){
+        return new Promise(function(resolve, reject){
+            var moduleObjects = planets_array.map(function(planet) {return shuttle.planet(planet)})
+            Promise.all(moduleObjects).then(function(module_objs) {
+                var newModObjs = module_objs.map(function(modObj) {
+                    return Object.keys(modObj).length === 1 && Object.keys(modObj)[0] === 'default'? modObj.default : modObj
+                })
+                resolve(newModObjs)
+            })
+        })
+    }
+      defineCluster().then(function (moduleObjects) {
+          callback.apply(null,moduleObjects)
+      })
+  }
   
   
   
   //Calls EntryPoint to Initialize
-
 
   return shuttle("./module2");
 
@@ -100,8 +116,9 @@
         function defCall(name){console.log(name);}; 
         shuttle_exports.LogMe = LogMe; 
         shuttle_exports.default = defCall; 
-        shuttle.planet('./planet.js').then(function(entry_module){
-            entry_module.welcome()
+        shuttle.planetCluster(['./planet.js','./planet2.js'],function(planet1,planet2) {
+            planet1()
+            planet2.here()
         })
     }),
     "./module2": (function(shuttle,shuttle_exports){

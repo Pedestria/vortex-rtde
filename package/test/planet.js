@@ -6,7 +6,7 @@ var planetmodules = {
             console.log('Welcome Here!')
             _mod5.other()
         }
-        shuttle_exports.welcome = welcome
+        shuttle_exports.default = welcome
     }),
     "./module5": (function(shuttle,shuttle_exports){
         var _assign = shuttle("object-assign")
@@ -15,8 +15,5 @@ var planetmodules = {
         }
         shuttle_exports.other = other
         console.log(_assign.default({foeeo: 0}, {baar: 1},{hee: 4}, {bell: 12}))
-        shuttle.planet('./planet2.js').then(function(entry_module){
-            entry_module.here()
-        })
     })
 }

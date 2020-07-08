@@ -1,7 +1,7 @@
 import Module from "./Module.js";
 import Dependency from './Dependency'
 import ModuleDependency from "./dependencies/ModuleDependency.js";
-import { Planet } from "./Planet.js";
+import { Planet, PlanetClusterMapObject } from "./Planet.js";
 
 /**
  * The Dependency Graph used by Vortex
@@ -14,10 +14,14 @@ export class VortexGraph {
         entryPoint:string
         shuttleEntry:string
     /**
-     * List of ALL Dependencys for app/library
+     * List of ALL Dependencys that are imported synchronously for app/library
      */
         Star:Array<Dependency> = []
+        /**
+         * List of ALL Planets for app/library
+         */
         Planets:Array<Planet> = []
+        PlanetClusterMap:Array<PlanetClusterMapObject> = []
 
     /**
      * @param {string} entrypoint Entry point 
