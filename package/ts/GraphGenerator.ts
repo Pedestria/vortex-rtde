@@ -102,7 +102,7 @@ export default async function GenerateGraph(entry:string,modEntry:string): Promi
                     else{
                         let file = fs.readFileSync(modName).toString()
 
-                        if(!isLibrary && file.includes('./')){
+                        if(!isLibrary){
                             file = transformSync(file,BabelSettings).code
                         }
 
@@ -156,7 +156,7 @@ export default async function GenerateGraph(entry:string,modEntry:string): Promi
 
         let entryFile = fs.readFileSync(modEnt).toString()
 
-        if(!isLibrary){
+        if(!isLibrary && !planet.entryModuleIsLibrary){
             entryFile = transformSync(fs.readFileSync(modEnt).toString(),BabelSettings).code
         }
 

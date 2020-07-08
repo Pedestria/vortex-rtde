@@ -7,8 +7,7 @@ export default class OtherThing extends Component{
     }
 }
 
-define(['lodash','object-assign'], function(lodash,_assign) {
+define(['lodash'], function(lodash) {
     var _ = lodash.default
-    console.log(_.chunk(['a', 'b', 'c', 'd'], 2))
-    console.log(_assign.default({foo:3}, {mama:4}, {peolo:23}))
+    console.log(_.difference([1,2,3],[1,2,4]));
 })

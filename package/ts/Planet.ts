@@ -12,6 +12,7 @@ import CjsModuleDependency from "./dependencies/CjsModuleDependency"
 export class Planet {
     name:string
     entryModule:string
+    entryModuleIsLibrary:boolean
     originalName:string
     entryDependency:Dependency
     importedAt:Array<PlanetImportLocation> = []

@@ -120,7 +120,6 @@ async function createStarPackage (){
 
     let Graph = await GenerateGraph(entry,os.platform() === 'win32'? amendEntryPoint2(Panel.start) : Panel.start).catch(err => {console.log(err);process.exit(1);})
     spinner2.succeed();
-    console.log(Graph)
     spinner3.start();
 
     //Assign Entry Dependency For Planets
@@ -137,9 +136,10 @@ async function createStarPackage (){
         spinner4.succeed();
 
         if(bundles.length === 1){
-            console.log(chalk.yellowBright('Successfully Created Neutron Star!'))
+            console.log(chalk.yellowBright(`Successfully Created Neutron Star! ('${outputFilename}')`))
         }
         else {
+            console.log(chalk.yellowBright(`Successfully Created Neutron Star! (Neutron Star outputed to '${outputFilename}')`))
             console.log(chalk.greenBright(`Planets Created: \n `))
             for(let bundle of bundles){
                 if(bundle.valueOf() !== 'star'){
@@ -151,11 +151,11 @@ async function createStarPackage (){
         await regularPackage(outputFilename,yourCredits,bundles).catch(err => {console.log(err);process.exit(1);})
         spinner3.succeed();
         if(bundles.length === 1){
-            console.log(chalk.rgb(252, 160, 20)('Successfully Created Star!'))
+            console.log(chalk.rgb(252, 160, 20)(`Successfully Created Star! ('${outputFilename}')`))
         }
         else{
-            console.log(chalk.rgb(252, 160, 20)('Successfully Created Star! \n'))
-            console.log(chalk.greenBright(`Planets Created: \n `))
+            console.log(chalk.rgb(252, 160, 20)(`Successfully Created Star! (Star outputed to '${outputFilename}') \n`))
+            console.log(chalk.greenBright.underline(`Planets Created:`))
             for(let bundle of bundles){
                 if(bundle.valueOf() !== 'star'){
                     console.log(chalk.yellowBright(` \n ${bundle.valueOf().toString()}`))

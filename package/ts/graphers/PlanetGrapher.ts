@@ -22,12 +22,15 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph){
             //Dynamic Import Grapher
             if(path.node.callee.type === "Import"){
                 let name = path.node.arguments[0].value
+                let isLib:boolean
                 let ent:string
 
                 if(name.includes('./')){
                     ent = LocalizedResolve(entry.name,name)
+                    isLib = false
                 } else{
                     ent = resolveLibBundle(name)
+                    isLib = true
                 }
 
                 if(Graph.planetExists(ent)){
@@ -36,6 +39,7 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph){
                 else{
                     let planet = new Planet(namePlanet(Graph),ent)
                     planet.originalName = path.node.arguments[0].value
+                    planet.entryModuleIsLibrary = isLib
                     Graph.Planets.push(planet)
                     Graph.Planets[Graph.indexOfPlanet(ent)].importedAt.push(new PlanetImportLocation(entry.name,false))
                 }
@@ -47,12 +51,15 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph){
                     for(let imprt of path.node.arguments[0].elements){
                             //imprt is a String Literal in this case!
                             let name:string = imprt.value
+                            let isLib:boolean
                             let ent:string
 
                             if(name.includes('./')){
                                 ent = LocalizedResolve(entry.name,name)
+                                isLib = false
                             } else{
                                 ent = resolveLibBundle(name)
+                                isLib = true
                             }
 
                             if(Graph.planetExists(ent)){
@@ -64,6 +71,7 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph){
                                 planet.inCluster = true
                                 originalNames.push(planet.originalName)
                                 newNames.push(planet.name)
+                                planet.entryModuleIsLibrary = isLib
                                 Graph.Planets.push(planet)
                                 Graph.Planets[Graph.indexOfPlanet(ent)].importedAt.push(new PlanetImportLocation(entry.name,true))
                             }
