@@ -5,7 +5,6 @@ import { LocalizedResolve } from "./Resolve"
 import { FileImportLocation } from "./importlocations/FileImportLocation"
 import { FileDependency } from "./dependencies/FileDependency"
 import Dependency from "./Dependency"
-import {extensions} from "./Main"
 import { VortexError, VortexErrorType } from "./VortexError"
 
 export function getFileExtension(filename:string){

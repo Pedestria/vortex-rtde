@@ -1,7 +1,6 @@
 import Dependency from "./Dependency"
 import traverse from '@babel/traverse'
 
-import {loadEntryFromQueue} from './GraphGenerator'
 import EsModuleDependency from "./dependencies/EsModuleDependency"
 import CjsModuleDependency from "./dependencies/CjsModuleDependency"
 
@@ -29,7 +28,7 @@ export class Planet {
  * @param {Planet} planet 
  */
 
-export function assignDependencyType(planet:Planet) : Planet{
+export function assignDependencyType(planet:Planet,queue) : Planet{
 
     enum DepTypes {
         CJS = 1,
@@ -39,7 +38,7 @@ export function assignDependencyType(planet:Planet) : Planet{
 
     let entrydepType
 
-    traverse(loadEntryFromQueue(planet.entryModule).ast,{
+    traverse(loadEntryFromQueue(planet.entryModule,queue).ast,{
         enter(path){
             if(path.isExportDefaultDeclaration){
                 entrydepType = DepTypes.ESM
@@ -97,5 +96,13 @@ export class PlanetImportLocation {
     constructor(name:string,clusterImport:boolean){
         this.name = name
         this.clusterImport = clusterImport
+    }
+}
+
+function loadEntryFromQueue(entryName:string,queue){
+    for(let ent of queue){
+        if(ent.name === entryName){
+            return ent
+        }
     }
 }

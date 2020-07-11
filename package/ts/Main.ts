@@ -1,76 +1,61 @@
-import GenerateGraph from './GraphGenerator'
+import {queue,GenerateGraph} from './GraphGenerator'
 import * as fs from 'fs-extra'
-import * as Babel from '@babel/parser'
-import Compile from './Compiler.js';
-import { stage1, stage2, stage3, finish } from './Log.js';
+import {Compile} from './Compiler.js';
 import * as terser from 'terser'
 import * as path from 'path'
 
 import * as Panel from '../vortex.panel.js' /*vortexRetain*/ 
 
 import * as chalk from 'chalk';
-import { transformSync } from '@babel/core';
-import { BabelSettings } from './Options';
-import { getFileExtension } from './DependencyFactory';
 import cliSpinners from 'cli-spinners'
 import * as ora from 'ora'
 import * as os from 'os'
 import { assignDependencyType } from './Planet';
-import { VortexError, VortexErrorType } from './VortexError';
+import { VortexAddon, ExportsHandler } from './Addon';
+import { TestThread } from './Threads';
+import EsModuleDependency from './dependencies/EsModuleDependency';
 
 //import * as Babel_Core from '@babel/core'
+export namespace ControlPanel {
 
-/**
- * If checked True, then Vortex will bundle with NO debug tools.
- * If checked False, then Vortex will bundle with debug tools.
- */
-export var isProduction:boolean
-/**
- * If checked true, Vortex will consider your program a library instead of a web application.
- */
-export var isLibrary:boolean
-/**
- * If checked true, Terser will be used to minify production bundle. (Can NOT be used on development bundles.) (Labels it Neutron Star)
- */
-export var usingTerser:boolean = Panel.useTerser !== null? Panel.useTerser : false;
+    /**
+     * If checked True, then Vortex will bundle with NO debug tools.
+     * If checked False, then Vortex will bundle with debug tools.
+     */
+    export var isProduction:boolean
+    /**
+     * If checked true, Vortex will consider your program a library instead of a web application.
+     */
+    export var isLibrary:boolean
+    /**
+     * If checked true, Terser will be used to minify production bundle. (Can NOT be used on development bundles.) (Labels it Neutron Star)
+     */
+    export var usingTerser:boolean = Panel.useTerser !== null? Panel.useTerser : false;
 
-export var outputFile:string = Panel.output
+    export var outputFile:string = Panel.output
 
-/**If checked true, Vortex will encode File Dependency names with uuids.
- */
-export var encodeFilenames:boolean = Panel.encodeFilenames !== null? Panel.encodeFilenames : true
+    /**If checked true, Vortex will encode File Dependency names with uuids.
+     */
+    export var encodeFilenames:boolean = Panel.encodeFilenames !== null? Panel.encodeFilenames : true
 
-export var useDebug:boolean;
+    export var useDebug:boolean;
 
-export var extensions:Array<string> = Panel.extensions
+    export var extensions:Array<string> = Panel.extensions
 
-export var polyfillPromise:boolean = Panel.polyfillPromise
+    export var polyfillPromise:boolean = Panel.polyfillPromise
 
-export function isJs(filename:string){
+    export var externalLibs:Array<string> = Panel.outBundle
 
-    if(path.basename(filename) === filename){
-        return true
-    }
-    else if(extensions.includes(getFileExtension(filename))){
-        return false
-    }
-    else if(filename.includes('./') && path.extname(filename) === ''){
-        return true
-    }
-    else if(filename.includes('.js') || filename.includes('.mjs') || filename.includes('.') == false){
-        return true
-    }
-    else {
-        throw new VortexError(`Cannot resolve extension: "${getFileExtension(filename)}" If you wish to include this in your Solar System, include it in the resolvable extensions option in the vortex.panel.js`,VortexErrorType.PortalPanelError)
-    }
+    export var VAddons:Array<ExportsHandler> = Panel.addons.map(addon => addon.handler)
 
 }
+
 
 /**Creates a Star/Neutron Star/Solar System from entry point.
  *  
  */ 
 
-async function createStarPackage (){
+export async function createStarPackage (){
 
     //SPINNERS -->
 
@@ -95,19 +80,19 @@ async function createStarPackage (){
     let outputFilename = Panel.output;
 
     if(Panel.bundleMode === 'star'){
-        isProduction = false
+        ControlPanel.isProduction = false
     } else if(Panel.bundleMode === 'neutronstar'){
-        isProduction = true
+        ControlPanel.isProduction = true
     }
 
-    if(usingTerser === true && !isProduction){
+    if(ControlPanel.usingTerser === true && !ControlPanel.isProduction){
         throw new Error(chalk.redBright('ERROR: Can not use terser on regular star!'))
     }
 
     if(Panel.type === 'app'){
-        isLibrary = false
+        ControlPanel.isLibrary = false
     } else if(Panel.type === 'library'){
-        isLibrary = true
+        ControlPanel.isLibrary = true
     }
 
     //PROGRAM -->
@@ -115,7 +100,7 @@ async function createStarPackage (){
     
     let yourCredits = fs.readJSONSync('./package.json',{encoding:'utf-8'})
 
-    spinner2.spinner = cliSpinners.arc;
+    spinner2.spinner = cliSpinners.dots11;
     spinner2.start();
 
     let Graph = await GenerateGraph(entry,os.platform() === 'win32'? amendEntryPoint2(Panel.start) : Panel.start).catch(err => {console.log(err);process.exit(1);})
@@ -124,12 +109,15 @@ async function createStarPackage (){
 
     //Assign Entry Dependency For Planets
     for(let planet of Graph.Planets){
-        planet = assignDependencyType(planet)
+        planet = assignDependencyType(planet,queue)
     }
 
+    let dep = new EsModuleDependency('',null);
+    let jsonObj = JSON.parse(JSON.stringify(dep))
 
     let bundles = await Compile(Graph).catch(err => {console.log(err);process.exit(1);})
-    if(usingTerser){
+
+    if(ControlPanel.usingTerser){
         spinner3.succeed();
         spinner4.start();
         await terserPackage(outputFilename,yourCredits,bundles).catch(err => {console.log(err);process.exit(1);})
@@ -142,7 +130,7 @@ async function createStarPackage (){
             console.log(chalk.yellowBright(`Successfully Created Neutron Star! (Neutron Star outputed to '${outputFilename}')`))
             console.log(chalk.greenBright(`Planets Created: \n `))
             for(let bundle of bundles){
-                if(bundle.valueOf() !== 'star'){
+                if(bundle.value !== 'star'){
                     console.log(chalk.magentaBright(` \n ${bundle.valueOf().toString()}`))
                 }
             }
@@ -157,25 +145,12 @@ async function createStarPackage (){
             console.log(chalk.rgb(252, 160, 20)(`Successfully Created Star! (Star outputed to '${outputFilename}') \n`))
             console.log(chalk.greenBright.underline(`Planets Created:`))
             for(let bundle of bundles){
-                if(bundle.valueOf() !== 'star'){
-                    console.log(chalk.yellowBright(` \n ${bundle.valueOf().toString()}`))
+                if(bundle.value !== 'star'){
+                    console.log(chalk.yellowBright(` \n ${bundle.value}`))
                 }
             }
         }
-
     }
-
-    //     filename = terserPackage(outputFilename,yourCredits,bundle).catch(err => {console.log(err);process.exit(1);})
-    //     spinner4.succeed();
-    //     console.log(chalk.yellowBright(`Successfully Created Neutron Star! (${await filename})`))
-    // }
-    // else{
-    //     spinner3.succeed();
-    //     filename = regularPackage(outputFilename,yourCredits,bundle).catch(err => {console.log(err);process.exit(1);})
-    //     console.log(chalk.redBright(`Successfully Created Star (${await filename})`))
-
-    // }
-    
 }
 
 /**Packages bundles to files + minifies with Terser 
@@ -186,11 +161,11 @@ async function createStarPackage (){
  */
 
 async function terserPackage(outputFilename:string,yourCredits,bundleObjects:Array<Object>){
-    if(isLibrary){
+    if(ControlPanel.isLibrary){
         let credits = `/*NEUTRON-STAR*/ \n /*${yourCredits.name} ${yourCredits.version} _MINIFIED_ \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
             //console.log(credits)
             for(let bundle of bundleObjects){
-                if(bundle.valueOf() === 'star'){
+                if(bundle.value === 'star'){
                     var minBundle = terser.minify(bundle.code,{compress:true,mangle:true}).code
                 }
             }
@@ -210,7 +185,7 @@ async function terserPackage(outputFilename:string,yourCredits,bundleObjects:Arr
 
         for(let bundle of bundleObjects){
             let filename:string
-            if(bundle.valueOf() === 'star'){
+            if(bundle.value === 'star'){
                 filename = outputFilename
 
                 let mini = terser.minify(bundle.code,{compress:true,mangle:true}).code
@@ -218,7 +193,7 @@ async function terserPackage(outputFilename:string,yourCredits,bundleObjects:Arr
                 let finalB = credits + mini
                 fs.writeFileSync(filename,finalB)
             } else{
-                filename = path.dirname(outputFilename) + '/' + bundle.valueOf().toString()
+                filename = path.dirname(outputFilename) + '/' + bundle.value
 
                 let mini = terser.minify(bundle.code,{compress:true,mangle:true}).code
 
@@ -233,10 +208,10 @@ async function terserPackage(outputFilename:string,yourCredits,bundleObjects:Arr
 }
 
 async function regularPackage(outputFilename:string,yourCredits,bundleObjects:Array<Object>){
-        if(isLibrary){
+        if(ControlPanel.isLibrary){
             let finBund
             for(let bundle of bundleObjects){
-                if(bundle.valueOf() === 'star'){
+                if(bundle.value === 'star'){
                     finBund = bundle.code
                 }
             }
@@ -245,19 +220,19 @@ async function regularPackage(outputFilename:string,yourCredits,bundleObjects:Ar
                 fs.writeFileSync(outputFilename,credits + finBund)
         } 
         else {
-            let credits = isProduction? `/*NEUTRON-STAR*/ \n /*BUNDLED BY VORTEX*/ \n` : `/*STAR*/ \n /*BUNDLED BY VORTEX*/ \n`
+            let credits = ControlPanel.isProduction? `/*NEUTRON-STAR*/ \n /*BUNDLED BY VORTEX*/ \n` : `/*STAR*/ \n /*BUNDLED BY VORTEX*/ \n`
             let planetCredits = `/*PLANET*/ \n /*BUNDLED BY VORTEX*/ \n`
             fs.ensureDirSync(path.dirname(outputFilename) + '/')
 
             for(let bundle of bundleObjects){
                 let filename:string
-                if(bundle.valueOf() === 'star'){
+                if(bundle.value === 'star'){
                     filename = outputFilename
     
                     let finalB = credits + bundle.code
                     fs.writeFileSync(filename,finalB)
                 } else{
-                    filename = path.dirname(outputFilename) + '/' + bundle.valueOf().toString()
+                    filename = path.dirname(outputFilename) + '/' + bundle.value
 
                     let finalB = planetCredits + bundle.code
                     fs.writeFileSync(filename,finalB)
@@ -291,8 +266,6 @@ function amendEntryPoint2(entry:string){
     }
     return `./${shortEntry}`
 }
-
-createStarPackage()
 
 // if(Panel.type !== 'live'){
 //     createStarPackage();

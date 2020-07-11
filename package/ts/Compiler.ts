@@ -4,28 +4,50 @@ import EsModuleDependency from "./dependencies/EsModuleDependency.js";
 import generate from "@babel/generator";
 import traverse from "@babel/traverse";
 import * as Babel from "@babel/parser";
-import { template} from "@babel/core";
+import template from '@babel/template'
 import * as t from '@babel/types';
 import MDImportLocation from "./importlocations/MDImportLocation.js";
 import { ModuleTypes } from "./Module.js";
 import Module from './Module'
 import ModuleDependency from "./dependencies/ModuleDependency.js";
 import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
-import { BabelSettings} from "./Options.js";
-import {isProduction, isLibrary, outputFile} from './Main'
-import { queue, loadEntryFromQueue } from "./GraphGenerator.js";
-import * as sourceMap from 'source-map'
 import { CSSDependency } from "./dependencies/CSSDependency.js";
-import ImportLocation from "./ImportLocation.js";
 import { FileImportLocation } from "./importlocations/FileImportLocation.js";
 import { VortexError, VortexErrorType } from "./VortexError.js";
 import { FileDependency } from "./dependencies/FileDependency.js";
-import { LocalizedResolve } from "./Resolve.js";
+import { LocalizedResolve, resolveLibBundle } from "./Resolve.js";
 import * as path from 'path'
 import * as css from 'css'
-import { encodeFilenames } from './Main'
 import { Planet, PlanetClusterMapObject } from "./Planet.js";
 import * as _ from 'lodash';
+import { outBundle } from "../vortex.panel.js";
+import { ControlPanel } from "./Main.js";
+import { queue } from "./GraphGenerator.js";
+
+
+class QueueEntry {
+    name:string
+    ast:t.File|css.Stylesheet
+    external?:boolean = false
+
+    constructor(name:string,parsedCode:t.File|css.Stylesheet){
+        this.name = name
+        this.ast = parsedCode
+    }
+
+}
+
+ function addEntryToQueue(entry:QueueEntry){
+    queue.push(entry)
+}
+
+function loadEntryFromQueue(entryName:string){
+    for(let ent of queue){
+        if(ent.name === entryName){
+            return ent
+        }
+    }
+}
 
 function fixDependencyName(name:string){
     let NASTY_CHARS = "\\./@^$#*&!%-"
@@ -57,37 +79,20 @@ function fixDependencyName(name:string){
  * @param {VortexGraph} Graph The Dependency Graph created by the Graph Generator 
  * @returns {Promise<Object[]>} An Array of Bundle Code Objects
  */
-export default async function Compile(Graph:VortexGraph): Promise<Array<Object>>{
+export async function Compile(Graph:VortexGraph){
 
     let final
 
-    if(isLibrary){
+    if(ControlPanel.isLibrary){
         //Returns a single bundle code object
-        final = LibCompile(Graph)
+        final = await LibCompile(Graph)
     }
     else{
         //Returns single/many bundle code object/s.
-        final = WebAppCompile(Graph)
+        final = await WebAppCompile(Graph)
     }
 
-    return final
-
-    // let finalLib = LibCompile(Graph)
-
-    // return finalLib
-
-    // const buffer = fs.readFileSync('./test/func.js').toString()
-
-    // const code = Babel.parse(buffer,{"sourceType":"module"})
-
-    // let modules = []
-
-    // let testBundle = new LibBundle
-
-    // modules.push(new Module('haha',ModuleTypes.CjsNamespaceProvider))
-
-    // removeImportsFromAST(code,new MDImportLocation('FILE',0,modules),'haha',testBundle)
-
+    return final;
 }
 
 /**Compiles a library bundle from a given Vortex Graph
@@ -95,7 +100,7 @@ export default async function Compile(Graph:VortexGraph): Promise<Array<Object>>
  * @param {VortexGraph} Graph 
  */
 
-function LibCompile(Graph:VortexGraph){
+async function LibCompile(Graph:VortexGraph){
 
     let libB = new LibBundle
 
@@ -374,9 +379,9 @@ function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDepen
     }
 }
 
-function findDefaultExportName(dep:ModuleDependency){
+async function findDefaultExportName(dep:ModuleDependency){
 
-    let buffer =  fs.readFileSync(dep.name).toString()
+    let buffer =  (await fs.readFile(dep.name)).toString()
 
     let code = Babel.parse(buffer,{"sourceType":"module"})
 
@@ -705,9 +710,12 @@ const ModuleEvalTemplate = template('eval(CODE)')
  * @returns {Object[]} WebApp Bundle
  */
 
-function WebAppCompile (Graph:VortexGraph){
+async function WebAppCompile (Graph:VortexGraph){
 
    let shuttle = new Shuttle();
+
+
+   const BrowserGlobalTemplate = template('if(window.GLOBAL){shuttle_exports.MAPPED_DEFAULT = GLOBAL}',{placeholderWhitelist:new Set(['GLOBAL']),placeholderPattern:false})
 
    /**
     * Transformed Exports from File/lib
@@ -726,39 +734,48 @@ function WebAppCompile (Graph:VortexGraph){
 
    var assetsFolder = './assets'
 
-   var dir = LocalizedResolve(outputFile,assetsFolder)
+   var dir = LocalizedResolve(ControlPanel.outputFile,assetsFolder)
 
    // Transform Star
 
     for(let dep of Graph.Star){
         if(dep instanceof ModuleDependency){
             for(let impLoc of dep.importLocations){
-                TransformImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep)
+                 TransformImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep)
             }
-            if(transdExps.includes(dep.name) == false){
-                TransformExportsFromAST(loadEntryFromQueue(dep.name.includes('./') ? dep.name : dep.libLoc).ast,dep)
+            if(transdExps.includes(dep.name) == false && !dep.outBundle){
+                 TransformExportsFromAST(loadEntryFromQueue(dep.name.includes('./') ? dep.name : dep.libLoc).ast,dep)
                 transdExps.push(dep.name)
+            } else if(dep.outBundle && transdExps.includes(dep.name) == false){
+                let exportCheck = dep.importLocations.map(imploc => imploc.modules[0].name)
+                let verify = _.uniq(exportCheck)
+                if(verify.length === 1){
+                    let ent = new QueueEntry(dep.name,t.file(t.program([BrowserGlobalTemplate({GLOBAL:t.identifier(verify[0])})]),null,null))
+                    ent.external = true
+                    addEntryToQueue(ent)
+                    transdExps.push(dep.name)
+                }
             }
         } else if(dep instanceof CSSDependency){
             if(resolveCSS.includes(dep.name) == false){
-                let nCSS = resolveCSSDependencies(dep,assetsFolder)
+                let nCSS = await resolveCSSDependencies(dep,assetsFolder)
                 resolveCSS.push(dep.name)
                 dep.stylesheet = nCSS
             }
             for(let impLoc of dep.importLocations){
-                injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+                 injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
             }
         } else if(dep instanceof FileDependency){
-            let outFile = encodeFilenames? `${dep.uuid}${path.extname(dep.name)}` : path.basename(dep.name)
+            let outFile = ControlPanel.encodeFilenames? `${dep.uuid}${path.extname(dep.name)}` : path.basename(dep.name)
             let newName = `${dir}/${outFile}`
             let localNewName = `${assetsFolder}/${outFile}`
             if(resolvedFiles.includes(dep.name) == false){
-                fs.ensureDirSync(dir)
-                fs.copyFileSync(dep.name,newName)
+                await fs.ensureDir(dir)
+                await fs.copyFile(dep.name,newName)
                 resolvedFiles.push(dep.name)
             }
             for(let impLoc of dep.importLocations){
-                resolveFileDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc,localNewName)
+                 resolveFileDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc,localNewName)
             }
         }
     }
@@ -770,7 +787,7 @@ function WebAppCompile (Graph:VortexGraph){
             for(let impLoc of planet.importedAt){
                 // If current import location is NOT a cluster import
                 if(!impLoc.clusterImport) {
-                    TransformAsyncImportFromAST(loadEntryFromQueue(impLoc.name).ast,planet)
+                     TransformAsyncImportFromAST(loadEntryFromQueue(impLoc.name).ast,planet)
                 }
             }
 
@@ -782,15 +799,24 @@ function WebAppCompile (Graph:VortexGraph){
         for(let dep of planet.modules){
             if(dep instanceof ModuleDependency){
                 for(let impLoc of dep.importLocations){
-                    TransformImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep)
+                     TransformImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep)
                 }
-                if(transdExps.includes(dep.name) == false){
+                if(transdExps.includes(dep.name) == false && !dep.outBundle){
                     TransformExportsFromAST(loadEntryFromQueue(dep.name.includes('./') ? dep.name : dep.libLoc).ast,dep)
                     transdExps.push(dep.name)
+                } else if(dep.outBundle && transdExps.includes(dep.name) == false){
+                    let exportCheck = dep.importLocations.map(imploc => imploc.modules[0].name)
+                    let verify = _.uniq(exportCheck)
+                    if(verify.length === 1){
+                        let ent = new QueueEntry(dep.name,BrowserGlobalTemplate({GLOBAL:t.identifier(verify[0])}))
+                        ent.external = true
+                        addEntryToQueue(ent)
+                        transdExps.push(dep.name)
+                    }
                 }
             } else if(dep instanceof CSSDependency){
                 if(resolveCSS.includes(dep.name) == false){
-                    let nCSS = resolveCSSDependencies(dep,assetsFolder)
+                    let nCSS = await resolveCSSDependencies(dep,assetsFolder)
                     resolveCSS.push(dep.name)
                     dep.stylesheet = nCSS
                 }
@@ -798,12 +824,12 @@ function WebAppCompile (Graph:VortexGraph){
                     injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
                 }
             } else if(dep instanceof FileDependency){
-                let outFile = encodeFilenames? `${dep.uuid}${path.extname(dep.name)}` : path.basename(dep.name)
+                let outFile = ControlPanel.encodeFilenames? `${dep.uuid}${path.extname(dep.name)}` : path.basename(dep.name)
                 let newName = `${dir}/${outFile}`
                 let localNewName = `${assetsFolder}/${outFile}`
                 if(resolvedFiles.includes(dep.name) == false){
-                    fs.ensureDirSync(dir)
-                    fs.copyFileSync(dep.name,newName)
+                    await fs.ensureDir(dir)
+                    await fs.copyFile(dep.name,newName)
                     resolvedFiles.push(dep.name)
                 }
                 for(let impLoc of dep.importLocations){
@@ -834,21 +860,30 @@ function WebAppCompile (Graph:VortexGraph){
 
     const entry = loadEntryFromQueue(Graph.entryPoint)
     stripNodeProcess(entry.ast)
-    const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
-    const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n  //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
+    const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+    const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n  //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
     shuttle.addModuleToBuffer(Graph.entryPoint,mod)
     bufferNames.push(Graph.entryPoint)
 
     //Pushing modules into buffer to be compiled.
+
+
 
     for(let dep of Graph.Star){
         if(dep instanceof ModuleDependency){
             if(dep.libLoc !== undefined){
                     if(bufferNames.includes(dep.libLoc) == false){
                         const entry = loadEntryFromQueue(dep.libLoc)
+                        if(entry.external) {
+                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                            const mod = ControlPanel.isProduction? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code)})
+                            shuttle.addModuleToBuffer(dep.libLoc,mod)
+                            bufferNames.push(dep.libLoc)
+                            continue;
+                        }
                         stripNodeProcess(entry.ast)
-                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
-                        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
+                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                        const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                         shuttle.addModuleToBuffer(dep.libLoc,mod)
                         bufferNames.push(dep.libLoc)
                     }
@@ -856,9 +891,16 @@ function WebAppCompile (Graph:VortexGraph){
                 else{
                     if(bufferNames.includes(dep.name) == false){
                         const entry = loadEntryFromQueue(dep.name)
+                        if(entry.external) {
+                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                            const mod = ControlPanel.isProduction? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code)})
+                            shuttle.addModuleToBuffer(dep.name,mod)
+                            bufferNames.push(dep.name)
+                            continue;
+                        }
                         stripNodeProcess(entry.ast)
-                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
-                        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code  + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
+                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                        const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code  + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                         shuttle.addModuleToBuffer(dep.name,mod)
                         bufferNames.push(dep.name)
                     }
@@ -880,8 +922,8 @@ function WebAppCompile (Graph:VortexGraph){
 
         const entry = loadEntryFromQueue(planet.entryModule)
         stripNodeProcess(entry.ast)
-        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
-        const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
+        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+        const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
         local_shuttle.addModuleToBuffer(planet.entryModule,mod)
         bufferNames.push(planet.entryModule)
 
@@ -892,9 +934,16 @@ function WebAppCompile (Graph:VortexGraph){
                 if(dep.libLoc !== undefined){
                         if(bufferNames.includes(dep.libLoc) == false){
                             const entry = loadEntryFromQueue(dep.libLoc)
+                            if(entry.external) {
+                                const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                                const mod = ControlPanel.isProduction? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code)})
+                                shuttle.addModuleToBuffer(dep.libLoc,mod)
+                                bufferNames.push(dep.libLoc)
+                                continue;
+                            }
                             stripNodeProcess(entry.ast)
-                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
-                            const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
+                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                            const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                             local_shuttle.addModuleToBuffer(dep.libLoc,mod)
                             bufferNames.push(dep.libLoc)
                         }
@@ -902,9 +951,16 @@ function WebAppCompile (Graph:VortexGraph){
                     else{
                         if(bufferNames.includes(dep.name) == false){
                             const entry = loadEntryFromQueue(dep.name)
+                            if(entry.external) {
+                                const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                                const mod = ControlPanel.isProduction? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code)})
+                                shuttle.addModuleToBuffer(dep.name,mod)
+                                bufferNames.push(dep.name)
+                                continue;
+                            }
                             stripNodeProcess(entry.ast)
-                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(outputFile),entry.name)})
-                            const mod = isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
+                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                            const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                             local_shuttle.addModuleToBuffer(dep.name,mod)
                             bufferNames.push(dep.name)
                         }
@@ -915,8 +971,6 @@ function WebAppCompile (Graph:VortexGraph){
         PlanetShuttles.push(local_shuttle)
     }
 
-
-    
 
 
 
@@ -981,6 +1035,9 @@ function WebAppCompile (Graph:VortexGraph){
   
         local_modules[mod_name](shuttle, mod.exports, loadedStyles);
         var o = new Object(mod_name);
+        if(mod.exports.MAPPED_DEFAULT){
+            mod.exports = mod.exports.MAPPED_DEFAULT
+        }
         Object.defineProperty(o, 'cachedExports', {
           value: mod.exports,
           writable: false
@@ -1017,7 +1074,6 @@ function WebAppCompile (Graph:VortexGraph){
                           Object.defineProperty(loadedPlanetEntryExports, planet_name, {
                               value: o
                           });
-  
                           resolve(exports);
                       })
               },false)
@@ -1048,7 +1104,7 @@ function WebAppCompile (Graph:VortexGraph){
           return new Promise(function(resolve, reject){
               var moduleObjects = planets_array.map(function(planet) { return shuttle.planet(planet)})
               Promise.all(moduleObjects).then(function(module_objs) {
-                resolve(module_objs)
+                  resolve(module_objs)
               })
           })
       }
@@ -1056,6 +1112,10 @@ function WebAppCompile (Graph:VortexGraph){
             callback.apply(null,moduleObjects)
         })
     }
+
+    //AMD Registration Object!
+
+    shuttle.planetCluster.amdRegistrar = {};
     
     
     
@@ -1066,28 +1126,20 @@ function WebAppCompile (Graph:VortexGraph){
 
     let parsedFactory = Babel.parse(factory,{allowReturnOutsideFunction:true}).program.body
 
-    let finalCode = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier("modules")],t.blockStatement(parsedFactory),false,false),[shuttle.buffer])])),{compact: isProduction? true : false}).code;
-
+    let finalCode = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier("modules")],t.blockStatement(parsedFactory),false,false),[shuttle.buffer])])),{compact: ControlPanel.isProduction? true : false}).code;
+    
     let codeEntries:Array<Object> = []
 
-    let o = new Object("star");
-    Object.defineProperty(o,'code', {
-        value: finalCode,
-        writable:false
-    })
+    let o = {value:'star',code:finalCode};
 
     codeEntries.push(o)
 
     for(let _shuttle of PlanetShuttles){
 
-        let code = generate(t.program([t.variableDeclaration('var',[t.variableDeclarator(t.identifier('entry'),t.stringLiteral(_shuttle.entry)),t.variableDeclarator(t.identifier('planetmodules'),_shuttle.buffer)])]),{compact: isProduction? true : false}).code
+        let code = generate(t.program([t.variableDeclaration('var',[t.variableDeclarator(t.identifier('entry'),t.stringLiteral(_shuttle.entry)),t.variableDeclarator(t.identifier('planetmodules'),_shuttle.buffer)])]),{compact: ControlPanel.isProduction? true : false}).code
 
-        let o = new Object(_shuttle.name)
-        Object.defineProperty(o,'code',{
-            value: code,
-            writable:false
-        })
-
+        let o = {value:_shuttle.name,code:code}
+        
         codeEntries.push(o)
     }
 
@@ -1104,7 +1156,7 @@ class Shuttle {
     //[shuttle,_exports_]
 
     addModuleToBuffer(entry:string,evalModule:t.Statement|Array<t.Statement>){
-        let func = t.functionExpression(null,[t.identifier('shuttle'),t.identifier('shuttle_exports'),t.identifier('gLOBAL_STYLES')],t.blockStatement(isProduction ? evalModule : [evalModule]),false,false)
+        let func = t.functionExpression(null,[t.identifier('shuttle'),t.identifier('shuttle_exports'),t.identifier('gLOBAL_STYLES')],t.blockStatement(ControlPanel.isProduction ? evalModule : [evalModule]),false,false)
         this.buffer.properties.push(t.objectProperty(t.stringLiteral(entry),t.callExpression(t.identifier(''),[func])))
     }
 
@@ -1382,9 +1434,9 @@ function stripNodeProcess(ast:t.File){
         },
         MemberExpression: function(path){
             if(path.node.object.type === 'Identifier' && path.node.object.name === 'process' && path.node.property.name === 'env'){
-                path.replaceWith(t.stringLiteral(isProduction? 'production' : 'development'))
+                path.replaceWith(t.stringLiteral(ControlPanel.isProduction? 'production' : 'development'))
             } else if(path.node.object.type === 'MemberExpression' && path.node.object.object.type === 'Identifier' && path.node.object.object.name === 'process' && path.node.object.property.name === 'env' && path.node.property.name === 'NODE_ENV'){
-                path.replaceWith(t.stringLiteral(isProduction? 'production' : 'development'))
+                path.replaceWith(t.stringLiteral(ControlPanel.isProduction? 'production' : 'development'))
             }
         }
     })
@@ -1458,22 +1510,22 @@ function replaceFileDependencyIntoCSS(ast:css.Stylesheet,fileDep:string,newName:
  * @param {string} assets_folder 
  */
 
-function resolveCSSDependencies(dep:CSSDependency,assets_folder:string){
+async function resolveCSSDependencies(dep:CSSDependency,assets_folder:string){
 
     //console.log(dep.dependencies)
 
     let parsedCss = css.parse(dep.stylesheet)
 
-    let outputDest = LocalizedResolve(outputFile,assets_folder)
+    let outputDest = LocalizedResolve(ControlPanel.outputFile,assets_folder)
 
-    fs.ensureDirSync(outputDest)
+    await fs.ensureDir(outputDest)
 
 
     for(let d of dep.dependencies){
         if(d instanceof FileDependency){
-            let outFile = encodeFilenames? `${d.uuid}${path.extname(d.name)}` : path.basename(d.name)
+            let outFile = ControlPanel.encodeFilenames? `${d.uuid}${path.extname(d.name)}` : path.basename(d.name)
             let newName = `${assets_folder}/${outFile}`
-            fs.copyFileSync(d.name,`${outputDest}/${outFile}`)
+            await fs.copyFile(d.name,`${outputDest}/${outFile}`)
             replaceFileDependencyIntoCSS(parsedCss,d.name,newName)
         }
     }

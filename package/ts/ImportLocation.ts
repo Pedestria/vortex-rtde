@@ -1,5 +1,5 @@
 export default class ImportLocation {
-
+    
     name:string
     line:number
 

@@ -4,9 +4,12 @@ import * as Babel from '@babel/parser'
 import traverse from '@babel/traverse'
 import * as fs from 'fs-extra'
 import {DefaultQuarkTable, QuarkLibEntry} from './QuarkTable'
-import {isProduction} from  './Main'
+import {ControlPanel} from  './Main'
 import * as chalk from 'chalk'
 import { ParseSettings } from './Options'
+import { getFileExtension } from './DependencyFactory'
+import { extensions } from '../vortex.panel'
+import { VortexError } from './VortexError'
 
 /**Resolves dependency location based off of Import Location
  * __(To allow Node File System to read/verify imported modules)__
@@ -53,7 +56,7 @@ export function resolveLibBundle(nodeLibName:string){
             return addJsExtensionIfNecessary(bundles[0])
         }
         for(let bund of bundles){
-            if(isProduction){
+            if(ControlPanel.isProduction){
                 if(bund.includes('min') || bund.includes('prod')){
                     return addJsExtensionIfNecessary(bund)
                 } 
@@ -154,4 +157,24 @@ export function addJsExtensionIfNecessary(file:string){
     else{
         return file + '.js'
     }
+}
+
+export function isJs(filename:string){
+
+    if(path.basename(filename) === filename){
+        return true
+    }
+    else if(extensions.includes(getFileExtension(filename))){
+        return false
+    }
+    else if(filename.includes('./') && path.extname(filename) === ''){
+        return true
+    }
+    else if(filename.includes('.js') || filename.includes('.mjs') || filename.includes('.') == false){
+        return true
+    }
+    else {
+        throw new VortexError(`Cannot resolve extension: "${getFileExtension(filename)}" If you wish to include this in your Solar System, include it in the resolvable extensions option in the vortex.panel.js`,VortexErrorType.PortalPanelError)
+    }
+
 }

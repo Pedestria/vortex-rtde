@@ -68,7 +68,6 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph){
                             else{
                                 let planet = new Planet(namePlanet(Graph),ent)
                                 planet.originalName = imprt.value
-                                planet.inCluster = true
                                 originalNames.push(planet.originalName)
                                 newNames.push(planet.name)
                                 planet.entryModuleIsLibrary = isLib

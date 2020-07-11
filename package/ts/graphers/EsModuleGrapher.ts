@@ -11,8 +11,9 @@ import { QueueEntry } from "../GraphGenerator.js";
 import { exportDefaultSpecifier } from "@babel/types";
 import { resolveDependencyType } from "../DependencyFactory.js";
 import ImportLocation from "../ImportLocation.js";
-import { isJs } from "../Main.js";
+import {ControlPanel} from "../Main.js";
 import { FileImportLocation } from "../importlocations/FileImportLocation.js";
+import {isJs} from '../Resolve'
 
 /**Searchs and Graphs JS code for ECMAScript Module Dependencies
  * 
@@ -53,6 +54,12 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:st
                     if(path.node.trailingComments[0].value === 'vortexRetain'){
                         dep.outBundle = true
                     }
+                }
+
+                //Browser Externals!
+                if(ControlPanel.externalLibs.includes(dep.name)){
+                    dep.outBundle = true
+                    dep.libLoc = dep.name
                 }
                 Transport(dep,Graph,entry.name,currentImpLoc,planetName)
 

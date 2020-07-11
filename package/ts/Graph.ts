@@ -27,7 +27,7 @@ export class VortexGraph {
      * @param {string} entrypoint Entry point 
      */
 
-    constructor(entrypoint:string){
+    constructor(entrypoint?:string){
         this.entryPoint = entrypoint
     }
 
