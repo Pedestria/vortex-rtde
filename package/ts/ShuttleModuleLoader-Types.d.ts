@@ -20,7 +20,7 @@ declare namespace shuttle {
      * @param {Function} callback 
      */
 
-    function planetCluster(planetNames:Array<string>,callback:(...args:Array<string>) => void): void
+    function planetCluster(planetNames:Array<string>,callback:(...args:Array<Object>) => void): void
 
     /**Overrides current module scope with new scope
      * 

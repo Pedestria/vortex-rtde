@@ -1,3 +1,5 @@
+const {VueVortexAddon} = require('./lib/addons/VueAddon')
+
 module.exports = {
     type:'app',
     bundleMode:'star',
@@ -6,6 +8,8 @@ module.exports = {
     output:'./out/webapp.js',
     extensions: ['.css','.png','.otf'],
     encodeFilenames:true,
-    polyfillPromise:true
+    polyfillPromise:false,
+    addons:[VueVortexAddon],
+    outBundle:['aws-sdk']
 
 }

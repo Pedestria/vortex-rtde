@@ -1,3 +1,4 @@
+import { VortexAddon } from "./ts/Addon";
 
     declare var Panel:{
         /**
@@ -9,7 +10,7 @@
          */
         bundleMode:'star'|'neutronstar'
         /**
-         * Whether Vortex should use terser to extra minify your nuetron star system.
+         * Whether Vortex should use terser to extra minify your neutron star solar system.
          */
         useTerser:boolean
         /**
@@ -33,6 +34,17 @@
          * Whether Vortex should polyfill the es6 promise. __(Used with Planet imports!)__
          */
         polyfillPromise:boolean
+
+        /**
+         * Addon Objects to Add to Vortex RTDE
+         */
+        addons:Array<VortexAddon>
+
+        /**
+         * Libraries to NOT include in bundle. Links browser global to shuttle_exports.
+         */
+
+        outBundle:Array<string>
     }
 
     export = Panel;

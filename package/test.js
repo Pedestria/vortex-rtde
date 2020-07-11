@@ -98,28 +98,28 @@ cssResult = compiler.compileStyle({source:result.styles[0].content,preprocessLan
 const MainAST = Babel.parse(transformSync(result.script.content).code,{"sourceType":"module"})
 
 traverse.default(MainAST, {
-    ObjectExpression: function(path){
-        for(let prop of path.node.properties){
-            if(prop.type === 'ObjectProperty' && prop.key === t.identifier('render') && path.parent.type !== 'ReturnStatement'){
-                prop.value = t.identifier('render')
-                return
-            }
-        }
-        if(path.parent.type !== 'ReturnStatement'){
-            path.node.properties.push(t.objectProperty(t.identifier('render'),t.identifier('render')))
-            if(scoped){
-                path.node.properties.push(t.objectProperty(t.identifier('_scopeId'),t.stringLiteral(scopeID)))
-            }
-        }
-
-    },
     ExportDefaultDeclaration: function(path){
         if(path.node.declaration.type === 'ObjectExpression'){
-            path.replaceWith(t.assignmentExpression('=',t.memberExpression(t.identifier('shuttle_exports'),t.identifier('default')),path.node.declaration))
+            path.replaceWith(t.assignmentExpression('=',t.memberExpression(t.identifier('shuttle_exports'),t.identifier('MAPPED_DEFAULT')),path.node.declaration))
             return
         }
     }
 })
+let props = MainAST.program.body[0].expression.right.properties
+for(let prop of props){
+    if(prop.type === 'ObjectProperty' && prop.key === t.identifier('render') && path.parent.type !== 'ReturnStatement'){
+        prop.value = t.identifier('render')
+        return
+    }
+}
+props.push(t.objectProperty(t.identifier('render'),t.identifier('render')))
+if(scoped){
+    props.push(t.objectProperty(t.identifier('_scopeId'),t.stringLiteral(scopeID)))
+}
+
+console.log(MainAST.program.body[0].expression.right)
+
+
 
 MainAST.program.body.reverse()
 MainAST.program.body.push(ASTRenderFuncBody.program.body[0])

@@ -1,4 +1,4 @@
-var entry = "./module7"
+var entry = "./module7";
 var planetmodules = {
     "./module6": (function(shuttle,shuttle_exports){
         var _mod4 = shuttle('./module4')
@@ -17,4 +17,4 @@ var planetmodules = {
 
         console.log(_assign.default({foeeo: 0}, {baar: 1},{hee: 4}, {bell: 12}))
     })
-}
+};

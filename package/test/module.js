@@ -1,112 +1,101 @@
 (function(modules){
-  var loadedModules = [];
-  var loadedStyles = [];
-  var loadedExportsByModule = {}; 
-
-  var loadedPlanets = [];
-  var loadedPlanetEntryExports = {}
-
-  var local_modules = modules
+    var loadedModules = [];
+    var loadedStyles = [];
+    var loadedExportsByModule = {};
+    var loadedPlanets = [];
+    var loadedPlanetEntryExports = {};
+    var local_modules = modules; //Shuttle Module Loader
+    //Finds exports and returns them under fake namespace.
   
-  //Shuttle Module Loader
-  //Finds exports and returns them under fake namespace.
-
-  function shuttle(mod_name) {
-
-    //If module has already been loaded, load the exports that were cached away.
-    if (loadedModules.includes(mod_name)) {
-      return loadedExportsByModule[mod_name].cachedExports;
-    } else {
-      var mod = {
-        exports: {}
-      };
-
-      local_modules[mod_name](shuttle, mod.exports, loadedStyles);
-      var o = new Object(mod_name);
-      Object.defineProperty(o, 'cachedExports', {
-        value: mod.exports,
-        writable: false
-      });
-      Object.defineProperty(loadedExportsByModule, mod_name, {
-        value: o
-      });
-      loadedModules.push(mod_name);
-      return mod.exports;
-    }
-  }
-
-  // SML's version of ES Dynamic Import (Returns entry point module export of planet)
+    function shuttle(mod_name) {
+      //If module has already been loaded, load the exports that were cached away.
+      if (loadedModules.includes(mod_name)) {
+        return loadedExportsByModule[mod_name].cachedExports;
+      } else {
+        var mod = {
+          exports: {}
+        };
+        local_modules[mod_name](shuttle, mod.exports, loadedStyles);
+        var o = new Object(mod_name);
+        Object.defineProperty(o, 'cachedExports', {
+          value: mod.exports,
+          writable: false
+        });
+        Object.defineProperty(loadedExportsByModule, mod_name, {
+          value: o
+        });
+        loadedModules.push(mod_name);
+        return mod.exports;
+      }
+    } // SML's version of ES Dynamic Import (Returns entry point module export of planet)
   
-  shuttle.planet = function(planet_name) {
-
-    return new Promise(function(resolve,reject){
-        if(loadedPlanets.includes(planet_name)){
-            resolve(loadedPlanetEntryExports[planet_name].cachedExports);
+  
+    shuttle.planet = function (planet_name) {
+      return new Promise(function (resolve, reject) {
+        if (loadedPlanets.includes(planet_name)) {
+          resolve(loadedPlanetEntryExports[planet_name].cachedExports);
+        } else {
+          var planet = document.createElement('script');
+          planet.src = planet_name;
+          document.body.appendChild(planet);
+          planet.addEventListener('load', function () {
+            planetLoaded().then(function (exports) {
+              loadedPlanets.push(planet_name);
+              var o = new Object(planet_name);
+              Object.defineProperty(o, 'cachedExports', {
+                value: exports,
+                writable: false
+              });
+              Object.defineProperty(loadedPlanetEntryExports, planet_name, {
+                value: o
+              });
+  
+              if (exports.MAPPED_DEFAULT) {
+                resolve(exports.MAPPED_DEFAULT);
+              } else {
+                resolve(exports);
+              }
+            });
+          }, false);
+          var entryPoint;
+  
+          function planetLoaded() {
+            return new Promise(function (resolve, reject) {
+              console.log('Loading from ' + planet_name);
+              shuttle.override(planetmodules);
+              entryPoint = entry;
+              resolve(shuttle(entryPoint));
+            });
+          }
         }
-        else{
-            var planet = document.createElement('script');
-            planet.src = planet_name;
-            document.body.appendChild(planet);
-            planet.addEventListener('load',function(){
-                planetLoaded().then(
-                    function(exports){
-                        loadedPlanets.push(planet_name);
-                        var o = new Object(planet_name);
-                        Object.defineProperty(o, 'cachedExports', {
-                            value: exports,
-                            writable: false
-                        });
-                        Object.defineProperty(loadedPlanetEntryExports, planet_name, {
-                            value: o
-                        });
-
-                        resolve(exports);
-                    })
-            },false)
-
-            var entryPoint
-
-            function planetLoaded(){
-                return new Promise(function(resolve,reject){
-                    console.log('Loading from '+planet_name);
-                    shuttle.override(planetmodules);
-                    entryPoint = entry;
-                    resolve(shuttle(entryPoint));
-                })
-            }
-
-        }
-    })
-
-      
-  }
-
-  shuttle.override = function(mods){
-      local_modules = mods
-  }
-
-  shuttle.planetCluster = function(planets_array,callback){
-      function defineCluster(){
-        return new Promise(function(resolve, reject){
-            var moduleObjects = planets_array.map(function(planet) {return shuttle.planet(planet)})
-            Promise.all(moduleObjects).then(function(module_objs) {
-                var newModObjs = module_objs.map(function(modObj) {
-                    return Object.keys(modObj).length === 1 && Object.keys(modObj)[0] === 'default'? modObj.default : modObj
-                })
-                resolve(newModObjs)
-            })
-        })
-    }
+      });
+    };
+  
+    shuttle.override = function (mods) {
+      local_modules = mods;
+    };
+  
+    shuttle.planetCluster = function (planets_array, callback) {
+      function defineCluster() {
+        return new Promise(function (resolve, reject) {
+          var moduleObjects = planets_array.map(function (planet) {
+            return shuttle.planet(planet);
+          });
+          Promise.all(moduleObjects).then(function (module_objs) {
+            resolve(module_objs);
+          });
+        });
+      }
+  
       defineCluster().then(function (moduleObjects) {
-          callback.apply(null,moduleObjects)
-      })
-  }
+        callback.apply(null, moduleObjects);
+      });
+    }; //AMD Registration Object!
   
   
+    shuttle.planetCluster.amdRegistrar = {}; //Calls EntryPoint to Initialize
   
-  //Calls EntryPoint to Initialize
-
-  return shuttle("./module2");
+    return shuttle("./module2");
 
 }({
     "./module1": (function(shuttle,shuttle_exports){
@@ -117,7 +106,6 @@
         shuttle_exports.LogMe = LogMe; 
         shuttle_exports.default = defCall; 
         shuttle.planetCluster(['./planet.js','./planet2.js'],function(planet1,planet2) {
-            planet1()
             planet2.here()
         })
     }),
@@ -126,6 +114,9 @@
         console.log("module2"); 
         var _module1 = shuttle("./module1"); 
         var _assign = shuttle("object-assign"); 
+        var AWS_SDK = shuttle("aws-sdk");
+
+        console.log(AWS_SDK)
         console.log(_assign.default({foo: 0}, {bar: 1}, undefined,null)); 
         _module1.LogMe(); 
         _module1.default("Default Export Call With Param");
@@ -222,6 +213,12 @@
             return to;
         };
     }),
+    "aws-sdk": (function(shuttle,shuttle_exports){
+        console.log('loading AWS')
+        if(window.AWS){
+            shuttle_exports.MAPPED_DEFAULT = AWS
+        }
+    })
 }))
 
 
