@@ -12,7 +12,7 @@ const generate = require('@babel/generator')
 const {v4} = require('uuid')
 const hash = require('hash-sum')
 const sass = require('node-sass')
-const { indexOf } = require('lodash')
+const {writeFile} = require('fs/promises')
 // const compiler = require('@vue/component-compiler')
 
 
@@ -83,7 +83,7 @@ let scopeID = `data-v-${v4()}`
 const result = compiler.parse({source:fs.readFileSync(filename).toString(),filename,compiler:VueTemplate})
 
 
-const renderFuncBody = compiler.compileTemplate({source:result.template.content,compiler:VueTemplate,filename})
+const renderFuncBody = compiler.compileTemplate({source:result.template.content,compiler:VueTemplate,filename,transformAssetUrls:true})
 
 const ASTRenderFuncBody = Babel.parse(renderFuncBody.code,{allowReturnOutsideFunction:true})
 
@@ -133,6 +133,12 @@ function findDefaultExportExpression () {
         }
     }
 }
+
+var output = './outputVue.js'
+
+writeFile(output,finalCode).then(() => {
+    console.log('Yippee Outputed Vue to' + output)
+}).catch(err => console.log(err))
 
 
 

@@ -64,4 +64,8 @@ export enum ModuleTypes {
 
     EsDefaultNamespaceProvider = 8,
 
+    CJSAsset = 9,
+
+    CJSLoad = 10,
+
 }

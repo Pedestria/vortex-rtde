@@ -4,6 +4,7 @@
     {{message}}
    </div>
    <button v-on:click="handleClick">Vue Button</button>
+   <img src="./img/1200px-React-icon.png"/>
  </div>
 </template>
 

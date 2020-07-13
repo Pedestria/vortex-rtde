@@ -1535,6 +1535,11 @@ function resolveFileDependencyIntoAST(ast:t.File,dep:FileDependency,currentImpLo
             if(path.node.source.value === currentImpLoc.relativePathToDep){
                 path.replaceWith(t.variableDeclaration('var',[t.variableDeclarator(t.identifier(currentImpLoc.localName),t.stringLiteral(newFileName))]))
             }
+        },
+        CallExpression: function(path){
+            if(path.node.callee.type === 'Identifier' && path.node.callee.name === 'require' && path.node.arguments[0].value === currentImpLoc.relativePathToDep){
+                path.replaceWith(t.stringLiteral(newFileName))
+            }
         }
     })
 }

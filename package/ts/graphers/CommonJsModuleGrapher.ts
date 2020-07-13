@@ -8,6 +8,9 @@ import MDImportLocation from "../importlocations/MDImportLocation.js";
 import traverse from "@babel/traverse";
 import * as t from '@babel/types'
 import { QueueEntry } from "../GraphGenerator.js";
+import { isJs } from "../Resolve.js";
+import { FileImportLocation } from "../importlocations/FileImportLocation.js";
+import { resolveDependencyType } from "../DependencyFactory.js";
 
 /**Searchs and Graphs JS code for CommonJS Dependencies
  * 
@@ -75,7 +78,27 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:st
                         }
                     }
                 }
+            },
+            ObjectProperty: function(path){
+                let modules =[]
+                if(path.node.value.type === 'CallExpression' && path.node.value.callee.type === 'Identifier' && path.node.value.callee.name === 'require'){
+                    if (isJs(path.node.value.arguments[0].value)){ 
+                        modules.push(new Module('CJSLoad',ModuleTypes.CJSLoad))
+                        let currentImpLoc = new MDImportLocation(entry.name,0,modules,path.node.value.arguments[0].value);
+                        Transport(new CjsModuleDependency(path.node.value.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName)
+                    } else {
+                        nonModuleDependencyResolve(path.node.value.arguments[0].value,Graph);
+                    }
+                }
             }
         })
+
+        function nonModuleDependencyResolve(DepLoc:string,Graph:VortexGraph){
+
+            let fileImpLoc = new FileImportLocation(entry.name,0,DepLoc)
+            let dep = resolveDependencyType(DepLoc,fileImpLoc,entry.name)
+            Transport(dep,Graph,entry.name,null,planetName)
+
+        }
 
 }

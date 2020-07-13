@@ -88,7 +88,7 @@ export function resolveLibBundle(nodeLibName:string){
 }
 
 export function ResolveLibrary(packageName:string){
-    let packageIndexDirname = fixLibraryPath(resolve.sync(packageName))
+    let packageIndexDirname = './' + path.relative(path.join(__dirname,'../'),resolve.sync(packageName))
 
     let testOutput = []
 
@@ -137,16 +137,6 @@ function LibraryRelayVerify(packageIndexDirname:string){
         }
     });
     return libBundles
-}
-
-function fixLibraryPath(pathToFile:string){ 
-    if(pathToFile.includes('node_modules') == false){
-        throw new Error(chalk.redBright('Package "' + pathToFile + '" does not Exist!'))
-    }
-    else{
-        let i = pathToFile.search('node_modules')
-        return './' + pathToFile.slice(i)
-    }
 }
 
 export function addJsExtensionIfNecessary(file:string){

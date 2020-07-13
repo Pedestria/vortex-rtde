@@ -51,7 +51,7 @@ async function CompileComponent(component:RawVueComponent,DependencyName:string)
 
     var scopeID = `data-v-${v4()}`
 
-    const renderFuncBody = VueUtils.compileTemplate({source:component.template.content,compiler:VueTemplateCompiler,filename:DependencyName})
+    const renderFuncBody = VueUtils.compileTemplate({source:component.template.content,compiler:VueTemplateCompiler,filename:DependencyName,transformAssetUrls:true})
 
     const ASTRenderFuncBody = API.ParseCode(renderFuncBody.code,{allowReturnOutsideFunction:true})
 
