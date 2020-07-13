@@ -9,11 +9,13 @@ import MDImportLocation from "./importlocations/MDImportLocation.js";
 import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
 import { isInQueue, loadEntryFromQueue, addEntryToQueue, QueueEntry } from "./GraphGenerator.js";
-import { isLibrary } from "./Main.js";
-import { transformSync } from "@babel/core";
+import {ControlPanel} from "./Main.js";
+import {transformAsync} from "@babel/core";
 import { BabelSettings } from "./Options.js";
 import { ModuleTypes } from "./Module.js";
 import { searchForDefaultNamespace } from "./dependencies/NamespaceSearch.js";
+import { promisify } from "util";
+import {readFile} from 'fs/promises'
 //import MDImportLocation from "./MDImportLocation.js";
 
 /**Transports the given dependency to given Graph.
@@ -23,7 +25,7 @@ import { searchForDefaultNamespace } from "./dependencies/NamespaceSearch.js";
  * @param {string} CurrentFile Current file being loading from. 
  * @param {MDImportLocation} CurrentMDImpLoc Curret Module Dependency Import Location
  */
-export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,planetName?:string){
+export async function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,planetName?:string){
 
     let str = './'
 
@@ -37,9 +39,9 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
                             Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
                         }
                         else{
-                            let file = fs.readFileSync(Dependency.name).toString()
-                            if(!isLibrary){
-                                file = transformSync(file,BabelSettings).code
+                            let file = (await fs.readFile(Dependency.name)).toString()
+                            if(!ControlPanel.isLibrary){
+                                file = (await transformAsync(file,BabelSettings)).code
                             }
                             addEntryToQueue(new QueueEntry(Dependency.name,Babel.parse(file,{"sourceType":'module'})))
                             Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)

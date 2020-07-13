@@ -13,10 +13,12 @@ import { CSSDependency } from './dependencies/CSSDependency.js'
 import * as css from 'css'
 import * as CSSGrapher from './graphers/CSSGrapher'
 import * as PlanetGrapher from './graphers/PlanetGrapher'
-import { promisify } from 'util'
+import {readFile} from 'fs/promises'
 import { ControlPanel } from './Main.js'
+import * as path from 'path'
+import { notNativeDependency, resolveGrapherForNonNativeDependency } from './DependencyFactory.js'
 
-var readFileAsync = promisify(fs.readFile)
+var readFileAsync = readFile
 
 export var queue:Array<QueueEntry> = []
 
@@ -72,7 +74,7 @@ export async function GenerateGraph(entry:string,modEntry:string){
 
     let modEnt = addJsExtensionIfNecessary(entry)
 
-    var entryFile = await readFileAsync(modEnt)
+    var entryFile = (await readFileAsync(modEnt)).toString()
 
     if(!ControlPanel.isLibrary){
         entryFile = (await transformAsync(entryFile.toString(),BabelSettings)).code
@@ -102,7 +104,7 @@ export async function GenerateGraph(entry:string,modEntry:string){
                         GraphDepsAndModsForCurrentFile(loadEntryFromQueue(modName),Graph)
                     }
                     else{
-                        let file = await readFileAsync(modEntry)
+                        let file = (await readFileAsync(modEntry)).toString()
 
                         if(!ControlPanel.isLibrary){
                             file = (await transformAsync(file.toString(),BabelSettings)).code
@@ -147,6 +149,9 @@ export async function GenerateGraph(entry:string,modEntry:string){
                     CSSGrapher.SearchAndGraph(loadEntryFromQueue(dep.name).ast,dep)
                 }
             }
+            // IF dependency is added from Addon
+        } else if(notNativeDependency(dep.name)){
+            resolveGrapherForNonNativeDependency(dep)(dep,Graph);
         }
     }
 
@@ -156,7 +161,7 @@ export async function GenerateGraph(entry:string,modEntry:string){
 
         let modEnt = addJsExtensionIfNecessary(planet.entryModule)
 
-        let entryFile = await readFileAsync(modEnt)
+        let entryFile = (await readFileAsync(modEnt)).toString()
 
         if(!ControlPanel.isLibrary && !planet.entryModuleIsLibrary){
             entryFile = (await transformAsync(entryFile.toString(),BabelSettings)).code
@@ -179,7 +184,7 @@ export async function GenerateGraph(entry:string,modEntry:string){
                               GraphDepsAndModsForCurrentFile(loadEntryFromQueue(modName),Graph,planet.name)
                           }
                           else{
-                            let file = await readFileAsync(modName)
+                            let file = (await readFileAsync(modName)).toString()
 
                               if(!ControlPanel.isLibrary){
                                   file = (await transformAsync(file.toString(),BabelSettings)).code
@@ -224,14 +229,17 @@ export async function GenerateGraph(entry:string,modEntry:string){
                           CSSGrapher.SearchAndGraph(loadEntryFromQueue(dep.name).ast,dep)
                       }
                   }
-              }
+                  // IF dependency is added from Addon
+              } else if(notNativeDependency(dep.name)){
+                resolveGrapherForNonNativeDependency(dep)(dep,Graph,planet.name);
+            }
         }
     }
 
    return Graph
 }
 
-function GraphDepsAndModsForCurrentFile(entry:QueueEntry,Graph:VortexGraph,planetName?:string){
+export function GraphDepsAndModsForCurrentFile(entry:QueueEntry,Graph:VortexGraph,planetName?:string){
     EsModuleGrapher.SearchAndGraph(entry,Graph,planetName)
     CjsModuleGrapher.SearchAndGraph(entry,Graph,planetName)
     PlanetGrapher.SearchAndGraph(entry,Graph)

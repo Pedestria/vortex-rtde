@@ -26,11 +26,10 @@ export class ExportsHandler {
            extensions:[],
            custom:{
                graph:{
-                   dependencies:[],
-                   dependencyMapExposeExports:[]
+                   graphers:[],
+                   dependenciesMap:[],
                },
                compiler:{
-                   dependencies:[],
                    dependencyMapCompiler:[]
                },
                livePush:{}
@@ -56,6 +55,14 @@ export class ExportsHandler {
                 case 'NON_JS_EXNTS':
                     this.exports.extend.extensions = _.concat(value)
                     break;
+                case 'GRAPH_EXTSN':
+                    this.exports.extend.custom.graph.graphers = _.concat(value)
+                    break;
+                case 'CUSTOM_DEPENDENCIES':
+                    this.exports.extend.custom.graph.dependenciesMap = _.concat(value)
+                    break;
+                case 'COMPILER_EXTSN':
+                    this.exports.extend.custom.compiler.dependencyMapCompiler = _.concat(value)
             }
         }
     }
@@ -63,24 +70,31 @@ export class ExportsHandler {
 
 }
 
-interface GraphReturnExportsMapObject {
+export interface CustomGraphDependencyMapObject {
+    extension:string
+    dependency:DependencyConstructor
+    bundlable:boolean
+}
+
+export interface CustomDependencyGrapher {
     name:string 
-    returnExports:boolean
+    grapher:Grapher
 }
 
-interface Transformer extends Function {
+export interface Transformer{
 
-    AST:t.File
-    Dependency:VortexAPI.Dependency
+    (AST:t.File,Dependency:VortexAPI.Dependency):void
 
 }
 
-interface ImportsTransformer extends Transformer {
-    CurrentImportLocation:VortexAPI.ImportLocation
+export interface ImportsTransformer{
+
+    (AST:t.File,Dependency:VortexAPI.Dependency,CurrentImportLocation:VortexAPI.ImportLocation):void
+
 }
 
-interface CompilerCustomDependencyMap {
-    name:string
+export interface CompilerCustomDependencyMap {
+    extname:string
     importsTransformer:ImportsTransformer
     exportsTransformer:Transformer
 }
@@ -88,6 +102,9 @@ interface CompilerCustomDependencyMap {
 export interface VortexAddonModule extends Object {
     JS_EXNTS:Array<string>
     NON_JS_EXNTS:Array<string>
+    GRAPH_EXTSN:Array<CustomDependencyGrapher>
+    CUSTOM_DEPENDENCIES:Array<CustomGraphDependencyMapObject>
+    COMPILER_EXTSN:Array<CompilerCustomDependencyMap>
 
 }
 
@@ -97,11 +114,10 @@ interface ExportHandlerMap {
         extensions:Array<string>
         custom: {
             graph: {
-                dependencies:Array<VortexAPI.Dependency>
-                dependencyMapExposeExports:Array<GraphReturnExportsMapObject>
+                graphers:Array<CustomDependencyGrapher>
+                dependenciesMap:Array<CustomGraphDependencyMapObject>
             }
             compiler : {
-                dependencies:Array<VortexAPI.Dependency>
                 dependencyMapCompiler:Array<CompilerCustomDependencyMap>
             }
             livePush: {
@@ -121,5 +137,35 @@ interface ExportHandlerMap {
             compiler:Function
         }[]
     }
+
+}
+
+
+export interface InternalVortexAddons{
+    extensions:{
+        js:Array<string>
+        other:Array<string>
+    }
+    importedDependencies:Array<CustomGraphDependencyMapObject>
+    importedGraphers:Array<CustomDependencyGrapher>
+    importedCompilers:Array<CompilerCustomDependencyMap>
+}
+
+export interface Grapher {
+    /**
+     * Construct Grapher with Dependency Input.
+     * Often used with Precompilers.
+     */
+    (Dependency:VortexAPI.Dependency,Graph:VortexAPI.VortexGraph,planetName?:string):void
+    /**
+     * Construct Grapher with Queue Entry Input
+     */
+    // (QueueEntry:VortexAPI.QueueEntry,Graph:VortexAPI.VortexGraph):void
+
+}
+
+interface DependencyConstructor{
+
+    new (name:string,initImportLocation:VortexAPI.ImportLocation):VortexAPI.Dependency;
 
 }

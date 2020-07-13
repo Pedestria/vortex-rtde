@@ -23,6 +23,7 @@ import * as _ from 'lodash';
 import { outBundle } from "../vortex.panel.js";
 import { ControlPanel } from "./Main.js";
 import { queue } from "./GraphGenerator.js";
+import { notNativeDependency, resolveTransformersForNonNativeDependency, CustomDependencyIsBundlable } from "./DependencyFactory.js";
 
 
 class QueueEntry {
@@ -252,7 +253,7 @@ function addToNamespace(Node:t.FunctionDeclaration | t.VariableDeclaration | t.C
  * @param {LibBundle} libBund The Library Bundle
  */
 
-function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDependency,libBund:LibBundle){
+ function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDependency,libBund:LibBundle){
 
     //Grabs all requires/imports of libs and converts them to CJS and places them at the top of bundle
     //
@@ -777,6 +778,13 @@ async function WebAppCompile (Graph:VortexGraph){
             for(let impLoc of dep.importLocations){
                  resolveFileDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc,localNewName)
             }
+        }else if(notNativeDependency(dep.name)){
+            let {importsTransformer,exportsTransformer} = resolveTransformersForNonNativeDependency(dep)
+            for(let impLoc of dep.importLocations){
+                importsTransformer(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+            }
+            // Node libraries are NATIVE ONLY therefore no need to verify if Dependency is a local file.
+            exportsTransformer(loadEntryFromQueue(dep.name).ast,dep)
         }
     }
 
@@ -835,6 +843,13 @@ async function WebAppCompile (Graph:VortexGraph){
                 for(let impLoc of dep.importLocations){
                     resolveFileDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc,localNewName)
                 }
+            } else if(notNativeDependency(dep.name)){
+                let {importsTransformer,exportsTransformer} = resolveTransformersForNonNativeDependency(dep)
+                for(let impLoc of dep.importLocations){
+                    importsTransformer(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+                }
+                // Node libraries are NATIVE ONLY therefore no need to verify if Dependency is a local file.
+                exportsTransformer(loadEntryFromQueue(dep.name).ast,dep)
             }
         }
     }
@@ -906,6 +921,23 @@ async function WebAppCompile (Graph:VortexGraph){
                     }
                 }
             }
+            else if (notNativeDependency(dep.name) && CustomDependencyIsBundlable(dep)){
+                if(bufferNames.includes(dep.libLoc) == false){
+                    const entry = loadEntryFromQueue(dep.name)
+                    if(entry.external) {
+                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                        const mod = ControlPanel.isProduction? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code)})
+                        shuttle.addModuleToBuffer(dep.name,mod)
+                        bufferNames.push(dep.name)
+                        continue;
+                    }
+                    stripNodeProcess(entry.ast)
+                    const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                    const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code  + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
+                    shuttle.addModuleToBuffer(dep.name,mod)
+                    bufferNames.push(dep.name)
+                }
+            }
     }
     
     //
@@ -964,6 +996,23 @@ async function WebAppCompile (Graph:VortexGraph){
                             local_shuttle.addModuleToBuffer(dep.name,mod)
                             bufferNames.push(dep.name)
                         }
+                    }
+                }
+                else if (notNativeDependency(dep.name) && CustomDependencyIsBundlable(dep)){
+                    if(bufferNames.includes(dep.libLoc) == false){
+                        const entry = loadEntryFromQueue(dep.name)
+                        if(entry.external) {
+                            const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                            const mod = ControlPanel.isProduction? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code)})
+                            shuttle.addModuleToBuffer(dep.name,mod)
+                            bufferNames.push(dep.name)
+                            continue;
+                        }
+                        stripNodeProcess(entry.ast)
+                        const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
+                        const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code  + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
+                        shuttle.addModuleToBuffer(dep.name,mod)
+                        bufferNames.push(dep.name)
                     }
                 }
             }
@@ -1195,7 +1244,7 @@ const ShuttleExportDefault = template("shuttle_exports.default = EXPORT")
  * @param {ModuleDependency} dep The current ModuleDependency.
  */
 
-function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:ModuleDependency){
+export function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:ModuleDependency){
 
     let namespace = `VORTEX_MODULE_${fixDependencyName(dep.name)}`
 
@@ -1213,7 +1262,7 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
                     }
                 },
                 Identifier: function(path){
-                    if(path.parent.type !== 'MemberExpression' && path.parent.type !== 'ImportSpecifier' && path.parent.type !== 'ImportDefaultSpecifier'){
+                    if(path.parent.type !== 'MemberExpression' && path.parent.type !== 'ImportSpecifier' && path.parent.type !== 'ImportDefaultSpecifier' && path.parent.type !== 'ObjectProperty'){
 
                             if(currentImpLoc.indexOfModuleByName(path.node.name) !== null){
                                 if(dep.name.includes('./') == false){
@@ -1225,6 +1274,7 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
                                     }
                                     //if NOT library at all
                                 } else{
+                                    //If Object Property, replace with module Object Namespace
                                     if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.name)].type === ModuleTypes.EsDefaultModule){
                                         path.replaceWith(t.memberExpression(t.identifier(namespace),t.identifier('default')))
                                     }
@@ -1248,6 +1298,15 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
                                     // IF Namespace is the default export and is used as new or call expression elsewhere.
                                     path.replaceWith(t.memberExpression(t.memberExpression(t.identifier(namespace),t.identifier('default')),path.node.property))
                                 }
+                            }
+                        }
+                    }
+                },
+                ObjectProperty: function(path){
+                    if(path.node.value.type === "Identifier"){
+                        if(currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.value.name)] !== undefined){
+                            if(path.node.value.name === currentImpLoc.modules[currentImpLoc.indexOfModuleByName(path.node.value.name)].name){
+                                path.node.value.name = namespace
                             }
                         }
                     }
@@ -1322,7 +1381,7 @@ function TransformImportsFromAST(ast:t.File,currentImpLoc:MDImportLocation,dep:M
  */
 
 
-function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
+export function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
     //Removes exports from local file ES Modules only.
     if(dep instanceof EsModuleDependency && dep.libLoc == null){
         let exportsToBeRolled:Array<string> = []
@@ -1442,7 +1501,7 @@ function stripNodeProcess(ast:t.File){
     })
 }
 
-const CSSInjector = template("if(!gLOBAL_STYLES.includes(DEPNAME)){var style = document.createElement('style'); style.innerHTML=CSS;document.head.appendChild(style);gLOBAL_STYLES.push(DEPNAME)}")
+export const CSSInjector = template("if(!gLOBAL_STYLES.includes(DEPNAME)){var style = document.createElement('style'); style.innerHTML=CSS;document.head.appendChild(style);gLOBAL_STYLES.push(DEPNAME)}")
 
 /**Injects CSS into import location
  * 

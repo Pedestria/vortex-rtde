@@ -173,6 +173,9 @@ export function isJs(filename:string){
     else if(filename.includes('.js') || filename.includes('.mjs') || filename.includes('.') == false){
         return true
     }
+    else if (ControlPanel.InstalledAddons.extensions.js.includes(path.extname(filename))){
+        return true
+    }
     else {
         throw new VortexError(`Cannot resolve extension: "${getFileExtension(filename)}" If you wish to include this in your Solar System, include it in the resolvable extensions option in the vortex.panel.js`,VortexErrorType.PortalPanelError)
     }

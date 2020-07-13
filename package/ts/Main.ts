@@ -11,9 +11,9 @@ import cliSpinners from 'cli-spinners'
 import * as ora from 'ora'
 import * as os from 'os'
 import { assignDependencyType } from './Planet';
-import { VortexAddon, ExportsHandler } from './Addon';
-import { TestThread } from './Threads';
+import { VortexAddon, ExportsHandler, InternalVortexAddons } from './Addon';
 import EsModuleDependency from './dependencies/EsModuleDependency';
+import _ = require('lodash');
 
 //import * as Babel_Core from '@babel/core'
 export namespace ControlPanel {
@@ -46,7 +46,7 @@ export namespace ControlPanel {
 
     export var externalLibs:Array<string> = Panel.outBundle
 
-    export var VAddons:Array<ExportsHandler> = Panel.addons.map(addon => addon.handler)
+    export var InstalledAddons:InternalVortexAddons = ParseAddons(Panel.addons)
 
 }
 
@@ -56,6 +56,7 @@ export namespace ControlPanel {
  */ 
 
 export async function createStarPackage (){
+
 
     //SPINNERS -->
 
@@ -111,9 +112,6 @@ export async function createStarPackage (){
     for(let planet of Graph.Planets){
         planet = assignDependencyType(planet,queue)
     }
-
-    let dep = new EsModuleDependency('',null);
-    let jsonObj = JSON.parse(JSON.stringify(dep))
 
     let bundles = await Compile(Graph).catch(err => {console.log(err);process.exit(1);})
 
@@ -274,3 +272,17 @@ function amendEntryPoint2(entry:string){
 // }
 //fs.writeJSONSync('out/importcool.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"plugins":["dynamicImport"],"sourceType":"module"}))
 
+function ParseAddons(Addons:Array<VortexAddon>){
+
+    var INTERALS:InternalVortexAddons = {
+        extensions:{
+            js:_.flatten(Addons.map(addon => addon.handler.exports.extend.jsExtensions)),
+            other:_.flatten(Addons.map(addon => addon.handler.exports.extend.extensions))
+        },
+        importedDependencies:_.flatten(Addons.map(addon => addon.handler.exports.extend.custom.graph.dependenciesMap)),
+        importedGraphers:_.flatten(Addons.map(addon => addon.handler.exports.extend.custom.graph.graphers)),
+        importedCompilers:_.flatten(Addons.map(addon => addon.handler.exports.extend.custom.compiler.dependencyMapCompiler))
+    }
+
+    return INTERALS
+}

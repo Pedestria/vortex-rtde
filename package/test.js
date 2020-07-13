@@ -12,6 +12,7 @@ const generate = require('@babel/generator')
 const {v4} = require('uuid')
 const hash = require('hash-sum')
 const sass = require('node-sass')
+const { indexOf } = require('lodash')
 // const compiler = require('@vue/component-compiler')
 
 
@@ -79,7 +80,7 @@ let filename = './test/component.vue'
 
 let scopeID = `data-v-${v4()}`
 
-const result = compiler.parse({source:fs.readFileSync(filename).toString(),compilerParseOptions:{pad:'line'},filename,compiler:VueTemplate})
+const result = compiler.parse({source:fs.readFileSync(filename).toString(),filename,compiler:VueTemplate})
 
 
 const renderFuncBody = compiler.compileTemplate({source:result.template.content,compiler:VueTemplate,filename})
@@ -97,15 +98,10 @@ cssResult = compiler.compileStyle({source:result.styles[0].content,preprocessLan
 
 const MainAST = Babel.parse(transformSync(result.script.content).code,{"sourceType":"module"})
 
-traverse.default(MainAST, {
-    ExportDefaultDeclaration: function(path){
-        if(path.node.declaration.type === 'ObjectExpression'){
-            path.replaceWith(t.assignmentExpression('=',t.memberExpression(t.identifier('shuttle_exports'),t.identifier('MAPPED_DEFAULT')),path.node.declaration))
-            return
-        }
-    }
-})
-let props = MainAST.program.body[0].expression.right.properties
+let index = findDefaultExportExpression()
+
+let props = MainAST.program.body[index].declaration.properties
+
 for(let prop of props){
     if(prop.type === 'ObjectProperty' && prop.key === t.identifier('render') && path.parent.type !== 'ReturnStatement'){
         prop.value = t.identifier('render')
@@ -117,7 +113,7 @@ if(scoped){
     props.push(t.objectProperty(t.identifier('_scopeId'),t.stringLiteral(scopeID)))
 }
 
-console.log(MainAST.program.body[0].expression.right)
+console.log(MainAST.program.body[index].declaration.properties)
 
 
 
@@ -129,10 +125,14 @@ MainAST.program.body.push(CSSInjector({DEPNAME:t.stringLiteral('style1'),CSS:t.s
 
 const finalCode = generate.default(MainAST).code
 
-let output = './outputVue.js'
 
-fs.writeFileSync(output,finalCode)
-console.log(chalk.redBright('Yippee Outputed Vue Component to' + output))
+function findDefaultExportExpression () {
+    for(let node of MainAST.program.body){
+        if(node.type === 'ExportDefaultDeclaration'){
+            return MainAST.program.body.indexOf(node)
+        }
+    }
+}
 
 
 

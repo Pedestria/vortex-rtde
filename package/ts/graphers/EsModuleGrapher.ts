@@ -9,11 +9,12 @@ import { Transport } from "../Transport.js";
 import MDImportLocation from "../importlocations/MDImportLocation.js";
 import { QueueEntry } from "../GraphGenerator.js";
 import { exportDefaultSpecifier } from "@babel/types";
-import { resolveDependencyType } from "../DependencyFactory.js";
+import { resolveDependencyType, getFileExtension, notNativeDependency, resolveNonNativeDependency } from "../DependencyFactory.js";
 import ImportLocation from "../ImportLocation.js";
 import {ControlPanel} from "../Main.js";
 import { FileImportLocation } from "../importlocations/FileImportLocation.js";
-import {isJs} from '../Resolve'
+import {isJs, LocalizedResolve} from '../Resolve'
+import * as PATH from 'path'
 
 /**Searchs and Graphs JS code for ECMAScript Module Dependencies
  * 
@@ -49,19 +50,29 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:st
                 }
                 //console.log(modules)
                 let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.source.value)
-                let dep = new EsModuleDependency(path.node.source.value,currentImpLoc)
-                if(path.node.trailingComments !== undefined){
-                    if(path.node.trailingComments[0].value === 'vortexRetain'){
-                        dep.outBundle = true
-                    }
-                }
 
-                //Browser Externals!
-                if(ControlPanel.externalLibs.includes(dep.name)){
-                    dep.outBundle = true
-                    dep.libLoc = dep.name
-                }
-                Transport(dep,Graph,entry.name,currentImpLoc,planetName)
+                let name = path.node.source.value
+
+                //If the Module dependency is NOT Built in to Vortex.
+
+                if(notNativeDependency(name)){
+                    Transport(resolveNonNativeDependency(LocalizedResolve(entry.name,name),currentImpLoc),Graph,entry.name,currentImpLoc,planetName)
+                } 
+                else {
+                    let dep = new EsModuleDependency(name,currentImpLoc)
+                    if(path.node.trailingComments !== undefined){
+                        if(path.node.trailingComments[0].value === 'vortexRetain'){
+                            dep.outBundle = true
+                        }
+                    }
+
+                    //Browser Externals!
+                    if(ControlPanel.externalLibs.includes(dep.name)){
+                        dep.outBundle = true
+                        dep.libLoc = dep.name
+                    }
+                    Transport(dep,Graph,entry.name,currentImpLoc,planetName);
+            }
 
         } else{
             //For Non-Module Dependencies.

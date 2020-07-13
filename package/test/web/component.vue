@@ -4,12 +4,12 @@
     {{message}}
    </div>
    <button v-on:click="handleClick">Vue Button</button>
+   <other-component/>
  </div>
 </template>
 
 <script>
-
-import NewComponent from './newComponent'
+import OtherComponent from './newComponent.vue'
 
 export default {
     data () {
@@ -23,7 +23,7 @@ export default {
         }
     },
     components: {
-        NewComponent
+        OtherComponent
     }
 }
 </script>
