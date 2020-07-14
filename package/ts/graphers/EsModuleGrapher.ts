@@ -71,7 +71,7 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:st
                         dep.outBundle = true
                         dep.libLoc = dep.name
                     }
-                    Transport(dep,Graph,entry.name,currentImpLoc,planetName);
+                    Transport(dep,Graph,entry.name,currentImpLoc,planetName)
             }
 
         } else{

@@ -24,21 +24,20 @@ class VueComponentDependency extends API.Dependency{
 }
 
 
-const SearchAndGraphInVueDep:Grapher = (Dependency:API.Dependency,Graph:API.VortexGraph,planetName?:string) => {
+const SearchAndGraphInVueDep:Grapher = async (Dependency:API.Dependency,Graph:API.VortexGraph,planetName?:string) => {
 
-    readFile(Dependency.name).then(buffer => {
-        let file = buffer.toString()
-        var {script,styles,template} = VueUtils.parse({compiler:VueTemplateCompiler,source:file,filename:Dependency.name})
-        return {script,styles,template}
-    }).then(component => {
-        return CompileComponent(component,Dependency.name)
-    }).then(code => {
-        const entry = new API.QueueEntry(Dependency.name,API.ParseCode(code,{sourceType:"module"}))
-        API.addQueueEntry(entry)
-        API.NativeDependencyGrapher(entry,Graph,planetName)
-    })
+    console.log('calling here!')
+
+    let buffer = await readFile(Dependency.name)
+    let file = buffer.toString()
+    var {script,styles,template} = VueUtils.parse({compiler:VueTemplateCompiler,source:file,filename:Dependency.name})
+    let code = await CompileComponent({script,styles,template},Dependency.name)
+    const entry = new API.QueueEntry(Dependency.name,API.ParseCode(code,{sourceType:"module"}))
+    API.addQueueEntry(entry)
+    API.NativeDependencyGrapher(API.loadQueueEntry(entry.name),Graph,planetName) 
 
     return;
+
 }
 
 /**Compiles Parsed Vue Component into Js Code String

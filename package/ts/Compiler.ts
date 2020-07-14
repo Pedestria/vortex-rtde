@@ -800,7 +800,12 @@ async function WebAppCompile (Graph:VortexGraph){
             }
 
         if(transdExps.includes(planet.entryModule) == false){
-            TransformExportsFromAST(loadEntryFromQueue(planet.entryModule).ast,planet.entryDependency)
+            if(!notNativeDependency(planet.entryModule)){
+                TransformExportsFromAST(loadEntryFromQueue(planet.entryModule).ast,planet.entryDependency)
+            } else{
+                let {exportsTransformer} = resolveTransformersForNonNativeDependency(planet.entryDependency)
+                exportsTransformer(loadEntryFromQueue(planet.entryModule).ast,planet.entryDependency)
+            }
             transdExps.push(planet.entryModule)
         }
         
@@ -922,7 +927,7 @@ async function WebAppCompile (Graph:VortexGraph){
                 }
             }
             else if (notNativeDependency(dep.name) && CustomDependencyIsBundlable(dep)){
-                if(bufferNames.includes(dep.libLoc) == false){
+                if(bufferNames.includes(dep.name) == false){
                     const entry = loadEntryFromQueue(dep.name)
                     if(entry.external) {
                         const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
@@ -969,7 +974,7 @@ async function WebAppCompile (Graph:VortexGraph){
                             if(entry.external) {
                                 const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
                                 const mod = ControlPanel.isProduction? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code)})
-                                shuttle.addModuleToBuffer(dep.libLoc,mod)
+                                local_shuttle.addModuleToBuffer(dep.libLoc,mod)
                                 bufferNames.push(dep.libLoc)
                                 continue;
                             }
@@ -986,7 +991,7 @@ async function WebAppCompile (Graph:VortexGraph){
                             if(entry.external) {
                                 const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
                                 const mod = ControlPanel.isProduction? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code)})
-                                shuttle.addModuleToBuffer(dep.name,mod)
+                                local_shuttle.addModuleToBuffer(dep.name,mod)
                                 bufferNames.push(dep.name)
                                 continue;
                             }
@@ -999,19 +1004,18 @@ async function WebAppCompile (Graph:VortexGraph){
                     }
                 }
                 else if (notNativeDependency(dep.name) && CustomDependencyIsBundlable(dep)){
-                    if(bufferNames.includes(dep.libLoc) == false){
+                    if(bufferNames.includes(dep.name) == false){
                         const entry = loadEntryFromQueue(dep.name)
                         if(entry.external) {
                             const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
                             const mod = ControlPanel.isProduction? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code)})
-                            shuttle.addModuleToBuffer(dep.name,mod)
+                            local_shuttle.addModuleToBuffer(dep.name,mod)
                             bufferNames.push(dep.name)
                             continue;
                         }
-                        stripNodeProcess(entry.ast)
                         const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
                         const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code  + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
-                        shuttle.addModuleToBuffer(dep.name,mod)
+                        local_shuttle.addModuleToBuffer(dep.name,mod)
                         bufferNames.push(dep.name)
                     }
                 }

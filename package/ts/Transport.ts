@@ -10,12 +10,13 @@ import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
 import { isInQueue, loadEntryFromQueue, addEntryToQueue, QueueEntry } from "./GraphGenerator.js";
 import {ControlPanel} from "./Main.js";
-import {transformAsync} from "@babel/core";
+import {transformAsync, transformSync} from "@babel/core";
 import { BabelSettings } from "./Options.js";
 import { ModuleTypes } from "./Module.js";
 import { searchForDefaultNamespace } from "./dependencies/NamespaceSearch.js";
 import { promisify } from "util";
 import {readFile} from 'fs/promises'
+import { S_IFREG } from "constants";
 //import MDImportLocation from "./MDImportLocation.js";
 
 /**Transports the given dependency to given Graph.
@@ -25,7 +26,32 @@ import {readFile} from 'fs/promises'
  * @param {string} CurrentFile Current file being loading from. 
  * @param {MDImportLocation} CurrentMDImpLoc Curret Module Dependency Import Location
  */
-export async function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,planetName?:string){
+export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,planetName?:string){
+
+    verifyModules(Dependency,CurrentFile,CurrentMDImpLoc);
+
+    //If transporting to Star 
+    if(planetName === undefined){
+        if (Graph.searchFor(Dependency)){
+            Graph.update(Dependency)
+        }
+        else{
+            Graph.add(Dependency);
+        }
+        //Else transport to planet if currently graphing for one.
+    } else{
+        if(Graph.searchForOnPlanet(Dependency,planetName)){
+            Graph.updateOnPlanet(Dependency,planetName);
+        }
+        else{
+            Graph.addToPlanet(Dependency,planetName);
+        }
+    }
+
+    return;
+}
+
+function verifyModules(Dependency:Dependency,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation){
 
     let str = './'
 
@@ -36,15 +62,19 @@ export async function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentF
                 Dependency.updateName(LocalizedResolve(CurrentFile,addJsExtensionIfNecessary(Dependency.name)))
                     if(Dependency instanceof EsModuleDependency || Dependency instanceof CjsModuleDependency){
                         if(isInQueue(Dependency.name)){
-                            Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
+                            if(CurrentMDImpLoc.modules.length > 0){
+                                Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
+                            }
                         }
                         else{
-                            let file = (await fs.readFile(Dependency.name)).toString()
+                            let file = fs.readFileSync(Dependency.name).toString()
                             if(!ControlPanel.isLibrary){
-                                file = (await transformAsync(file,BabelSettings)).code
+                                file = transformSync(file,BabelSettings).code
                             }
                             addEntryToQueue(new QueueEntry(Dependency.name,Babel.parse(file,{"sourceType":'module'})))
-                            Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
+                            if(CurrentMDImpLoc.modules.length > 0){
+                                Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
+                            }
                         }
                     }
             }
@@ -65,22 +95,4 @@ export async function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentF
         }
     }
 
-    //If transporting to Star 
-
-    if(planetName === undefined){
-        if (Graph.searchFor(Dependency)){
-            Graph.update(Dependency)
-        }
-        else{
-            Graph.add(Dependency);
-        }
-        //Else transport to planet if currently graphing for one.
-    } else{
-        if(Graph.searchForOnPlanet(Dependency,planetName)){
-            Graph.updateOnPlanet(Dependency,planetName);
-        }
-        else{
-            Graph.addToPlanet(Dependency,planetName);
-        }
-    }
 }

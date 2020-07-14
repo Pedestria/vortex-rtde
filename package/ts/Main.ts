@@ -14,6 +14,8 @@ import { assignDependencyType } from './Planet';
 import { VortexAddon, ExportsHandler, InternalVortexAddons } from './Addon';
 import EsModuleDependency from './dependencies/EsModuleDependency';
 import _ = require('lodash');
+import { notNativeDependency } from './DependencyFactory';
+import Dependency from './Dependency';
 
 //import * as Babel_Core from '@babel/core'
 export namespace ControlPanel {
@@ -108,9 +110,14 @@ export async function createStarPackage (){
     spinner2.succeed();
     spinner3.start();
 
+    
     //Assign Entry Dependency For Planets
     for(let planet of Graph.Planets){
-        planet = assignDependencyType(planet,queue)
+        if(!notNativeDependency(planet.entryModule)){
+            planet = assignDependencyType(planet,queue)
+        } else{
+            planet.entryDependency = new Dependency(planet.entryModule)
+        }
     }
 
     let bundles = await Compile(Graph).catch(err => {console.log(err);process.exit(1);})

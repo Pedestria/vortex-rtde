@@ -2,7 +2,7 @@ import Dependency from './Dependency'
 import ImportLocation from './ImportLocation'
 import ModuleDependency from './dependencies/ModuleDependency'
 import MDImportLocation from './importlocations/MDImportLocation'
-import { QueueEntry, addEntryToQueue } from './GraphGenerator'
+import { QueueEntry, addEntryToQueue, loadEntryFromQueue } from './GraphGenerator'
 import traverse from '@babel/traverse'
 import { VortexGraph } from './Graph'
 import { transformAsync} from '@babel/core'
@@ -34,7 +34,8 @@ export {
     TransformExportsFromAST as TransformNativeExports,
     CSSInjector as InjectCSS,
     addEntryToQueue as addQueueEntry,
-    EsModuleDependency
+    EsModuleDependency,
+    loadEntryFromQueue as loadQueueEntry,
     
 }
 export * as BabelTypes from '@babel/types'

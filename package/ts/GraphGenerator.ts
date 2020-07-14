@@ -33,6 +33,7 @@ export function isInQueue(entryName:string){
 
 export function addEntryToQueue(entry:QueueEntry){
     queue.push(entry)
+    return;
 }
 
 export function loadEntryFromQueue(entryName:string){
@@ -151,27 +152,42 @@ export async function GenerateGraph(entry:string,modEntry:string){
             }
             // IF dependency is added from Addon
         } else if(notNativeDependency(dep.name)){
-            resolveGrapherForNonNativeDependency(dep)(dep,Graph);
+            let grapher = resolveGrapherForNonNativeDependency(dep)
+            await grapher(dep,Graph);
         }
     }
 
 
     //Planet Graph
     for(let planet of Graph.Planets){
-
-        let modEnt = addJsExtensionIfNecessary(planet.entryModule)
-
-        let entryFile = (await readFileAsync(modEnt)).toString()
-
-        if(!ControlPanel.isLibrary && !planet.entryModuleIsLibrary){
-            entryFile = (await transformAsync(entryFile.toString(),BabelSettings)).code
+        let modEnt = planet.entryModule
+        if(!notNativeDependency(planet.entryModule)){
+             modEnt = addJsExtensionIfNecessary(planet.entryModule)
         }
 
-        let entryAst = Babel.parse(entryFile.toString(),ParseSettings)
 
-        addEntryToQueue(new QueueEntry(planet.entryModule,entryAst))
-        GraphDepsAndModsForCurrentFile(loadEntryFromQueue(modEnt),Graph,planet.name);
-        loadedFilesCache.push(entry)
+        if(!notNativeDependency(planet.entryModule)){
+            let entryFile = (await readFileAsync(modEnt)).toString()
+            if(!ControlPanel.isLibrary && !planet.entryModuleIsLibrary){
+
+                entryFile = (await transformAsync(entryFile.toString(),BabelSettings)).code
+            }
+
+            let entryAst = Babel.parse(entryFile.toString(),ParseSettings)
+
+            addEntryToQueue(new QueueEntry(modEnt,entryAst))
+            GraphDepsAndModsForCurrentFile(loadEntryFromQueue(modEnt),Graph,planet.name);
+
+        } else {
+            let depLie = new Dependency(planet.entryModule)
+
+            let grapher = resolveGrapherForNonNativeDependency(depLie)
+
+            await grapher(depLie,Graph,planet.name);
+
+        }
+
+        loadedFilesCache.push(planet.entryModule)
 
         for(let dep of planet.modules){
             if(dep instanceof ModuleDependency){
@@ -231,12 +247,17 @@ export async function GenerateGraph(entry:string,modEntry:string){
                   }
                   // IF dependency is added from Addon
               } else if(notNativeDependency(dep.name)){
-                resolveGrapherForNonNativeDependency(dep)(dep,Graph,planet.name);
+
+                let grapher = resolveGrapherForNonNativeDependency(dep)
+
+                await grapher(dep,Graph,planet.name);
             }
         }
     }
 
-   return Graph
+
+
+   return Graph;
 }
 
 export function GraphDepsAndModsForCurrentFile(entry:QueueEntry,Graph:VortexGraph,planetName?:string){

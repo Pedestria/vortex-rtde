@@ -156,7 +156,7 @@ export interface Grapher {
      * Construct Grapher with Dependency Input.
      * Often used with Precompilers.
      */
-    (Dependency:VortexAPI.Dependency,Graph:VortexAPI.VortexGraph,planetName?:string):void
+    (Dependency:VortexAPI.Dependency,Graph:VortexAPI.VortexGraph,planetName?:string):Promise<void>
     /**
      * Construct Grapher with Queue Entry Input
      */
