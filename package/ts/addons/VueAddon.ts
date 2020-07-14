@@ -4,6 +4,13 @@ import {readFile} from 'fs/promises'
 import * as VueUtils from '@vue/component-compiler-utils'
 import { v4 } from "uuid";
 const VueTemplateCompiler = require('vue-template-compiler')
+import * as sass from 'node-sass'
+import * as less from 'less'
+// import {nodes} from 'stylus'
+import * as Pug from 'pug'
+// import * as Bluebird from 'bluebird'
+
+// const compileStylus = Bluebird.Promise.promisify(stylus.render)
 
 export class VVueAddon extends VortexAddon {
     constructor(name:string,handler:ExportsHandler){
@@ -25,8 +32,6 @@ class VueComponentDependency extends API.Dependency{
 
 
 const SearchAndGraphInVueDep:Grapher = async (Dependency:API.Dependency,Graph:API.VortexGraph,planetName?:string) => {
-
-    console.log('calling here!')
 
     let buffer = await readFile(Dependency.name)
     let file = buffer.toString()
@@ -50,7 +55,19 @@ async function CompileComponent(component:RawVueComponent,DependencyName:string)
 
     var scopeID = `data-v-${v4()}`
 
-    const renderFuncBody = VueUtils.compileTemplate({source:component.template.content,compiler:VueTemplateCompiler,filename:DependencyName,transformAssetUrls:true})
+    var template
+
+    if(component.template.lang !== undefined){
+        switch(component.template.lang){
+            case 'pug'||'jade':
+                template = Pug.render(component.template.content)
+                break;
+        }
+    } else {
+        template = component.template.content
+    }
+
+    const renderFuncBody = VueUtils.compileTemplate({source:template,compiler:VueTemplateCompiler,filename:DependencyName,transformAssetUrls:true})
 
     const ASTRenderFuncBody = API.ParseCode(renderFuncBody.code,{allowReturnOutsideFunction:true})
 
@@ -60,8 +77,25 @@ async function CompileComponent(component:RawVueComponent,DependencyName:string)
         var scoped = component.styles[0].scoped === undefined? false : component.styles[0].scoped
 
         var cssResult
+
+        if(component.styles[0].lang !== undefined){
+            switch(component.styles[0].lang){
+                case 'scss'||'sass':
+                    cssResult = sass.renderSync({file:component.styles[0].content}).css.toString()
+                    break;
+                case 'less':
+                    cssResult = (await less.render(component.styles[0].content)).css
+                    break;
+                // case 'stylus':
+                //     cssResult = (await compileStylus(component.styles[0].content)).css
+                //     break;
+            }
+        }
+
+
+
         if(scoped){
-        cssResult = VueUtils.compileStyle({source:component.styles[0].content,preprocessLang:component.styles[0].lang,scoped,id:scopeID,filename:DependencyName}).code
+        cssResult = VueUtils.compileStyle({source:cssResult === undefined? component.styles[0].content : cssResult,preprocessLang:component.styles[0].lang,scoped,id:scopeID,filename:DependencyName}).code
         } else{
             cssResult = component.styles[0].content
         }
