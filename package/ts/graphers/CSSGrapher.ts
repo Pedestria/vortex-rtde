@@ -1,8 +1,5 @@
 import * as css from 'css'
-import { Transport } from '../Transport'
-import { FileDependency } from '../dependencies/FileDependency'
 import { FileImportLocation } from '../importlocations/FileImportLocation'
-import { VortexGraph } from '../Graph'
 import { resolveDependencyType } from '../DependencyFactory'
 import { CSSDependency } from '../dependencies/CSSDependency'
 
@@ -13,8 +10,8 @@ export function SearchAndGraph(ast:css.Stylesheet,Dep:CSSDependency){
             for(let dec of rule.declarations){
                 if(dec.property === 'src'){
                     let depname = parseDependencyFromValue(dec.value)
-                    let impLoc = new FileImportLocation(ast.stylesheet.source,null,depname,null);
-                    Dep.dependencies.push(resolveDependencyType(depname,impLoc,ast.stylesheet.source))
+                    let impLoc = new FileImportLocation(Dep.name,null,depname,null);
+                    Dep.dependencies.push(resolveDependencyType(depname,impLoc,Dep.name))
                 }
             }
         }

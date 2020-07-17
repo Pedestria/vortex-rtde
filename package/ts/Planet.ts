@@ -38,7 +38,7 @@ export function assignDependencyType(planet:Planet,queue) : Planet{
 
     let entrydepType
 
-    traverse(loadEntryFromQueue(planet.entryModule,queue).ast,{
+    traverse(loadEntryFromSpecificQueue(planet.entryModule,queue).ast,{
         enter(path){
             if(path.isExportDefaultDeclaration){
                 entrydepType = DepTypes.ESM
@@ -99,7 +99,7 @@ export class PlanetImportLocation {
     }
 }
 
-function loadEntryFromQueue(entryName:string,queue){
+function loadEntryFromSpecificQueue(entryName:string,queue){
     for(let ent of queue){
         if(ent.name === entryName){
             return ent

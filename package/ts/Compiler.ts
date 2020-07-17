@@ -1,5 +1,6 @@
 import { VortexGraph } from "./Graph.js";
 import * as fs from 'fs-extra'
+import * as FS from 'fs/promises'
 import EsModuleDependency from "./dependencies/EsModuleDependency.js";
 import generate from "@babel/generator";
 import traverse from "@babel/traverse";
@@ -15,40 +16,29 @@ import { CSSDependency } from "./dependencies/CSSDependency.js";
 import { FileImportLocation } from "./importlocations/FileImportLocation.js";
 import { VortexError, VortexErrorType } from "./VortexError.js";
 import { FileDependency } from "./dependencies/FileDependency.js";
-import { LocalizedResolve, resolveLibBundle } from "./Resolve.js";
+import {LocalizedResolve} from "./Resolve.js";
 import * as path from 'path'
 import * as css from 'css'
 import { Planet, PlanetClusterMapObject } from "./Planet.js";
 import * as _ from 'lodash';
-import { outBundle } from "../vortex.panel.js";
 import { ControlPanel } from "./Main.js";
-import { queue } from "./GraphGenerator.js";
+import {addEntryToQueue,loadEntryFromQueue, QueueEntry, queue, isInQueue} from "./GraphGenerator.js";
 import { notNativeDependency, resolveTransformersForNonNativeDependency, CustomDependencyIsBundlable } from "./DependencyFactory.js";
+import { v4 } from "uuid";
 
+var CSS_PLANET_ID = v4();
 
-class QueueEntry {
-    name:string
-    ast:t.File|css.Stylesheet
-    external?:boolean = false
+var cssStorage:Array<string> = []
 
-    constructor(name:string,parsedCode:t.File|css.Stylesheet){
-        this.name = name
-        this.ast = parsedCode
-    }
-
+export function pipeCSSContentToBuffer(content:string):void{
+    cssStorage.push(content)
 }
 
- function addEntryToQueue(entry:QueueEntry){
-    queue.push(entry)
+export interface Bundle {
+    code:string
+    value:string
 }
 
-function loadEntryFromQueue(entryName:string){
-    for(let ent of queue){
-        if(ent.name === entryName){
-            return ent
-        }
-    }
-}
 
 function fixDependencyName(name:string){
     let NASTY_CHARS = "\\./@^$#*&!%-"
@@ -78,7 +68,7 @@ function fixDependencyName(name:string){
 /**
  * Creates a Star/Solar System depending on the global config/async imports.
  * @param {VortexGraph} Graph The Dependency Graph created by the Graph Generator 
- * @returns {Promise<Object[]>} An Array of Bundle Code Objects
+ * @returns {Promise<Bundle[]>} An Array of Bundle Code Objects
  */
 export async function Compile(Graph:VortexGraph){
 
@@ -112,42 +102,42 @@ async function LibCompile(Graph:VortexGraph){
         if(dep instanceof ModuleDependency){
             for(let impLoc of dep.importLocations){
                 if(impLoc instanceof MDImportLocation){
-                    if(libB.isInQueue(impLoc.name)){
+                    if(isInQueue(impLoc.name)){
                         if(dep.name.includes('./') == false && impLoc.modules[0].type !== ModuleTypes.EsNamespaceProvider){
-                            mangleVariableNamesFromAst(libB.loadEntryFromQueue(impLoc.name).ast,impLoc.modules)
+                            mangleVariableNamesFromAst(loadEntryFromQueue(impLoc.name).ast,impLoc.modules)
                         }
-                        removeImportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
+                        removeImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
                     }
                     else{
                         let filename = fs.readFileSync(impLoc.name).toString()
-                        libB.addEntryToQueue(new BundleEntry(impLoc.name,Babel.parse(filename,{"sourceType":'module'})))
+                        addEntryToQueue(new BundleEntry(impLoc.name,Babel.parse(filename,{"sourceType":'module'})))
                         if(dep.name.includes('./') == false && impLoc.modules[0].type !== ModuleTypes.EsNamespaceProvider){
-                            mangleVariableNamesFromAst(libB.loadEntryFromQueue(impLoc.name).ast,impLoc.modules)
+                            mangleVariableNamesFromAst(loadEntryFromQueue(impLoc.name).ast,impLoc.modules)
                         }
-                        removeImportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
+                        removeImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
 
                         if(impLoc.name === Graph.entryPoint){
-                            removeExportsFromAST(libB.loadEntryFromQueue(impLoc.name).ast,dep,libB)
+                            removeExportsFromAST(loadEntryFromQueue(impLoc.name).ast,dep,libB)
                         }
                     }
                 }
             }
             if(dep.outBundle !== true){
-                if(libB.isInQueue(dep.name)){
+                if(isInQueue(dep.name)){
                     if(dep.importLocations[0].modules[0].type === ModuleTypes.EsNamespaceProvider){
-                        convertToNamespace(libB.loadEntryFromQueue(dep.name).ast,dep.importLocations[0])
+                        convertToNamespace(loadEntryFromQueue(dep.name).ast,dep.importLocations[0])
                     }
-                    removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep,libB)
+                    removeExportsFromAST(loadEntryFromQueue(dep.name).ast,dep,libB)
                 }
                 else{
                     //Libraries are skipped completely in Lib Bundle
                     if(dep.name.includes('./')){
                         let filename = fs.readFileSync(dep.name).toString()
-                        libB.addEntryToQueue(new BundleEntry(dep.name,Babel.parse(filename,{"sourceType":'module'})))
+                        addEntryToQueue(new BundleEntry(dep.name,Babel.parse(filename,{"sourceType":'module'})))
                         if(dep.importLocations[0].modules[0].type === ModuleTypes.EsNamespaceProvider){
-                            convertToNamespace(libB.loadEntryFromQueue(dep.name).ast,dep.importLocations[0])
+                            convertToNamespace(loadEntryFromQueue(dep.name).ast,dep.importLocations[0])
                         }
-                        removeExportsFromAST(libB.loadEntryFromQueue(dep.name).ast,dep,libB)
+                        removeExportsFromAST(loadEntryFromQueue(dep.name).ast,dep,libB)
                     }
                 }
             }
@@ -155,8 +145,8 @@ async function LibCompile(Graph:VortexGraph){
     }
 
 
-    console.log(libB.queue)
-    let finalAr = libB.queue.reverse()
+    console.log(queue)
+    let finalAr = queue.reverse()
     finalBundle += `/*NODE_REQUIRES*/ \n`
     finalBundle += libB.libs.join('\n')
     finalBundle += `\n /*LIB_CODE*/ \n`
@@ -167,12 +157,8 @@ async function LibCompile(Graph:VortexGraph){
     finalBundle += `\n /*NODE_EXPORTS*/ \n`
     finalBundle += libB.exports.join('\n')
     
-    var o = new Object('star')
-    Object.defineProperty(o,'code',{
-        value:finalBundle,
-        writable:false
-    })
-
+    var o:Bundle = {value:'star',code:finalBundle}
+    
     return [o]
     //console.log(code)
     //return libB.code
@@ -763,8 +749,16 @@ async function WebAppCompile (Graph:VortexGraph){
                 resolveCSS.push(dep.name)
                 dep.stylesheet = nCSS
             }
-            for(let impLoc of dep.importLocations){
-                 injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+            if(ControlPanel.cssPlanet) {
+                pipeCSSContentToBuffer(dep.stylesheet)
+                for(let impLoc of dep.importLocations){
+                    removeCSSImportsFromAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+                }
+            }
+            else{
+                for(let impLoc of dep.importLocations){
+                    injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+                }
             }
         } else if(dep instanceof FileDependency){
             let outFile = ControlPanel.encodeFilenames? `${dep.uuid}${path.extname(dep.name)}` : path.basename(dep.name)
@@ -833,8 +827,16 @@ async function WebAppCompile (Graph:VortexGraph){
                     resolveCSS.push(dep.name)
                     dep.stylesheet = nCSS
                 }
-                for(let impLoc of dep.importLocations){
-                    injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+                if(ControlPanel.cssPlanet) {
+                    pipeCSSContentToBuffer(dep.stylesheet)
+                    for(let impLoc of dep.importLocations){
+                        removeCSSImportsFromAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+                    }
+                }
+                else{
+                    for(let impLoc of dep.importLocations){
+                        injectCSSDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
+                    }
                 }
             } else if(dep instanceof FileDependency){
                 let outFile = ControlPanel.encodeFilenames? `${dep.uuid}${path.extname(dep.name)}` : path.basename(dep.name)
@@ -1050,6 +1052,9 @@ async function WebAppCompile (Graph:VortexGraph){
         modules[mod_name](shuttle, mod.exports,loadedStyles);
   
         var o = new Object(mod_name);
+        if(mod.exports.MAPPED_DEFAULT){
+            mod.exports = mod.exports.MAPPED_DEFAULT
+        }
         Object.defineProperty(o, 'cachedExports', {
           value: mod.exports,
           writable: false
@@ -1062,6 +1067,17 @@ async function WebAppCompile (Graph:VortexGraph){
       }
     } 
     //Calls EntryPoint to Initialize
+
+    ${ControlPanel.cssPlanet?`shuttle.cssPlanet = function(){
+        var planetSrc = './${CSS_PLANET_ID}.css'
+        var sheet = document.createElement('link')
+        sheet.rel = "stylesheet"
+        sheet.type = "text/css"
+        sheet.href = planetSrc
+        document.head.appendChild(sheet)
+      }
+  
+      shuttle.cssPlanet()`: ''}
   
   
     return shuttle("${Graph.shuttleEntry}");` : `var loadedModules = [];
@@ -1173,6 +1189,17 @@ async function WebAppCompile (Graph:VortexGraph){
     
     
     //Calls EntryPoint to Initialize
+
+    ${ControlPanel.cssPlanet?`shuttle.cssPlanet = function(){
+        var planetSrc = './${CSS_PLANET_ID}.css'
+        var sheet = document.createElement('link')
+        sheet.rel = "stylesheet"
+        sheet.type = "text/css"
+        sheet.href = planetSrc
+        document.head.appendChild(sheet)
+      }
+  
+      shuttle.cssPlanet()`: ''}
   
   
     return shuttle("${Graph.shuttleEntry}");`;
@@ -1181,9 +1208,13 @@ async function WebAppCompile (Graph:VortexGraph){
 
     let finalCode = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier("modules")],t.blockStatement(parsedFactory),false,false),[shuttle.buffer])])),{compact: ControlPanel.isProduction? true : false}).code;
     
-    let codeEntries:Array<Object> = []
+    if(ControlPanel.cssPlanet){
+        await writeCSSPlanet(cssStorage);
+    }
 
-    let o = {value:'star',code:finalCode};
+    let codeEntries:Array<Bundle> = []
+
+    let o:Bundle = {value:'star',code:finalCode};
 
     codeEntries.push(o)
 
@@ -1191,10 +1222,11 @@ async function WebAppCompile (Graph:VortexGraph){
 
         let code = generate(t.program([t.variableDeclaration('var',[t.variableDeclarator(t.identifier('entry'),t.stringLiteral(_shuttle.entry)),t.variableDeclarator(t.identifier('planetmodules'),_shuttle.buffer)])]),{compact: ControlPanel.isProduction? true : false}).code
 
-        let o = {value:_shuttle.name,code:code}
+        let o:Bundle = {value:_shuttle.name,code:code}
         
         codeEntries.push(o)
     }
+
 
     return codeEntries
 
@@ -1524,6 +1556,16 @@ function injectCSSDependencyIntoAST(ast:t.File,dep:CSSDependency,currentImpLoc:F
     })
 }
 
+function removeCSSImportsFromAST(ast:t.File,dep:CSSDependency,currentImpLoc:FileImportLocation){
+    traverse(ast,{
+        ImportDeclaration: function(path){
+            if(path.node.source.value === currentImpLoc.relativePathToDep){
+                path.remove()
+            }
+        }
+    })
+}
+
 /**Resolves File Dependency name with new name from a given AST.
  * 
  * @param {t.File} ast Abstract Syntax Tree (ESTree Format)
@@ -1580,8 +1622,6 @@ function replaceFileDependencyIntoCSS(ast:css.Stylesheet,fileDep:string,newName:
 
 async function resolveCSSDependencies(dep:CSSDependency,assets_folder:string){
 
-    //console.log(dep.dependencies)
-
     let parsedCss = css.parse(dep.stylesheet)
 
     let outputDest = LocalizedResolve(ControlPanel.outputFile,assets_folder)
@@ -1626,6 +1666,25 @@ function TransformAsyncImportFromAST(ast:t.File,planet:Planet){
     })
 }
 
+/**Transforms AMD Define to be used by SML
+ * 
+ * @example
+ * 
+ * //Transforms
+ * define(['module0','module1'],function(module0Object,module1Object){
+ * // Access Module Exports Here!
+ * })
+ * //To --> 
+ * shuttle.planetCluster(['planet_0.js','planet_1.js'],function(module0Object,module1Object){
+ * // Access Module Exports Here!
+ * })
+ * 
+ * 
+ * 
+ * @param {t.File} ast 
+ * @param {PlanetClusterMapObject} planetClusterMap 
+ */
+
 function TransformAsyncClusterImportFromAST(ast:t.File,planetClusterMap:PlanetClusterMapObject){
     traverse(ast, {
         CallExpression: function(path){
@@ -1642,4 +1701,40 @@ function TransformAsyncClusterImportFromAST(ast:t.File,planetClusterMap:PlanetCl
     })
 
 }
+
+async function writeCSSPlanet(stylesheetBuffer:Array<string>){
+    let cssPlanetLoc = LocalizedResolve(ControlPanel.outputFile,`./${CSS_PLANET_ID}.css`)
+    let OUT_STYLESHEET = stylesheetBuffer.join('')
+    if(ControlPanel.minifyCssPlanet) {
+        OUT_STYLESHEET = await minifyCss(OUT_STYLESHEET)
+    }
+    await FS.writeFile(cssPlanetLoc,OUT_STYLESHEET);
+}
+
+async function minifyCss(styles:string) {
+
+    let finalString = ""
+
+    let lineBreak ='\r\n'
+    let linebreak2 = '\n'
+
+    while(styles.includes(lineBreak)){
+        styles = styles.replace(lineBreak,"")
+    }
+
+    while(styles.includes(linebreak2)){
+        styles = styles.replace(linebreak2,"")
+    }
+
+    for(let i = 0; i<styles.length;i++){
+        if(styles[i] !== " "){
+            finalString += styles[i]
+        }
+    }
+
+    return finalString
+}
+
+
+
 

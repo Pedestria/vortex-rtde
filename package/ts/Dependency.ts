@@ -1,9 +1,9 @@
 import ImportLocation from "./ImportLocation.js"
 
-/**
+/**@abstract
  * A Dependent File or Library that is required by another file.
  */
-export default class Dependency {
+export default abstract class Dependency {
     /**
      * Location/Name of Dependency
      */

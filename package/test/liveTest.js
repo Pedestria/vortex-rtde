@@ -2,8 +2,6 @@
     var loadedModules = [];
     var loadedStyles = [];
     var loadedExportsByModule = {};
-    var loadedPlanets = [];
-    var loadedPlanetEntryExports = {};
     var local_modules = modules; //Shuttle Module Loader
     //Finds exports and returns them under fake namespace.
   
@@ -27,85 +25,11 @@
         loadedModules.push(mod_name);
         return mod.exports;
       }
-    } // SML's version of ES Dynamic Import (Returns entry point module export of planet)
+    } 
+    
   
+    //Calls EntryPoint to Initialize
   
-    shuttle.planet = function (planet_name) {
-      return new Promise(function (resolve, reject) {
-        if (loadedPlanets.includes(planet_name)) {
-          resolve(loadedPlanetEntryExports[planet_name].cachedExports);
-        } else {
-          var planet = document.createElement('script');
-          planet.src = planet_name;
-          document.body.appendChild(planet);
-          planet.addEventListener('load', function () {
-            planetLoaded().then(function (exports) {
-              loadedPlanets.push(planet_name);
-              var o = new Object(planet_name);
-              Object.defineProperty(o, 'cachedExports', {
-                value: exports,
-                writable: false
-              });
-              Object.defineProperty(loadedPlanetEntryExports, planet_name, {
-                value: o
-              });
-  
-              if (exports.MAPPED_DEFAULT) {
-                resolve(exports.MAPPED_DEFAULT);
-              } else {
-                resolve(exports);
-              }
-            });
-          }, false);
-          var entryPoint;
-  
-          function planetLoaded() {
-            return new Promise(function (resolve, reject) {
-              console.log('Loading from ' + planet_name);
-              shuttle.override(planetmodules);
-              entryPoint = entry;
-              resolve(shuttle(entryPoint));
-            });
-          }
-        }
-      });
-    };
-  
-    shuttle.override = function (mods) {
-      local_modules = mods;
-    };
-  
-    shuttle.planetCluster = function (planets_array, callback) {
-      function defineCluster() {
-        return new Promise(function (resolve, reject) {
-          var moduleObjects = planets_array.map(function (planet) {
-            return shuttle.planet(planet);
-          });
-          Promise.all(moduleObjects).then(function (module_objs) {
-            resolve(module_objs);
-          });
-        });
-      }
-  
-      defineCluster().then(function (moduleObjects) {
-        callback.apply(null, moduleObjects);
-      });
-    }; //AMD Registration Object!
-  
-  
-    shuttle.planetCluster.amdRegistrar = {};
-
-    shuttle.cssPlanet = function(){
-      var planetSrc = '../compress.css'
-      var sheet = document.createElement('link')
-      sheet.rel = "stylesheet"
-      sheet.type = "text/css"
-      sheet.href = planetSrc
-      document.head.appendChild(sheet)
-    }
-
-    shuttle.cssPlanet()
-
     return shuttle("./module2");
 
 }({
@@ -125,7 +49,6 @@
         console.log("module2"); 
         var _module1 = shuttle("./module1"); 
         var _assign = shuttle("object-assign"); 
-        var AWS_SDK = shuttle("aws-sdk");
 
         console.log(AWS_SDK)
         console.log(_assign.default({foo: 0}, {bar: 1}, undefined,null)); 
@@ -224,23 +147,4 @@
             return to;
         };
     }),
-    "aws-sdk": (function(shuttle,shuttle_exports){
-        console.log('loading AWS')
-        if(window.AWS){
-            shuttle_exports.MAPPED_DEFAULT = AWS
-        }
-    })
 }))
-
-
-
-//Shuttle Module (SM)
-
-//var lib = shuttle("lib") --> Intializes Library
-//lib.named.b() --> Named Import from lib
-//lib.default.export() --> Default Import from lib
-
-//shuttle_exports.b = b --> Named Export
-//shuttle_default.export = a --> Default Export
-
-

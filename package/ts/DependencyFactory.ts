@@ -27,14 +27,17 @@ export function resolveDependencyType(name:string,initImportLoc:FileImportLocati
 
     let resolvedDependency:Dependency
 
-    switch(getFileExtension(name)){
+    switch(path.extname(name)){
         case '.css':       
             resolvedDependency = new CSSDependency(LocalizedResolve(currentFile,name),initImportLoc,fs.readFileSync(LocalizedResolve(currentFile,name)).toString())       
             break;  
-        case '.png'||'.jpeg':
+        case '.png':
             resolvedDependency = new FileDependency(LocalizedResolve(currentFile,name),initImportLoc)
             break;
-        case '.otf'||'.woff'||'.ttf':
+        case '.otf':
+            resolvedDependency = new FileDependency(LocalizedResolve(currentFile,name),initImportLoc)
+            break;
+        case '.ttf':
             resolvedDependency = new FileDependency(LocalizedResolve(currentFile,name),initImportLoc)
             break;
     }

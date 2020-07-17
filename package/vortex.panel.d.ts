@@ -10,7 +10,7 @@ import { VortexAddon } from "./ts/Addon";
          */
         bundleMode:'star'|'neutronstar'
         /**
-         * Whether Vortex should use terser to extra minify your neutron star solar system.
+         * Whether Vortex should use terser to extra minify your neutron star solar system. (Uses babel core compilier on neutronstar library!!!)
          */
         useTerser:boolean
         /**
@@ -45,6 +45,20 @@ import { VortexAddon } from "./ts/Addon";
          */
 
         outBundle:Array<string>
+
+        /**
+         * Whether Vortex should pipe all CSS Dependencies into one file.
+         */
+
+        cssPlanet:boolean
+
+        /**
+         * Whether Vortex should minify the CSS Planet (If it gets created.)
+         */
+
+        minifyCssPlanet:boolean
+
+
     }
 
     export = Panel;

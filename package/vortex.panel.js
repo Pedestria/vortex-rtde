@@ -1,15 +1,17 @@
 const {VueVortexAddon} = require('./lib/addons/VueAddon')
 
 module.exports = {
-    type:'app',
+    type:'library',
     bundleMode:'neutronstar',
-    useTerser:false,
-    start:'./test/web/Main.jsx',
-    output:'./out/webapp.js',
+    useTerser:true,
+    start:'./test/vortex/Index.js',
+    output:'./out/vortex.js',
     extensions: ['.css','.png','.otf'],
     encodeFilenames:true,
     polyfillPromise:false,
     addons:[VueVortexAddon],
-    outBundle:['aws-sdk']
+    outBundle:['aws-sdk'],
+    cssPlanet:true,
+    minifyCssPlanet:true
 
 }

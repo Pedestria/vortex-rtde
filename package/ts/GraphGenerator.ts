@@ -144,7 +144,13 @@ export async function GenerateGraph(entry:string,modEntry:string){
                     CSSGrapher.SearchAndGraph(loadEntryFromQueue(dep.name).ast,dep)
                 }
                 else{
-                    let sheet = css.parse((await readFileAsync(dep.name)).toString(),{source:dep.name})
+                    let sheet
+                    if(notNativeDependency(dep.name)){
+                        sheet = css.parse(dep.stylesheet,{source:dep.name})
+                    }
+                    else{
+                        sheet = css.parse((await readFileAsync(dep.name)).toString(),{source:dep.name})
+                    }
                     let entry = new QueueEntry(dep.name,sheet)
                     addEntryToQueue(entry)
                     CSSGrapher.SearchAndGraph(loadEntryFromQueue(dep.name).ast,dep)
@@ -239,7 +245,13 @@ export async function GenerateGraph(entry:string,modEntry:string){
                           CSSGrapher.SearchAndGraph(loadEntryFromQueue(dep.name).ast,dep)
                       }
                       else{
-                          let sheet = css.parse((await readFileAsync(dep.name)).toString(),{source:dep.name})
+                        let sheet
+                          if(notNativeDependency(dep.name)){
+                              sheet = css.parse(dep.stylesheet,{source:dep.name})
+                          }
+                          else{
+                            sheet = css.parse((await readFileAsync(dep.name)).toString(),{source:dep.name})
+                          }
                           let entry = new QueueEntry(dep.name,sheet)
                           addEntryToQueue(entry)
                           CSSGrapher.SearchAndGraph(loadEntryFromQueue(dep.name).ast,dep)

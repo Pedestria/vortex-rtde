@@ -8,8 +8,8 @@ import {ControlPanel} from  './Main'
 import * as chalk from 'chalk'
 import { ParseSettings } from './Options'
 import { getFileExtension } from './DependencyFactory'
-import { extensions } from '../vortex.panel'
-import { VortexError } from './VortexError'
+import { VortexError, VortexErrorType } from './VortexError'
+import { file } from '@babel/types'
 
 /**Resolves dependency location based off of Import Location
  * __(To allow Node File System to read/verify imported modules)__
@@ -43,7 +43,7 @@ export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:st
 
 export function resolveLibBundle(nodeLibName:string){
     //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
-    let STD_NODE_LIBS = ['path','fs','module','os']
+    let STD_NODE_LIBS = ['path','fs','module','os','fs/promises']
 
     if(STD_NODE_LIBS.includes(nodeLibName)){
         return 'node.js'
@@ -154,7 +154,7 @@ export function isJs(filename:string){
     if(path.basename(filename) === filename){
         return true
     }
-    else if(extensions.includes(getFileExtension(filename))){
+    else if(ControlPanel.extensions.includes(getFileExtension(filename))){
         return false
     }
     else if(filename.includes('./') && path.extname(filename) === ''){
@@ -165,6 +165,9 @@ export function isJs(filename:string){
     }
     else if (ControlPanel.InstalledAddons.extensions.js.includes(path.extname(filename))){
         return true
+    }
+    else if(ControlPanel.InstalledAddons.extensions.other.includes(path.extname(filename))){
+        return false;
     }
     else {
         throw new VortexError(`Cannot resolve extension: "${getFileExtension(filename)}" If you wish to include this in your Solar System, include it in the resolvable extensions option in the vortex.panel.js`,VortexErrorType.PortalPanelError)

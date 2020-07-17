@@ -1,21 +1,34 @@
 import {queue,GenerateGraph} from './GraphGenerator'
 import * as fs from 'fs-extra'
-import {Compile} from './Compiler.js';
+import {Compile, Bundle} from './Compiler.js';
 import * as terser from 'terser'
 import * as path from 'path'
 
-import * as Panel from '../vortex.panel.js' /*vortexRetain*/ 
 
 import * as chalk from 'chalk';
 import cliSpinners from 'cli-spinners'
 import * as ora from 'ora'
 import * as os from 'os'
 import { assignDependencyType } from './Planet';
-import { VortexAddon, ExportsHandler, InternalVortexAddons } from './Addon';
-import EsModuleDependency from './dependencies/EsModuleDependency';
+import { VortexAddon, InternalVortexAddons } from './Addon';
 import _ = require('lodash');
 import { notNativeDependency } from './DependencyFactory';
 import Dependency from './Dependency';
+
+function ParseAddons(Addons:Array<VortexAddon>){
+
+    var INTERALS:InternalVortexAddons = {
+        extensions:{
+            js:_.flatten(Addons.map(addon => addon.handler.exports.extend.jsExtensions)),
+            other:_.flatten(Addons.map(addon => addon.handler.exports.extend.extensions))
+        },
+        importedDependencies:_.flatten(Addons.map(addon => addon.handler.exports.extend.custom.graph.dependenciesMap)),
+        importedGraphers:_.flatten(Addons.map(addon => addon.handler.exports.extend.custom.graph.graphers)),
+        importedCompilers:_.flatten(Addons.map(addon => addon.handler.exports.extend.custom.compiler.dependencyMapCompiler))
+    }
+
+    return INTERALS
+}
 
 //import * as Babel_Core from '@babel/core'
 export namespace ControlPanel {
@@ -32,23 +45,29 @@ export namespace ControlPanel {
     /**
      * If checked true, Terser will be used to minify production bundle. (Can NOT be used on development bundles.) (Labels it Neutron Star)
      */
-    export var usingTerser:boolean = Panel.useTerser !== null? Panel.useTerser : false;
+    export var usingTerser:boolean
 
-    export var outputFile:string = Panel.output
+    export var outputFile:string
 
     /**If checked true, Vortex will encode File Dependency names with uuids.
      */
-    export var encodeFilenames:boolean = Panel.encodeFilenames !== null? Panel.encodeFilenames : true
+    export var encodeFilenames:boolean
 
     export var useDebug:boolean;
 
-    export var extensions:Array<string> = Panel.extensions
+    export var startingPoint:string
 
-    export var polyfillPromise:boolean = Panel.polyfillPromise
+    export var extensions:Array<string>
 
-    export var externalLibs:Array<string> = Panel.outBundle
+    export var polyfillPromise:boolean
 
-    export var InstalledAddons:InternalVortexAddons = ParseAddons(Panel.addons)
+    export var externalLibs:Array<string>
+
+    export var InstalledAddons:InternalVortexAddons
+
+    export var cssPlanet:boolean
+
+    export var minifyCssPlanet:boolean
 
 }
 
@@ -57,7 +76,20 @@ export namespace ControlPanel {
  *  
  */ 
 
-export async function createStarPackage (){
+export async function createStarPackage (resolvedPath:string){
+
+    const Panel = require(path.relative(__dirname,resolvedPath))
+
+    ControlPanel.usingTerser = Panel.useTerser !== null? Panel.useTerser : false;
+    ControlPanel.outputFile = Panel.output
+    ControlPanel.encodeFilenames = Panel.encodeFilenames !== null? Panel.encodeFilenames : true
+    ControlPanel.startingPoint = Panel.start
+    ControlPanel.extensions = Panel.extensions
+    ControlPanel.polyfillPromise = Panel.polyfillPromise
+    ControlPanel.externalLibs = Panel.outBundle !== undefined? Panel.outBundle : []
+    ControlPanel.InstalledAddons = Panel.addons.length > 0? ParseAddons(Panel.addons) : null
+    ControlPanel.cssPlanet = Panel.cssPlanet
+    ControlPanel.minifyCssPlanet = Panel.minifyCssPlanet
 
 
     //SPINNERS -->
@@ -116,7 +148,7 @@ export async function createStarPackage (){
         if(!notNativeDependency(planet.entryModule)){
             planet = assignDependencyType(planet,queue)
         } else{
-            planet.entryDependency = new Dependency(planet.entryModule)
+            planet.entryDependency = new Dependency(planet.entryModule);
         }
     }
 
@@ -136,7 +168,7 @@ export async function createStarPackage (){
             console.log(chalk.greenBright(`Planets Created: \n `))
             for(let bundle of bundles){
                 if(bundle.value !== 'star'){
-                    console.log(chalk.magentaBright(` \n ${bundle.valueOf().toString()}`))
+                    console.log(chalk.magentaBright(` \n ${bundle.value}`))
                 }
             }
         }
@@ -162,18 +194,19 @@ export async function createStarPackage (){
  * 
  * @param {string} outputFilename Star output file
  * @param yourCredits Credit JSON
- * @param {Object[]} bundleObjects Bundle Code Objects outputed by Compiler
+ * @param {Bundle[]} bundleObjects Bundle Code Objects outputed by Compiler
  */
 
-async function terserPackage(outputFilename:string,yourCredits,bundleObjects:Array<Object>){
+async function terserPackage(outputFilename:string,yourCredits,bundleObjects:Array<Bundle>){
     if(ControlPanel.isLibrary){
         let credits = `/*NEUTRON-STAR*/ \n /*${yourCredits.name} ${yourCredits.version} _MINIFIED_ \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
+
+            // var compileDownBundle = (await transformAsync(bundleObjects[0].code,{presets:[['@babel/preset-env',{modules:'commonjs'}]]})).code
+
             //console.log(credits)
-            for(let bundle of bundleObjects){
-                if(bundle.value === 'star'){
-                    var minBundle = terser.minify(bundle.code,{compress:true,mangle:true}).code
-                }
-            }
+            var minBundle = terser.minify(bundleObjects[0].code,{compress:true,mangle:true}).code
+
+            
             let output = credits + minBundle
             //console.log(output)
 
@@ -212,14 +245,13 @@ async function terserPackage(outputFilename:string,yourCredits,bundleObjects:Arr
 
 }
 
-async function regularPackage(outputFilename:string,yourCredits,bundleObjects:Array<Object>){
+async function regularPackage(outputFilename:string,yourCredits,bundleObjects:Array<Bundle>){
         if(ControlPanel.isLibrary){
             let finBund
-            for(let bundle of bundleObjects){
-                if(bundle.value === 'star'){
-                    finBund = bundle.code
-                }
-            }
+
+                finBund = bundleObjects[0].code
+
+
                 let credits = `/*STAR*/ \n /*${yourCredits.name} ${yourCredits.version} \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
                 fs.ensureDirSync(path.dirname(outputFilename) + '/')
                 fs.writeFileSync(outputFilename,credits + finBund)
@@ -278,18 +310,3 @@ function amendEntryPoint2(entry:string){
     
 // }
 //fs.writeJSONSync('out/importcool.json',Babel.parse(fs.readFileSync('./test/func.js').toString(),{"plugins":["dynamicImport"],"sourceType":"module"}))
-
-function ParseAddons(Addons:Array<VortexAddon>){
-
-    var INTERALS:InternalVortexAddons = {
-        extensions:{
-            js:_.flatten(Addons.map(addon => addon.handler.exports.extend.jsExtensions)),
-            other:_.flatten(Addons.map(addon => addon.handler.exports.extend.extensions))
-        },
-        importedDependencies:_.flatten(Addons.map(addon => addon.handler.exports.extend.custom.graph.dependenciesMap)),
-        importedGraphers:_.flatten(Addons.map(addon => addon.handler.exports.extend.custom.graph.graphers)),
-        importedCompilers:_.flatten(Addons.map(addon => addon.handler.exports.extend.custom.compiler.dependencyMapCompiler))
-    }
-
-    return INTERALS
-}

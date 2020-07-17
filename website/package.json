@@ -24,6 +24,8 @@
   },
   "dependencies": {
     "react": "^16.13.1",
-    "react-dom": "^16.13.1"
+    "react-dom": "^16.13.1",
+    "vue": "^2.6.11",
+    "vue-template-compiler": "^2.6.11"
   }
 }

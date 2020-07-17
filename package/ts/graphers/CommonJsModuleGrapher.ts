@@ -1,12 +1,9 @@
 import { VortexGraph } from "../Graph.js";
-import * as Babel from '@babel/parser'
-import * as fs from 'fs-extra'
 import Module, { ModuleTypes } from "../Module.js";
 import CjsModuleDependency from "../dependencies/CjsModuleDependency.js";
 import { Transport } from "../Transport.js";
 import MDImportLocation from "../importlocations/MDImportLocation.js";
 import traverse from "@babel/traverse";
-import * as t from '@babel/types'
 import { QueueEntry } from "../GraphGenerator.js";
 import { isJs } from "../Resolve.js";
 import { FileImportLocation } from "../importlocations/FileImportLocation.js";

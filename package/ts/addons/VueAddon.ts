@@ -53,6 +53,8 @@ const SearchAndGraphInVueDep:Grapher = async (Dependency:API.Dependency,Graph:AP
 
 async function CompileComponent(component:RawVueComponent,DependencyName:string){
 
+    var cssPlanet:boolean = API.ControlPanel.cssPlanet
+
     var scopeID = `data-v-${v4()}`
 
     var template
@@ -76,7 +78,7 @@ async function CompileComponent(component:RawVueComponent,DependencyName:string)
     if(styled) {
         var scoped = component.styles[0].scoped === undefined? false : component.styles[0].scoped
 
-        var cssResult
+        var cssResult = component.styles[0].content
 
         if(component.styles[0].lang !== undefined){
             switch(component.styles[0].lang){
@@ -92,12 +94,8 @@ async function CompileComponent(component:RawVueComponent,DependencyName:string)
             }
         }
 
-
-
         if(scoped){
-        cssResult = VueUtils.compileStyle({source:cssResult === undefined? component.styles[0].content : cssResult,preprocessLang:component.styles[0].lang,scoped,id:scopeID,filename:DependencyName}).code
-        } else{
-            cssResult = component.styles[0].content
+            cssResult = VueUtils.compileStyle({source:cssResult === undefined? cssResult : cssResult,preprocessLang:component.styles[0].lang,scoped,id:scopeID,filename:DependencyName}).code
         }
     }
 
@@ -125,8 +123,10 @@ async function CompileComponent(component:RawVueComponent,DependencyName:string)
     MainAST.program.body.push(ASTRenderFuncBody.program.body[0])
     MainAST.program.body.reverse()
 
-    if(styled){
+    if(styled && !cssPlanet){
         MainAST.program.body.push(API.InjectCSS({DEPNAME:API.BabelTypes.stringLiteral(DependencyName),CSS:API.BabelTypes.stringLiteral(cssResult)}))
+    } else if(styled && cssPlanet){
+        API.pipeCSSContentToBuffer(cssResult)
     }
 
     return API.GenerateCode(MainAST).code

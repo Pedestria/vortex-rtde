@@ -10,7 +10,7 @@
 
 <script>
 
-import NewComponent from './newComponent'
+import NewComponent from './newComponent.vue'
 
 export default {
     data () {

@@ -4,19 +4,15 @@ import { LocalizedResolve, addJsExtensionIfNecessary, resolveLibBundle } from ".
 import ModuleDependency from "./dependencies/ModuleDependency.js";
 import EsModuleDependency from "./dependencies/EsModuleDependency.js";
 import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
-import ImportLocation from "./ImportLocation.js";
 import MDImportLocation from "./importlocations/MDImportLocation.js";
 import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
 import { isInQueue, loadEntryFromQueue, addEntryToQueue, QueueEntry } from "./GraphGenerator.js";
 import {ControlPanel} from "./Main.js";
-import {transformAsync, transformSync} from "@babel/core";
+import {transformSync} from "@babel/core";
 import { BabelSettings } from "./Options.js";
 import { ModuleTypes } from "./Module.js";
 import { searchForDefaultNamespace } from "./dependencies/NamespaceSearch.js";
-import { promisify } from "util";
-import {readFile} from 'fs/promises'
-import { S_IFREG } from "constants";
 //import MDImportLocation from "./MDImportLocation.js";
 
 /**Transports the given dependency to given Graph.

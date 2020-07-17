@@ -4,11 +4,6 @@
 
 ## Checklist:
 
-
-- Expand Non-JS support.
-
-- Add Support for UMD Modules (Add more support for AMD Define Modules)
-
 - Build LivePush
 
     - Build Interpreter For Browser(To interpret Star created by Compiler. Not used in production/neutron-star mode)
@@ -21,9 +16,8 @@
 
 - Add syntax word to change name of Planet.
 
-- Build support for addons.
+- Finish support for addons.
 
-- Worker farm for bundling.
 
 
 ## Bundler Key Syntax Words (Only for library mode):
@@ -49,14 +43,6 @@ import Example from './example.js' /*vortexRetain*/
 
 Vortex will outsource the import and will NOT include it in the bundle.
 
-
-## Possible NEW Architecture for RTDE:
-
-### Non Live
-
-If every import/export is synchronous, a star will be created. (One bundle.)
-However a large application would have to load some pieces asynchronously (via Dynamic imports), that division has to be split off into another file. (Either calling it a division or planet.)
-This division or planet has less features then the main division.
 
 ### Live (Offcially Called LivePush)
 

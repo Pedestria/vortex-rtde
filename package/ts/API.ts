@@ -10,8 +10,11 @@ import { BabelSettings, ParseSettings } from './Options'
 import { GraphDepsAndModsForCurrentFile } from './GraphGenerator'
 import generate from '@babel/generator'
 import {parse} from '@babel/parser'
-import {TransformImportsFromAST, TransformExportsFromAST, CSSInjector} from './Compiler'
+import {TransformImportsFromAST, TransformExportsFromAST, CSSInjector, pipeCSSContentToBuffer} from './Compiler'
 import EsModuleDependency from './dependencies/EsModuleDependency'
+import {CSSDependency} from './dependencies/CSSDependency'
+import {FileImportLocation} from './importlocations/FileImportLocation'
+import {ControlPanel} from './Main'
 
 function BabelCompile(code: string) {
     return transformAsync(code, BabelSettings)
@@ -22,6 +25,7 @@ export {
     Dependency,
     ImportLocation,
     ModuleDependency,
+    CSSDependency,
     MDImportLocation,
     QueueEntry,
     traverse as TraverseCode,
@@ -36,6 +40,9 @@ export {
     addEntryToQueue as addQueueEntry,
     EsModuleDependency,
     loadEntryFromQueue as loadQueueEntry,
+    FileImportLocation,
+    pipeCSSContentToBuffer,
+    ControlPanel
     
 }
 export * as BabelTypes from '@babel/types'

@@ -1,7 +1,7 @@
 import traverse from '@babel/traverse'
 import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
-import { isProduction } from '../Main';
+import {ControlPanel} from '../Main';
 import { ParseSettings } from '../Options';
 
 export function findModulesUnderNamespace(file:string,Namespace:string){
@@ -68,7 +68,7 @@ export function searchForDefaultNamespace(file:string,Namespace:string){
             } else if(path.node.object.type === "Identifier" && path.node.object.name === 'module' && path.node.property.name === 'exports' && path.parent.type === 'AssignmentExpression' && path.parent.right.type === 'CallExpression' && path.parent.right.callee.type === 'Identifier' && path.parent.right.callee.name === 'factory'){
                 rc = true
             }
-            else if(isProduction){
+            else if(ControlPanel.isProduction){
                 if(path.node.object.type === "Identifier" && path.node.object.name === 'module' && path.node.property.name === 'exports' && path.parent.type === 'AssignmentExpression'){
                     rc = true
                 }
