@@ -1,2 +1,2 @@
 @ECHO off
-yarn tsc && node ./lib/live/Watcher.js
+yarn tsc && node ./testServer.js

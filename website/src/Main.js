@@ -4,7 +4,7 @@ import '../styles/main.css'
 
 import App from './vue/App.vue'
 
-const {render} = Compiler.compileToFunctions('<div id="app"><app title="Vue Props Play!"/></div>')
+const {render} = Compiler.compileToFunctions('<div id="app"><app title="VORTEX"/></div>')
 
 var app = new Vue({
     el:'#app',
