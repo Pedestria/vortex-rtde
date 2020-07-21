@@ -17,6 +17,8 @@
 
 const {LivePush} = require('./lib/live/LivePush')
 
-new LivePush('','','./test/web/Main.jsx');
+const path = require('path')
+
+new LivePush('',path.resolve(__dirname,'./test/live.html'),'./test/web/Main.jsx');
 
 
