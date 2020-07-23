@@ -1,9 +1,15 @@
-<html><head>
-    <meta http-equiv="refresh" content="5">
+<html>
+    <head>
+        <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2.3.0/dist/socket.io.slim.js"></script>
+        <script>
+            var socket = io('http://localhost');
+            socket.on('star',function(){
+                location.reload();
+            })
+        </script>
     </head>
     <body>
         <div id="root"></div>
-        <script src="./LIVEPUSH.js">
-</script>
-
-</body></html>
+        <script src="./LIVEPUSH.js"></script>
+    </body>
+</html>

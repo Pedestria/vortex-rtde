@@ -112,10 +112,38 @@
         React = REACT.React,
         Component = REACT.Component;
 
-    // const OtherThing = React.lazy(() => import('./Com.jsx'))
+    function _defineProperty(obj, key, value) {
+      if (key in obj) {
+        Object.defineProperty(obj, key, {
+          value: value,
+          enumerable: true,
+          configurable: true,
+          writable: true
+        });
+      } else {
+        obj[key] = value;
+      }
+
+      return obj;
+    }
+
     class MainComponent extends Component {
+      constructor(...args) {
+        super(...args);
+
+        _defineProperty(this, "state", {
+          bird: "bo bo bo bo bo bo bo"
+        });
+      }
+
       render() {
-        return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", null, "Test WebApp"), /*#__PURE__*/React.createElement("p", null, "I am a Paragraph Describing Stuff!"), /*#__PURE__*/React.createElement(OtherComponent, null));
+        return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", null, "Test WebApp"), /*#__PURE__*/React.createElement("p", null, "I am a Paragraph Describing Stuff!"), /*#__PURE__*/React.createElement("h2", null, "Stop Being A Poop"), /*#__PURE__*/React.createElement("h3", {
+          onClick: e => {
+            this.setState({
+              bird: 'YARN CAT!!'
+            });
+          }
+        }, "WEBPACK IS GOING DOWN!!!!"), this.state.bird);
       }
 
     }

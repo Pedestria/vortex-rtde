@@ -17,6 +17,7 @@ import * as chalk from 'chalk'
 import * as chokidar from 'chokidar'
 import {diffLines, Change} from 'diff'
 import {platform} from 'os'
+import * as IO from 'socket.io'
 
 import * as _ from 'lodash'
 import cliSpinners = require('cli-spinners')
@@ -578,7 +579,7 @@ async function RecursiveTraverse(branch:LiveModule,liveTree:LiveTree,queue:LPEnt
                 if(subBranch.main.includes('./')){
                     let location = branch.libLoc? path.join(path.dirname(branch.libLoc),subBranch.main) : ResolveRelative(branch.main,subBranch.main);
 
-                    let transformed = (await transformAsync((await fs.readFile(location)).toString(),{sourceType:"module",presets:['@babel/preset-react']})).code
+                    let transformed = (await transformAsync((await fs.readFile(location)).toString(),{sourceType:"module",presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code
 
                     liveTree.preProcessQueue.push({name:location,code:transformed});
 
@@ -704,7 +705,7 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
     liveTree.root = ROOT
     liveTree.ID = ROOT
 
-    var transformed = (await transformAsync((await fs.readFile(ROOT)).toString(),{sourceType:"module",presets:['@babel/preset-react']})).code
+    var transformed = (await transformAsync((await fs.readFile(ROOT)).toString(),{sourceType:"module",presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code
 
     liveTree.preProcessQueue.push({name:ROOT,code:transformed});
 
@@ -718,7 +719,7 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
         if(branch instanceof LiveModule){
             if(!loadedModules.includes(branch.main)) {
                 if(branch.main.includes('./')){
-                    let transformed = (await transformAsync((await fs.readFile(branch.main)).toString(),{sourceType:"module",presets:['@babel/preset-react']})).code
+                    let transformed = (await transformAsync((await fs.readFile(branch.main)).toString(),{sourceType:"module",presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code
 
                     liveTree.preProcessQueue.push({name:branch.main,code:transformed});
 
@@ -980,7 +981,7 @@ async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
 
         updateTree(filename,TREE,PreProcessQUEUE,htmlDir).then(LiveTree => {
             TREE = LiveTree;
-            
+
             pushStage.succeed();
             console.log(chalk.greenBright("Successfully Pushed Changes!"))
             watcher.start();
@@ -994,7 +995,7 @@ async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
 
 async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Array<CodeEntry>,dirToHTML:string) {
     
-    let newFile = (await transformAsync((await fs.readFile(filename)).toString(),{sourceType:'module',presets:['@babel/preset-react']})).code
+    let newFile = (await transformAsync((await fs.readFile(filename)).toString(),{sourceType:'module',presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code
 
     let oldTrans = preProcessQueue.find(entry => entry.name === filename).code
 
@@ -1004,7 +1005,7 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
 
     preProcessQueue.find(entry => entry.name === filename).code = newFile;
 
-    let AST:t.File = await parseAsync(newFile,{sourceType:'module'});
+    let AST:t.File = await parseAsync(newFile,{sourceType:'module',parserOpts:{strictMode:false}});
 
     removeImportsFromAST(AST);
 
@@ -1140,12 +1141,20 @@ async function buildImportFromMemory(ast:t.File,IMPORT:t.VariableDeclaration){
 
 async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
 
+    function defaultErrorReturn(){
+
+    }
+
     let addedChanges = changes.filter(change => change.added === true).map(change => change.value).join('\n');
 
     let removedChanges = changes.filter(change => change.removed === true).map(change => change.value).join('\n');
 
-    let ADDED_AST:t.File = await parseAsync(addedChanges,{parserOpts:LooseParseOptions});
-    let REMOVED_AST:t.File  = await parseAsync(removedChanges,{parserOpts:LooseParseOptions});
+    let ADDED_AST:t.File = await parseAsync(addedChanges,{parserOpts:LooseParseOptions}).catch(err => {
+        return {program:{body:[]}};
+    });
+    let REMOVED_AST:t.File  = await parseAsync(removedChanges,{parserOpts:LooseParseOptions}).catch(err => {
+        return {program:{body:[]}};
+    });;
 
     let possibleRequests:RequestDiff[] = []
 

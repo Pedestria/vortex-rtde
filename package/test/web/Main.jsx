@@ -6,12 +6,16 @@ import Logo from '../img/1200px-React-icon.png'
 
 class MainComponent extends Component{
 
+    state = {bird:"bo bo bo bo bo bo bo"};
+
     render(){
         return(
             <div>
                 <h1>Test WebApp</h1>
                 <p>I am a Paragraph Describing Stuff!</p>
-                <OtherComponent/>
+                <h2>Stop Being A Poop</h2>
+                <h3 onClick={(e)=> {this.setState({bird:'YARN CAT!!'})}}>WEBPACK IS GOING DOWN!!!!</h3>
+                {this.state.bird}
                 {/* //<Suspense fallback={<h1>Loading...</h1>}> */}
                     {/* <OtherThing/> */}
                 {/* </Suspense> */}
