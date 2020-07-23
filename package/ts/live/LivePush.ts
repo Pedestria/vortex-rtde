@@ -1,32 +1,51 @@
 /*Vortex RTDE
- LivePush 0.0.0
+ LivePush 0.2.0
  Copyright Alex Topper 2020 
 */
 
 import * as path from 'path'
 import * as fs from 'fs/promises'
-import {parseAsync, ParseResult, traverse, NodePath, transformAsync} from '@babel/core'
+import {parseAsync, ParseResult, traverse, NodePath, transformAsync, ParserOptions} from '@babel/core'
 import * as t from '@babel/types'
 import generate from '@babel/generator'
 import * as Parse5 from 'parse5'
 import * as resolve from 'resolve'
 import { promisify } from 'util'
-import {writeJSON} from 'fs-extra'
+import {Express} from 'express'
+import * as ora from 'ora'
+import * as chalk from 'chalk'
+import * as chokidar from 'chokidar'
+import {diffLines, Change} from 'diff'
+import {platform} from 'os'
 
 import * as _ from 'lodash'
-import { subtract } from 'lodash'
+import cliSpinners = require('cli-spinners')
 
 var resolveAsync =  promisify(resolve)
+var diffLinesAsync = promisify(diffLines)
+
+var LooseParseOptions:ParserOptions = {sourceType:"module",allowReturnOutsideFunction:true,allowImportExportEverywhere:true,allowSuperOutsideMethod:true,allowAwaitOutsideFunction:true,allowUndeclaredExports:true}
 
 var loadedModules:string[] = []
 
+var queue:Array<LPEntry> = []
 
 
 var NON_JS_EXNTS = ['.png','.css','.scss']
 
+var INITSTAGE = `
+    ============================= 
+                            
+        Welcome To LivePush!
+                        
+    =============================
+`
+
 
 /**
- * The Vortex Live Package Interpreter 
+ * 
+ * The Vortex Live Updater!
+ * 
  */
 export class LivePush{
 
@@ -35,27 +54,71 @@ export class LivePush{
     /**
      * 
      * @param {string} name Name of Interpreter
-     * @param {string} dirToEntry Dir To Entry.
-     * @param {string} dirToHTML Dir to HTML Page
+     * @param {string} dirToEntry Dir To Entry. **(Resolved PLEASE!)**
+     * @param {string} dirToHTML Dir to HTML Page **(Resolved PLEASE!)**
      * @param {string} dirToControlPanel Dir to Vortex Config Panel
+     * @param {Express} expressRouter
      */
-    constructor(name:string,dirToHTML:string,dirToEntry:string){
-        this.name = name
-        this.run(dirToHTML,dirToEntry);
+    constructor(name:string,dirToHTML:string,dirToEntry:string,expressRouter:Express){
+        this.name = name;
+        this.run(dirToHTML,dirToEntry,expressRouter);
     }
 
-    /**Intializes live interpreter.
-     * 
+    /**
+     * Intializes live interpreter.
      * @param {string} dirToHTML
      * @param {string} dirToEntry
+     * @param {Express} router
      */
 
-    run(dirToHTML:string,dirToEntry:string){
-        initLiveDependencyTree(dirToEntry,dirToHTML).catch(err => console.log(err))
+    run(dirToHTML:string,dirToEntry:string,router:Express){
+
+        //Start Spinner!
+
+        const initStage = ora({prefixText:chalk.yellowBright("Initializing..."),spinner:cliSpinners.dots10});
+        initStage.start();
+
+        //Init LivePush!
+
+        initLiveDependencyTree(dirToEntry,dirToHTML).then(LiveTree => {
+            router.get('/*',(req,res) => {res.sendFile(dirToHTML)});
+            initStage.stop();
+            console.log(chalk.greenBright(INITSTAGE))
+
+            initWatch(LiveTree,router,dirToHTML);
+        }).catch(err => console.log(err));
     }
+
+}
+
+interface CodeEntry {
+    name:string
+    code:string
+}
+
+interface ImportsMemory {
+    address:string
+    imports:IMPORT[]
+}
+
+interface IMPORT {
+    name:string
+    varDeclaration:t.VariableDeclaration
 }
 
 class LiveTree {
+
+    factory: any
+
+    memory:ImportsMemory[] = []
+
+    /**
+     * The pre-processed local file code.
+     */
+    preProcessQueue:Array<CodeEntry> = []
+
+    moduleBuffer:Array<t.ObjectProperty> = []
+
     root:string
     branches:Array<LiveBranch> = []
     contexts:Array<LiveContext> = []
@@ -105,6 +168,34 @@ class LiveTree {
                 return;
             }
         }
+    }
+
+    removeContext(contextID:string){
+        this.contexts.filter(context => context.provider !== contextID);
+    }
+
+    memoryExists(address:string):boolean{
+        if(this.memory.find(mem => mem.address === address)){
+            return true
+        } else{
+            return false
+        }
+    }
+
+    loadMemory(address:string){
+        return this.memory.find(mem => mem.address === address)
+    }
+
+    addMemory(mem:ImportsMemory){
+        this.memory.push(mem);
+    }
+
+    addImportToMemory(address:string,IMPORT:t.VariableDeclaration,importFrom:string){
+        this.memory.find(mem => mem.address === address).imports.push({name:importFrom,varDeclaration:IMPORT});
+    }
+
+    refreshMemory(address:string,IMPORTS:IMPORT[]){
+        this.memory.find(mem => mem.address === address).imports = IMPORTS;
     }
 
 }
@@ -485,8 +576,13 @@ async function RecursiveTraverse(branch:LiveModule,liveTree:LiveTree,queue:LPEnt
         if(subBranch instanceof LiveModule){
             if(!loadedModules.includes(subBranch.main)) {
                 if(subBranch.main.includes('./')){
-                    let location = branch.libLoc? path.join(path.dirname(branch.libLoc),subBranch.main) : ResolveRelative(branch.main,subBranch.main)
-                    let ENTRY:LPEntry = {name:subBranch.main,ast:await parseAsync((await fs.readFile(location)).toString(),{sourceType:"module",presets:['@babel/preset-react']})}
+                    let location = branch.libLoc? path.join(path.dirname(branch.libLoc),subBranch.main) : ResolveRelative(branch.main,subBranch.main);
+
+                    let transformed = (await transformAsync((await fs.readFile(location)).toString(),{sourceType:"module",presets:['@babel/preset-react']})).code
+
+                    liveTree.preProcessQueue.push({name:location,code:transformed});
+
+                    let ENTRY:LPEntry = {name:subBranch.main,ast:await parseAsync(transformed,{sourceType:"module",presets:['@babel/preset-react']})}
                     queue.push(ENTRY)
                     TraverseAndTransform(ENTRY,subBranch,liveTree)
 
@@ -515,6 +611,39 @@ async function RecursiveTraverse(branch:LiveModule,liveTree:LiveTree,queue:LPEnt
 
 }
 
+function fetchLPEntry(entry_name:string){
+    for(let ent of queue){
+        if(ent.name === entry_name){
+            return ent
+        }
+    }
+}
+
+function fetchAddressFromTree(addressID:string,tree_OR_branch:LiveTree|LiveModule){
+    if(tree_OR_branch.ID === addressID){
+        return tree_OR_branch
+    }
+
+    for(let branch of tree_OR_branch.branches){
+        if(branch instanceof LiveModule){
+            if(branch.ID === addressID){
+                return branch
+            }
+            else{
+                fetchAddressFromTree(addressID,branch)
+            }
+        }
+    }
+}
+
+function loadRequestFromAddress(address:LiveAddress,context_ID:string){
+    for(let request of address.requests){
+        if(request.contextID === context_ID){
+            return request
+        }
+    }
+}
+
 function normalizeModuleName(name:string){
     let NASTY_CHARS = "\\./@^$#*&!%-"
     for(let char of name){
@@ -528,54 +657,60 @@ function normalizeModuleName(name:string){
     return name
 }
 
+/**
+ * Create a Live Tree.
+ * @param {string} root Entry Point
+ * @param dirToHtml Directory to HTML Page 
+ */
 
-async function initLiveDependencyTree(root:string,dirToHtml:string){
+async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<LiveTree>{
 
+    var ROOT = amendEntryPoint(root);
+    var ROOT2 = amendEntryPoint2(root);
 
-    var queue:Array<LPEntry> = []
-
-    function fetchLPEntry(entry_name:string){
-        for(let ent of queue){
-            if(ent.name === entry_name){
-                return ent
+    function amendEntryPoint(entry:string){
+        if(platform() !== "win32"){
+            return entry
+        } else {
+            let shortEntry = entry.slice(2)
+        
+            while(shortEntry.includes('/')){
+                let i = shortEntry.indexOf('/')
+                let a = shortEntry.slice(0,i)
+                let b = shortEntry.slice(i+1)
+                shortEntry = `${a}\\${b}`
             }
+            return `./${shortEntry}`
+        }
+    }
+    function amendEntryPoint2(entry:string){
+        if(platform() !== "win32"){
+            return entry
+        } else {
+            let shortEntry = entry.slice(2)
+        
+            while(shortEntry.includes('/')){
+                let i = shortEntry.indexOf('/')
+                let a = shortEntry.slice(0,i)
+                let b = shortEntry.slice(i+1)
+                shortEntry = `${a}\\\\${b}`
+            }
+            return `./${shortEntry}`
         }
     }
 
-    function fetchAddressFromTree(addressID:string,tree_OR_branch:LiveTree|LiveModule){
-        if(tree_OR_branch.ID === addressID){
-            return tree_OR_branch
-        }
-
-        for(let branch of tree_OR_branch.branches){
-            if(branch instanceof LiveModule){
-                if(branch.ID === addressID){
-                    return branch
-                }
-                else{
-                    fetchAddressFromTree(addressID,branch)
-                }
-            }
-        }
-    }
-
-    function loadRequestFromAddress(address:LiveAddress,context_ID:string){
-        for(let request of address.requests){
-            if(request.contextID === context_ID){
-                return request
-            }
-        }
-    }
     
     var liveTree = new LiveTree();
-    liveTree.root = root
-    liveTree.ID = root
+    liveTree.root = ROOT
+    liveTree.ID = ROOT
 
-    var transformed = (await transformAsync((await fs.readFile(root)).toString(),{sourceType:"module",presets:['@babel/preset-react']})).code
+    var transformed = (await transformAsync((await fs.readFile(ROOT)).toString(),{sourceType:"module",presets:['@babel/preset-react']})).code
 
-    var rootEntry:LPEntry = {name:root,ast:await parseAsync(transformed,{sourceType:"module"})}
+    liveTree.preProcessQueue.push({name:ROOT,code:transformed});
+
+    var rootEntry:LPEntry = {name:ROOT,ast:await parseAsync(transformed,{sourceType:"module"})}
     queue.push(rootEntry)
-    loadedModules.push(root)
+    loadedModules.push(ROOT)
 
     TraverseAndTransform(rootEntry,liveTree)
 
@@ -583,7 +718,11 @@ async function initLiveDependencyTree(root:string,dirToHtml:string){
         if(branch instanceof LiveModule){
             if(!loadedModules.includes(branch.main)) {
                 if(branch.main.includes('./')){
-                    let ENTRY:LPEntry = {name:branch.main,ast:await parseAsync((await fs.readFile(branch.main)).toString(),{sourceType:"module",presets:['@babel/preset-react']})}
+                    let transformed = (await transformAsync((await fs.readFile(branch.main)).toString(),{sourceType:"module",presets:['@babel/preset-react']})).code
+
+                    liveTree.preProcessQueue.push({name:branch.main,code:transformed});
+
+                    let ENTRY:LPEntry = {name:branch.main,ast:await parseAsync(transformed,{sourceType:"module",presets:['@babel/preset-react']})}
                     queue.push(ENTRY)
                     TraverseAndTransform(ENTRY,branch,liveTree)
 
@@ -636,9 +775,15 @@ async function initLiveDependencyTree(root:string,dirToHtml:string){
                             imports.push(t.variableDeclarator(t.identifier(request),t.memberExpression(t.identifier(newName),t.identifier(request))))
                         }
 
-                        ast.program.body.reverse()
-                        ast.program.body.push(t.variableDeclaration('var',imports))
-                        ast.program.body.reverse()
+                        let VARDEC = t.variableDeclaration('var',imports)
+
+                        ast.program.body.unshift(VARDEC)
+
+                        if(liveTree.memoryExists(address)){
+                            liveTree.addImportToMemory(address,VARDEC,context.provider);
+                        }else {
+                            liveTree.addMemory({address,imports:[{varDeclaration:VARDEC,name:context.provider}]});
+                        }
                     }
                 }
             }
@@ -755,9 +900,11 @@ async function initLiveDependencyTree(root:string,dirToHtml:string){
       loadedModules.push(mod_name);
     }
   
-    return loadExports('${liveTree.root}');`
+    return loadExports('${platform() === "win32"? ROOT2 : ROOT}');`
 
     let parsedFactory =  (await parseAsync(factory,{sourceType:'module',parserOpts:{allowReturnOutsideFunction:true}})).program.body
+
+    liveTree.factory = parsedFactory;
 
     
     let buffer:t.ObjectProperty[] = []
@@ -766,24 +913,308 @@ async function initLiveDependencyTree(root:string,dirToHtml:string){
         buffer.push(t.objectProperty(t.stringLiteral(ent.name),t.callExpression(t.identifier(''),[t.functionExpression(null,[t.identifier('loadExports'),t.identifier('exports'),t.identifier('module')],t.blockStatement(ent.ast.program.body))])))
     }
 
+    liveTree.moduleBuffer = buffer
+
     let final0 = t.objectExpression(buffer);
 
     let final1 = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier('live_modules')],t.blockStatement(parsedFactory)),[final0])])))
 
-    // const document:Parse5.DefaultTreeDocument = Parse5.parse((await fs.readFile(dirToHtml)).toString())
+    await appendToHTMLPage(dirToHtml,final1.code);
 
-    // const body:Parse5.Node = document.childNodes[1]
-
-    // console.log(body.)
-
-    await fs.writeFile('./test/live_bundle.js',final1.code)
-    console.log('Yipee!')
-
-
-
-
-    // await writeJSON('./Livetree.json',liveTree);
-    // console.log('Yipee!')
-    
+    return liveTree;
 
 }
+
+async function appendToHTMLPage(dirToHTML:string,livePushPackage:string){
+
+    let fileloc = path.dirname(dirToHTML)+'/LIVEPUSH.js'
+
+    await fs.writeFile(fileloc,livePushPackage);
+
+    const document = Parse5.parse((await fs.readFile(dirToHTML)).toString())
+
+    const HTML:Parse5.DefaultTreeNode = document.childNodes[0]
+
+    const PackageScript:Parse5.DefaultTreeNode = {nodeName:"script",tagName:"script",attrs:[{name:"src",value:'./LIVEPUSH.js'}]}
+
+    if(HTML.childNodes[0].nodeName === "body"){
+        HTML.childNodes[0].childNodes.push(PackageScript);
+    }
+    else if(HTML.childNodes[0].nodeName === "head" && HTML.childNodes[1].nodeName === "body"){
+        HTML.childNodes[1].childNodes.push(PackageScript);
+    }
+
+    const result = Parse5.serialize(document);
+
+    await fs.writeFile(dirToHTML,result);
+
+    return;
+
+}
+
+async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
+
+    const watcher = ora({prefixText:'Watching Files...',spinner:cliSpinners.bounce})
+
+    var TREE = Tree
+
+    const pushStage = ora({prefixText:chalk.yellowBright('Pushing...'),spinner:cliSpinners.bouncingBar});
+
+
+    // Modules to Watch (Includes Entry Point!)
+    var modulesToWatch = loadedModules.filter(filename => filename.includes('./'))
+
+    var Watcher = new chokidar.FSWatcher({persistent:true})
+
+    Watcher.add(modulesToWatch);
+
+    watcher.start();
+
+    let PreProcessQUEUE = TREE.preProcessQueue.filter(entry => entry.name.includes('./'));
+
+    Watcher.on("change",(filename) => {
+        filename = './'+filename
+        // console.log(`${filename} has been Changed!`)
+        watcher.stop();
+        pushStage.start();
+
+        updateTree(filename,TREE,PreProcessQUEUE,htmlDir).then(LiveTree => {
+            TREE = LiveTree;
+            router.get("/*",(req,res) => {res.redirect('back')});
+
+            pushStage.succeed();
+            console.log(chalk.greenBright("Successfully Pushed Changes!"))
+            watcher.start();
+        }).catch(err => {
+            console.log(err)
+        })
+    })
+
+
+}
+
+async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Array<CodeEntry>,dirToHTML:string) {
+    
+    let newFile = (await transformAsync((await fs.readFile(filename)).toString(),{sourceType:'module',presets:['@babel/preset-react']})).code
+
+    let oldTrans = preProcessQueue.find(entry => entry.name === filename).code
+
+    var CHANGES:Array<Change> = await diffLinesAsync(oldTrans,newFile);
+
+    var REQUESTDIFF = await diffRequests(CHANGES);
+
+    preProcessQueue.find(entry => entry.name === filename).code = newFile;
+
+    let AST:t.File = await parseAsync(newFile,{sourceType:'module'});
+
+    removeImportsFromAST(AST);
+
+    fetchLPEntry(filename).ast = AST;
+
+
+    if(REQUESTDIFF.length > 0){
+
+        let REMOVED_OR_MODIFIED_IMPORTNAMES:string[] = [];
+
+        let NEWMEMORYIMPORTS:IMPORT[] = []
+
+        for(let reqDiff of REQUESTDIFF){
+            //Import has been added!
+            if(reqDiff.added){
+                if(liveTree.contextExists(reqDiff.source)){
+                    let context = liveTree.loadContext(reqDiff.source)
+                    let module = fetchAddressFromTree(filename,liveTree)
+                    let cntRqt:ContextRequest = {contextID:context.provider,requests:reqDiff.newRequests,type:'Module',namespaceRequest:reqDiff.namespace};
+                    context.addAddress(module);
+                    module.requests.push(cntRqt);
+                    
+                    await buildImports(AST,cntRqt,context,NEWMEMORYIMPORTS);
+
+                } else {
+                    let context = new ModuleContext();
+                    context.provider = reqDiff.source.includes('./')? ResolveRelative(filename,reqDiff.source) : reqDiff.source;
+                    let module = fetchAddressFromTree(filename,liveTree);
+                    context.addAddress(module)
+                    let cntRqt:ContextRequest = {contextID:context.provider,requests:reqDiff.newRequests,type:'Module',namespaceRequest:reqDiff.namespace};
+                    module.requests.push(cntRqt)
+                    liveTree.contexts.push(context);
+
+                    await buildImports(AST,cntRqt,context,NEWMEMORYIMPORTS);
+                }
+                //Import has been removed!
+            } else if(reqDiff.removed){
+                REMOVED_OR_MODIFIED_IMPORTNAMES.push(reqDiff.source);
+                let context = liveTree.loadContext(reqDiff.source);
+                let module:LiveModule = fetchAddressFromTree(filename,liveTree);
+                context.removeAddress(module.main);
+                module.requests.filter(contextrequest => contextrequest.contextID !== context.provider);
+
+                if(context.addresses.length === 0){
+                    liveTree.removeContext(context.provider);
+                }
+                //Import requests have been modified!
+            } else {
+                REMOVED_OR_MODIFIED_IMPORTNAMES.push(reqDiff.source);
+                let context = liveTree.loadContext(reqDiff.source);
+                let contextRequest = fetchAddressFromTree(filename,liveTree).requests.find(contextrequest => contextrequest.contextID === context.provider);
+                contextRequest.requests = contextRequest.requests.concat(reqDiff.newRequests);
+                contextRequest.requests.filter(request => !reqDiff.removedRequests.includes(request));
+
+                await buildImports(AST,contextRequest,context,NEWMEMORYIMPORTS);
+            }
+        }
+
+        let OLDMEMORYIMPORTS = liveTree.loadMemory(filename).imports.filter(IMPORT => !REMOVED_OR_MODIFIED_IMPORTNAMES.includes(IMPORT.name))
+
+        for(let imp of OLDMEMORYIMPORTS){
+            await buildImportFromMemory(AST,imp.varDeclaration);
+        }
+
+        liveTree.refreshMemory(filename,OLDMEMORYIMPORTS.concat(NEWMEMORYIMPORTS))
+
+    } else{
+        for(let imp of liveTree.loadMemory(filename).imports){
+            await buildImportFromMemory(AST,imp.varDeclaration);
+        }
+    }
+
+    let updatedModule = t.objectProperty(t.stringLiteral(filename),t.callExpression(t.identifier(''),[t.functionExpression(null,[t.identifier('loadExports'),t.identifier('exports'),t.identifier('module')],t.blockStatement(AST.program.body))]));
+    //Replace Module in Buffer!! Technically same as HMR.
+    liveTree.moduleBuffer.find(value => value.key.value === updatedModule.key.value).value = updatedModule.value;
+
+    let final0 = t.objectExpression(liveTree.moduleBuffer);
+
+    let final1 = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier('live_modules')],t.blockStatement(liveTree.factory)),[final0])]))).code
+
+    await fs.writeFile(path.dirname(dirToHTML)+'/LIVEPUSH.js',final1);
+
+    return liveTree;
+
+}
+
+
+
+interface RequestDiff {
+    source:string
+    added:boolean
+    removed:boolean
+    newRequests?:string[]
+    removedRequests?:string[]
+    namespace:string
+}
+
+
+async function buildImports(ast:t.File,contextRequest:ContextRequest,context:LiveContext,currentMemoryImports:IMPORT[]){
+    
+    if(contextRequest.type === 'Module'){
+        //Build Imports
+        let imports:t.VariableDeclarator[] = []
+
+        let newName = normalizeModuleName(context.provider.toUpperCase())
+
+        let declarator 
+
+        if(contextRequest.namespaceRequest){
+            declarator = t.variableDeclarator(t.identifier(newName),t.callExpression(t.identifier('loadExports'),[t.stringLiteral(context.provider),t.stringLiteral(contextRequest.namespaceRequest)]))
+        } else{
+            declarator = t.variableDeclarator(t.identifier(newName),t.callExpression(t.identifier('loadExports'),[t.stringLiteral(context.provider)]))
+        }
+
+        imports.push(declarator)
+        for(let request of contextRequest.requests){
+            imports.push(t.variableDeclarator(t.identifier(request),t.memberExpression(t.identifier(newName),t.identifier(request))))
+        }
+
+        let VARDEC = t.variableDeclaration('var',imports)
+
+        ast.program.body.unshift(VARDEC);
+
+        currentMemoryImports.push({name:context.provider,varDeclaration:VARDEC});
+    }
+}
+
+async function buildImportFromMemory(ast:t.File,IMPORT:t.VariableDeclaration){
+
+    ast.program.body.unshift(IMPORT);
+
+}
+
+async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
+
+    let addedChanges = changes.filter(change => change.added === true).map(change => change.value).join('\n');
+
+    let removedChanges = changes.filter(change => change.removed === true).map(change => change.value).join('\n');
+
+    let ADDED_AST:t.File = await parseAsync(addedChanges,{parserOpts:LooseParseOptions});
+    let REMOVED_AST:t.File  = await parseAsync(removedChanges,{parserOpts:LooseParseOptions});
+
+    let possibleRequests:RequestDiff[] = []
+
+    //Added Request Diff
+
+    for(let node of ADDED_AST.program.body){
+        if(node.type === "ImportDeclaration"){
+            possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:node.specifiers.map(specifier => specifier.local.name),namespace:node.specifiers.find(specifier => specifier.type === "ImportDefaultSpecifier").local.name});
+        } else if(node.type === "ExpressionStatement" && node.expression.type === "AssignmentExpression" 
+        && node.expression.left.type === "Identifier" && node.expression.right.type === "CallExpression" 
+        && node.expression.right.callee.type === "Identifier" && node.expression.right.callee.name === "require"){
+            possibleRequests.push({source:node.expression.right.arguments[0].value,added:true,removed:undefined,newRequests:[node.expression.left.name],namespace:node.expression.left.name})
+        }
+    }
+
+    //Removed Requests Diff
+
+    for(let node of REMOVED_AST.program.body){
+        if(node.type === "ImportDeclaration"){
+            let NODE = node;
+
+            if(possibleRequests.findIndex(request => request.source === NODE.source.value) === -1){
+                possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:node.specifiers.map(specifier => specifier.local.name)});
+            } else {
+                let request = possibleRequests.find(request => request.source === NODE.source.value)
+                request.removedRequests = node.specifiers.map(specifier => specifier.local.name);
+                request.added = undefined;
+            }
+        } else if(node.type === "ExpressionStatement" && node.expression.type === "AssignmentExpression" 
+        && node.expression.left.type === "Identifier" && node.expression.right.type === "CallExpression" 
+        && node.expression.right.callee.type === "Identifier" && node.expression.right.callee.name === "require"){
+
+            if(possibleRequests.findIndex(request => request.source === node.expression.right.arguments[0].value) === -1){
+                possibleRequests.push({source:node.expression.right.arguments[0].value,added:undefined,removed:true,removedRequests:[node.expression.left.name]});
+            }
+            else{
+                let request = possibleRequests.find(request => request.source === node.expression.right.arguments[0].value)
+                request.removedRequests = node.expression.left.name;
+                request.added = undefined;
+            }
+        }
+    }
+
+
+    //Amending ES Requests!!
+    for(let diff of possibleRequests){
+        if(diff.newRequests && diff.removedRequests){
+            let buffer = diff.newRequests;
+            diff.newRequests = diff.newRequests.filter(value => !diff.removedRequests.includes(value));
+            diff.removedRequests = diff.removedRequests.filter(value => !buffer.includes(value));
+        }
+    }
+
+    return possibleRequests
+
+}
+
+function removeImportsFromAST(ast:t.File){
+
+    traverse(ast,{
+        ImportDeclaration: function(path) {
+            path.remove();
+        },
+        VariableDeclarator: function(path){
+            if(path.node.init.type === "CallExpression" && path.node.init.callee.type === "Identifier" && path.node.init.callee.name === "require"){
+                path.remove();
+            }
+        }
+    })
+}
+

@@ -43,8 +43,13 @@ import Example from './example.js' /*vortexRetain*/
 
 Vortex will outsource the import and will NOT include it in the bundle.
 
+### LivePush Checklist
 
-### Live (Offcially Called LivePush)
+- [ ] Add Updater.
+ - [ ] load Precached Code STRINGS for unchanged files!!
+ - [ ] add chokidar event listeners.
+ - [ ] 
+- [ ] Support For Images.
+- [ ] Addon Support! 
 
-For live updates, the watcher will quickly search through entrypoint and all of its dependencies (And there dependencies, and so on.) And it will copy all of those files to a package that is interpreted by the Vortex Live Intrepeter. 
 

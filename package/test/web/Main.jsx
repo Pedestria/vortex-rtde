@@ -11,6 +11,7 @@ class MainComponent extends Component{
             <div>
                 <h1>Test WebApp</h1>
                 <p>I am a Paragraph Describing Stuff!</p>
+                <h3>FUCK WEBPACK DEV SERVER!!!</h3>
                 {/* //<Suspense fallback={<h1>Loading...</h1>}> */}
                     {/* <OtherThing/> */}
                 {/* </Suspense> */}
