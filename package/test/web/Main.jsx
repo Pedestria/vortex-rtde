@@ -11,7 +11,7 @@ class MainComponent extends Component{
             <div>
                 <h1>Test WebApp</h1>
                 <p>I am a Paragraph Describing Stuff!</p>
-                <h3>FUCK WEBPACK DEV SERVER!!!</h3>
+                <OtherComponent/>
                 {/* //<Suspense fallback={<h1>Loading...</h1>}> */}
                     {/* <OtherThing/> */}
                 {/* </Suspense> */}
@@ -19,6 +19,17 @@ class MainComponent extends Component{
             </div>
         );
     } 
+}
+
+class OtherComponent extends Component {
+
+    render(){
+        return(
+            <div>
+                <h1>Other Component Here!</h1>
+            </div>
+        );
+    }
 }
 
 ReactDOM.render(<MainComponent/>, document.getElementById('root'));

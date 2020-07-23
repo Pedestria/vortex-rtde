@@ -115,7 +115,14 @@
     // const OtherThing = React.lazy(() => import('./Com.jsx'))
     class MainComponent extends Component {
       render() {
-        return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", null, "Test WebApp"), /*#__PURE__*/React.createElement("p", null, "I am a Paragraph Describing Stuff!"), /*#__PURE__*/React.createElement("h3", null, "FUCK WEBPACK DEV SERVER!!!"));
+        return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", null, "Test WebApp"), /*#__PURE__*/React.createElement("p", null, "I am a Paragraph Describing Stuff!"), /*#__PURE__*/React.createElement(OtherComponent, null));
+      }
+
+    }
+
+    class OtherComponent extends Component {
+      render() {
+        return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", null, "Other Component Here!"));
       }
 
     }

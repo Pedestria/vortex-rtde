@@ -980,8 +980,7 @@ async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
 
         updateTree(filename,TREE,PreProcessQUEUE,htmlDir).then(LiveTree => {
             TREE = LiveTree;
-            router.get("/*",(req,res) => {res.redirect('back')});
-
+            
             pushStage.succeed();
             console.log(chalk.greenBright("Successfully Pushed Changes!"))
             watcher.start();
