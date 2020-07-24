@@ -1,15 +1,15 @@
-<html>
-    <head>
-        <script src="https://cdn.jsdelivr.net/npm/socket.io-client@2.3.0/dist/socket.io.slim.js"></script>
+<html><head></head><body>
+        <button id="reload"></button>
+
         <script>
-            var socket = io('http://localhost');
-            socket.on('star',function(){
+            document.getElementById('reload').addEventListener("click",function(ev) {
+                ev.preventDefault();
                 location.reload();
+                console.log('reloaded app!')
             })
         </script>
-    </head>
-    <body>
+
         <div id="root"></div>
         <script src="./LIVEPUSH.js"></script>
-    </body>
-</html>
+    
+<script src="./LIVEPUSH.js"></script><script src="./LIVEPUSH.js"></script></body></html>

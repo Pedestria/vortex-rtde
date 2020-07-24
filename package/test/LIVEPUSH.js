@@ -110,7 +110,8 @@
         ReactDOM = REACT_DOM.ReactDOM;
     var REACT = loadExports("react", "React"),
         React = REACT.React,
-        Component = REACT.Component;
+        Component = REACT.Component,
+        Fragment = REACT.Fragment;
 
     function _defineProperty(obj, key, value) {
       if (key in obj) {
@@ -137,13 +138,13 @@
       }
 
       render() {
-        return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("h1", null, "Test WebApp"), /*#__PURE__*/React.createElement("p", null, "I am a Paragraph Describing Stuff!"), /*#__PURE__*/React.createElement("h2", null, "Stop Being A Poop"), /*#__PURE__*/React.createElement("h3", {
+        return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement(Fragment, null, /*#__PURE__*/React.createElement("h1", null, "Fragment Here!")), /*#__PURE__*/React.createElement("h1", null, "Test WebApp"), /*#__PURE__*/React.createElement("p", null, "I am a Paragraph Describing Stuff!"), /*#__PURE__*/React.createElement("h2", null, "Stop Being"), /*#__PURE__*/React.createElement("h4", null, "Give me some love now!!"), /*#__PURE__*/React.createElement("h3", {
           onClick: e => {
             this.setState({
               bird: 'YARN CAT!!'
             });
           }
-        }, "WEBPACK IS GOING DOWN!!!!"), this.state.bird);
+        }, "Not So Profane!"), this.state.bird);
       }
 
     }

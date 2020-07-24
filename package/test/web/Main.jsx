@@ -1,4 +1,4 @@
-import React, {Component} from 'react'
+import React, {Component,Fragment} from 'react'
 import ReactDOM from 'react-dom'
 // const OtherThing = React.lazy(() => import('./Com.jsx'))
 import './styles.css'
@@ -11,10 +11,14 @@ class MainComponent extends Component{
     render(){
         return(
             <div>
+                <Fragment>
+                    <h1>Fragment Here!</h1>
+                </Fragment>
                 <h1>Test WebApp</h1>
                 <p>I am a Paragraph Describing Stuff!</p>
-                <h2>Stop Being A Poop</h2>
-                <h3 onClick={(e)=> {this.setState({bird:'YARN CAT!!'})}}>WEBPACK IS GOING DOWN!!!!</h3>
+                <h2>Stop Being</h2>
+                <h4>Give me some love now!!</h4>
+                <h3 onClick={(e)=> {this.setState({bird:'YARN CAT!!'})}}>Not So Profane!</h3>
                 {this.state.bird}
                 {/* //<Suspense fallback={<h1>Loading...</h1>}> */}
                     {/* <OtherThing/> */}

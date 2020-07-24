@@ -1,6 +1,6 @@
 {
-  "name": "Vortex_RTDE",
-  "version": "0.7.1",
+  "name": "@vortex-rtde/core",
+  "version": "0.8.4",
   "author": "Alex Topper",
   "license": "MIT",
   "description": "A real time web application/js library development environment.",

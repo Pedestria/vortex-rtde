@@ -1,13 +1,13 @@
 Vortex Control Panel
 ===
 
-Similar to Webpack and Rollup.js, Vortex uses a config file. This is called the Control Panel (Default name is set to *vortex.panel.js*)
+Similar to Webpack and Rollup.js, Vortex uses a config file. This is called the Control Panel (Default name is set to *vortex.panel.js*).
 
 Here is an example of how one's project control panel might look:
 
 ```javascript
-const {VortexVueAddon} = require('@vortex/addons/vue')
-const {VortexMoreStylesAddon} = require('@vortex/addons/more-styles')
+const {VortexVueAddon} = require('@vortex-rtde/vue-addon');
+const {VortexMoreStylesAddon} = require('@vortex-rtde/more-styles-addon');
 
 module.exports = {
     type:'app',
@@ -17,7 +17,7 @@ module.exports = {
     extensions: ['.css','.png','.otf'],
     encodeFilenames:true,
     addons:[VortexVueAddon,VortexMoreStylesAddon]
-}
+};
 ```
 
 ## Options For Panel
@@ -39,4 +39,23 @@ The configuration of the LivePush feature.. Go to [here]() if you want to know a
 - "star" - Regular bundle mode. (Source Maps enabled.)
 - "neutronstar" - Minified bundle mode. (Same as Webpack production mode)
 
+### ```start:string```
+
+The entry point for your project.
+
+### ```output:string```
+
+The output star or neutronstar filename.
+
+### ```extensions:string[] ```
+
+The non-js file extensions that you wish to use in the project.
+
+### ```encodeFilenames:boolean```
+
+If true, Vortex will encode File Dependency names with uuids.
+
+### ```addons:VortexAddon[]```
+
+The list of installed Addons.
 
