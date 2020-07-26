@@ -41,28 +41,11 @@ export interface Bundle {
 
 
 function fixDependencyName(name:string){
-    let NASTY_CHARS = "\\./@^$#*&!%-"
-    let newName:string = ""
     if(name[0] === '@'){
-        newName = name.slice(1)
+        name = name.slice(1);
     }
-    else{
-        newName = name
-    }
-    for(let char of NASTY_CHARS){
-        if(newName.includes(char)){
-            while(newName.includes(char)){
-                let a 
-                let b 
-                a = newName.slice(0,newName.indexOf(char))
-                b = newName.slice(newName.indexOf(char)+1)
-                newName = `${a}_${b}`
-            }
-        }
-    }
-    //console.log(newName)
-    return newName
-
+    let NASTY_CHARS = /(@|\/|\^|\$|#|\*|&|!|%|-)/g
+    return name.replace(NASTY_CHARS,"_");
 }
 
 /**
@@ -1713,26 +1696,8 @@ async function writeCSSPlanet(stylesheetBuffer:Array<string>){
 
 async function minifyCss(styles:string) {
 
-    let finalString = ""
-
-    let lineBreak ='\r\n'
-    let linebreak2 = '\n'
-
-    while(styles.includes(lineBreak)){
-        styles = styles.replace(lineBreak,"")
-    }
-
-    while(styles.includes(linebreak2)){
-        styles = styles.replace(linebreak2,"")
-    }
-
-    for(let i = 0; i<styles.length;i++){
-        if(styles[i] !== " "){
-            finalString += styles[i]
-        }
-    }
-
-    return finalString
+    let regexp = /(\s*|(\n)*|(\r\n)*)/g
+    return styles.replace(regexp,"");
 }
 
 

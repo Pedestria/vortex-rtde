@@ -1,5 +1,5 @@
 /*Vortex RTDE
- LivePush 0.3.8
+ LivePush 0.4.1
  Copyright Alex Topper 2020 
 */
 
@@ -10,14 +10,13 @@ import * as t from '@babel/types'
 import generate from '@babel/generator'
 import * as Parse5 from 'parse5'
 import * as resolve from 'resolve'
-import { promisify, formatWithOptions } from 'util'
+import { promisify} from 'util'
 import {Express} from 'express'
 import * as ora from 'ora'
 import * as chalk from 'chalk'
 import * as chokidar from 'chokidar'
 import {diffLines, Change} from 'diff'
 import {platform} from 'os'
-import * as IO from 'socket.io'
 
 import * as _ from 'lodash'
 import cliSpinners = require('cli-spinners')
@@ -982,7 +981,7 @@ async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
         updateTree(filename,TREE,PreProcessQUEUE,htmlDir).then(({liveTree,delta}) => {
             TREE = liveTree;
 
-            if(delta){
+            if(delta.length > 0){
                 let newModulesToWatch = delta.filter(filename => filename.includes('./'));
 
                 if(newModulesToWatch.length > 0){
@@ -1005,23 +1004,21 @@ async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
 
 async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Array<CodeEntry>,dirToHTML:string) {
 
-    var priorLoadedModules:string[] = loadedModules;
+    let priorLoadedModules:string[] = new Array<string>(...loadedModules);
     
     let newFile = (await transformAsync((await fs.readFile(filename)).toString(),{sourceType:'module',presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code
 
     let oldTrans = preProcessQueue.find(entry => entry.name === filename).code
 
-    var CHANGES:Array<Change> = await diffLinesAsync(oldTrans,newFile);
+    var CHANGES:Array<Change> = await diffLinesAsync(await processJSForRequests(oldTrans),await processJSForRequests(newFile));
 
     var REQUESTDIFF = await diffRequests(CHANGES);
-
-    console.log(REQUESTDIFF);
 
     preProcessQueue.find(entry => entry.name === filename).code = newFile;
 
     let AST:t.File = await parseAsync(newFile,{sourceType:'module',parserOpts:{strictMode:false}});
 
-    removeImportsFromAST(AST);
+    removeImportsAndExportsFromAST(AST);
 
     fetchLPEntry(filename).ast = AST;
 
@@ -1257,6 +1254,10 @@ async function buildImportFromMemory(ast:t.File,IMPORT:t.VariableDeclaration){
 
 async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
 
+    if(changes.length === 0){
+        return [];
+    }
+
     let addedChanges = changes.filter(change => change.added === true).map(change => change.value).join('\n');
 
     let removedChanges = changes.filter(change => change.removed === true).map(change => change.value).join('\n');
@@ -1274,7 +1275,11 @@ async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
 
     for(let node of ADDED_AST.program.body){
         if(node.type === "ImportDeclaration"){
-            possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:node.specifiers.map(specifier => specifier.local.name),namespace:node.specifiers.find(specifier => specifier.type === "ImportDefaultSpecifier").local.name});
+            if(node.specifiers.length > 0){
+                possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:node.specifiers.map(specifier => specifier.local.name),namespace:node.specifiers.find(specifier => specifier.type === "ImportDefaultSpecifier").local.name});
+            } else {
+                possibleRequests.push({source:node.source.value,added:true,removed:undefined});
+            }
         } else if(node.type === "ExpressionStatement" && node.expression.type === "AssignmentExpression" 
         && node.expression.left.type === "Identifier" && node.expression.right.type === "CallExpression" 
         && node.expression.right.callee.type === "Identifier" && node.expression.right.callee.name === "require"){
@@ -1288,12 +1293,16 @@ async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
         if(node.type === "ImportDeclaration"){
             let NODE = node;
 
-            if(possibleRequests.findIndex(request => request.source === NODE.source.value) === -1){
-                possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:node.specifiers.map(specifier => specifier.local.name)});
+            if(node.specifiers.length > 0){
+                if(possibleRequests.findIndex(request => request.source === NODE.source.value) === -1){
+                    possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:node.specifiers.map(specifier => specifier.local.name)});
+                } else {
+                    let request = possibleRequests.find(request => request.source === NODE.source.value)
+                    request.removedRequests = node.specifiers.map(specifier => specifier.local.name);
+                    request.added = undefined;
+                }
             } else {
-                let request = possibleRequests.find(request => request.source === NODE.source.value)
-                request.removedRequests = node.specifiers.map(specifier => specifier.local.name);
-                request.added = undefined;
+                possibleRequests.push({source:node.source.value,added:undefined,removed:true});
             }
         } else if(node.type === "ExpressionStatement" && node.expression.type === "AssignmentExpression" 
         && node.expression.left.type === "Identifier" && node.expression.right.type === "CallExpression" 
@@ -1324,7 +1333,10 @@ async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
 
 }
 
-function removeImportsFromAST(ast:t.File){
+function removeImportsAndExportsFromAST(ast:t.File){
+
+    let exportsToBeRolled:t.ExpressionStatement[] = []
+    let defaultExport:t.ExpressionStatement
 
     traverse(ast,{
         ImportDeclaration: function(path) {
@@ -1334,8 +1346,44 @@ function removeImportsFromAST(ast:t.File){
             if(path.node.init.type === "CallExpression" && path.node.init.callee.type === "Identifier" && path.node.init.callee.name === "require"){
                 path.remove();
             }
+        }, 
+        ExportNamedDeclaration: function(path){
+            if(path.node.specifiers.length > 0){
+                for(let specifier of path.node.specifiers){
+                    if(specifier.type === "ExportSpecifier"){
+                        exportsToBeRolled.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(specifier.exported.name)),t.identifier(specifier.local.name))));
+                    }
+                }
+                path.remove();
+            }
+            else {
+                if(path.node.declaration.type === "ClassDeclaration"){
+                    path.replaceWith(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),path.node.declaration))
+                } else if(path.node.declaration.type === "FunctionDeclaration"){
+                    path.replaceWith(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),path.node.declaration))
+                }
+            }
+        },
+        ExportDefaultDeclaration: function(path){
+            defaultExport = t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("module"),t.identifier("exports")),t.identifier(path.node.declaration.id.name)));
+            path.replaceWith(path.node.declaration)
         }
     })
+
+    ast.program.body = ast.program.body.concat(exportsToBeRolled)
+    ast.program.body.push(defaultExport)
+}
+
+async function processJSForRequests(code:string){
+
+    let commentregex:RegExp = /(\/\/.*)|(\/\*(.|\n)*\*\/)/g
+    let requestregex:RegExp = /(import ((['|"][\w\/.]+['|"])|({[\w\W,]+} from ['|"][\w\/.]+['|"])|(\w+)[,| ](?:(?<=,)( {\w+} from ['|"][\w\/.]+['|"])|(from ['|"]\w+['|"]))))|((const|var|let)( +[\w$!]+ *= *require\(['|"][\w\/.]+['|"]\)))/g
+
+    let newCode = code.replace(commentregex,"");
+
+    let matches = newCode.match(requestregex)
+    return matches === null? "" : matches.join("\n")
+    
 }
 
 

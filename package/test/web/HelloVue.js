@@ -1,7 +1,7 @@
 import Vue from 'vue'
 import Compiler from 'vue-template-compiler'
 
-const {render} = Compiler.compileToFunctions('<div id="app">{{message}}<file-component/></div>')
+const {render} = Compiler.compileToFunctions('<div id="app">{{message}}</div>')
 
 
 var app = new Vue({
@@ -9,8 +9,5 @@ var app = new Vue({
     render,
     data: {
         message: 'Hello there from Vue.js!'
-    },
-    components: {
-        'file-component': () => import('./component.vue')
     }
 })

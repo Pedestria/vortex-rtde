@@ -1,7 +1,6 @@
 import * as VortexAPI from './API'
 import * as t from '@babel/types'
 import * as _ from 'lodash'
-import { string } from 'yargs'
 /**
  * Vortex Addon Interface
  */
@@ -73,7 +72,7 @@ export class ExportsHandler {
 
 export interface CustomGraphDependencyMapObject {
     extension:string
-    dependency:DependencyConstructor
+    dependency:DependencyConstructor<VAbstractDependencies>,
     bundlable:boolean
 }
 
@@ -166,6 +165,7 @@ export interface Grapher {
 }
 
 
-type DependencyConstructor = 
-{new (name:string,initImportLocation:VortexAPI.ImportLocation):VortexAPI.Dependency }| 
-{new (name:string,initImportLocation:VortexAPI.FileImportLocation,stylesheet:string):VortexAPI.CSSDependency}
+type DependencyConstructor<T> = T extends VortexAPI.CSSDependency?{new(name:string,initImportLocation:VortexAPI.FileImportLocation,stylesheet:string):VortexAPI.CSSDependency} :
+T extends VortexAPI.Dependency?{new(name:string,initImportLocation:VortexAPI.ImportLocation):VortexAPI.Dependency} : never
+
+type VAbstractDependencies = VortexAPI.Dependency|VortexAPI.CSSDependency|VortexAPI.ModuleDependency
