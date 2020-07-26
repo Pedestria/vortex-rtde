@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom'
 // import './styles.css'
 import Logo from '../img/1200px-React-icon.png'
 import _ from 'lodash'
+import './HelloVue.js'
 
 class MainComponent extends Component{
 

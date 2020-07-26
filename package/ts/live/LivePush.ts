@@ -386,7 +386,8 @@ function ResolveRelative(from:string,to:string){
     return './'+path.join(path.dirname(from),to)
 }
 function addJSExtIfPossible(filename:string){
-    return filename.includes('.js')|| filename.includes('.mjs')? filename : filename+'.js'
+    let regexp = /\.m?js$/g
+    return regexp.test(filename)? filename : filename+'.js'
 }
 
 
@@ -420,7 +421,7 @@ async function RelayFetch(index:string){
             if(path.node.left.type === "MemberExpression" && path.node.left.object.type === 'Identifier' 
             && path.node.left.object.name === 'module' && path.node.left.property.name === 'exports' 
             && path.node.right.type === 'CallExpression' && path.node.right.callee.type === 'Identifier' && path.node.right.callee.name === 'require'){
-                exports.push(GLOBAL_RESOLVE(DIRNAME(index),path.node.right.arguments[0].value))
+                exports.push(GLOBAL_RESOLVE(DIRNAME(index),addJSExtIfPossible(path.node.right.arguments[0].value)))
             }
         }
     })
@@ -645,16 +646,11 @@ function loadRequestFromAddress(address:LiveAddress,context_ID:string){
 }
 
 function normalizeModuleName(name:string){
-    let NASTY_CHARS = "\\./@^$#*&!%-"
-    for(let char of name){
-        if(NASTY_CHARS.includes(char)){
-            let a = name.slice(0,name.indexOf(char))
-            let b = name.slice(name.indexOf(char)+1)
-            name = `${a}_${b}`
-        }
+    if(name[0] === '@'){
+        name = name.slice(1);
     }
-
-    return name
+    let NASTY_CHARS = /(@|\/|\^|\$|#|\*|&|!|%|-)/g
+    return name.replace(NASTY_CHARS,"_");
 }
 
 /**
@@ -1146,10 +1142,13 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
     if(loadedModules.length > priorLoadedModules.length){
         let newloadedModules = loadedModules.filter(module => !priorLoadedModules.includes(module));
 
+        console.log(newloadedModules,liveTree);
+
         delta = newloadedModules;
         
         for(let module of newloadedModules){
             let Entry = fetchLPEntry(module)
+            console.log(module);
             for(let request of fetchAddressFromTree(module,liveTree).requests){
                 await buildImportsFromNewModule(Entry,request,liveTree.loadContext(request.contextID),liveTree);
             }
@@ -1176,8 +1175,8 @@ interface RequestDiff {
     source:string
     added:boolean
     removed:boolean
-    newRequests?:string[]
-    removedRequests?:string[]
+    newRequests?:string[]|["NONE"]
+    removedRequests?:string[]|["NONE"]
     namespace:string
 }
 
@@ -1199,8 +1198,11 @@ async function buildImports(ast:t.File,contextRequest:ContextRequest,context:Liv
         }
 
         imports.push(declarator)
-        for(let request of contextRequest.requests){
-            imports.push(t.variableDeclarator(t.identifier(request),t.memberExpression(t.identifier(newName),t.identifier(request))))
+
+        if(contextRequest.requests[0] !== "NONE"){
+            for(let request of contextRequest.requests){
+                imports.push(t.variableDeclarator(t.identifier(request),t.memberExpression(t.identifier(newName),t.identifier(request))))
+            }
         }
 
         let VARDEC = t.variableDeclaration('var',imports)
@@ -1228,8 +1230,10 @@ async function buildImportsFromNewModule(Entry:LPEntry,contextRequest:ContextReq
         }
 
         imports.push(declarator)
-        for(let request of contextRequest.requests){
-            imports.push(t.variableDeclarator(t.identifier(request),t.memberExpression(t.identifier(newName),t.identifier(request))))
+        if(contextRequest.requests[0] !== "NONE"){
+            for(let request of contextRequest.requests){
+                imports.push(t.variableDeclarator(t.identifier(request),t.memberExpression(t.identifier(newName),t.identifier(request))))
+            }
         }
 
         let VARDEC = t.variableDeclaration('var',imports)
@@ -1278,7 +1282,7 @@ async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
             if(node.specifiers.length > 0){
                 possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:node.specifiers.map(specifier => specifier.local.name),namespace:node.specifiers.find(specifier => specifier.type === "ImportDefaultSpecifier").local.name});
             } else {
-                possibleRequests.push({source:node.source.value,added:true,removed:undefined});
+                possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:["NONE"]});
             }
         } else if(node.type === "ExpressionStatement" && node.expression.type === "AssignmentExpression" 
         && node.expression.left.type === "Identifier" && node.expression.right.type === "CallExpression" 
@@ -1371,7 +1375,9 @@ function removeImportsAndExportsFromAST(ast:t.File){
     })
 
     ast.program.body = ast.program.body.concat(exportsToBeRolled)
-    ast.program.body.push(defaultExport)
+    if(defaultExport){
+        ast.program.body.push(defaultExport)
+    }
 }
 
 async function processJSForRequests(code:string){
