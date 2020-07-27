@@ -1,5 +1,5 @@
 /*Vortex RTDE
- LivePush 0.4.1
+ LivePush 0.4.9
  Copyright Alex Topper 2020 
 */
 
@@ -154,11 +154,7 @@ class LiveTree {
     }
 
     loadContext(contextID:string){
-        for(let context of this.contexts){
-            if(context.provider === contextID){
-                return context
-            }
-        }
+        return this.contexts.find(context => contextID === context.provider)
     }
 
     replaceContext(contextID:string,newContext:LiveContext){
@@ -467,7 +463,7 @@ function pushRequests(currentBranch:LiveAddress&LiveBranch|LiveTree,path:NodePat
  * @param {LiveAddress&LiveBranch|LiveTree} currentBranch 
  * @param {LiveTree} tree 
  * @param {boolean} isTree 
- * @param {NodePath<t.ImportDeclaration>|NodePath<t.AssignmentExpression>} path
+ * @param {NodePath<t.ImportDeclaration>|NodePath<t.VariableDeclarator>} path
  */
 
 function TreeBuilder(name:string,currentBranch:LiveAddress&LiveBranch|LiveTree,tree:LiveTree,isTree:boolean,path:NodePath<t.ImportDeclaration>|NodePath<t.VariableDeclarator>){
@@ -539,6 +535,12 @@ function TreeBuilder(name:string,currentBranch:LiveAddress&LiveBranch|LiveTree,t
 
 
 }
+/**
+ * 
+ * @param {LPEntry} entry 
+ * @param {LiveBranch&LiveAddress|LiveTree} currentBranch 
+ * @param {LiveTree} tree 
+ */
 
 function TraverseAndTransform(entry:LPEntry,currentBranch:LiveBranch&LiveAddress|LiveTree,tree?:LiveTree){
 
@@ -549,18 +551,28 @@ function TraverseAndTransform(entry:LPEntry,currentBranch:LiveBranch&LiveAddress
     }
 
     traverse(entry.ast, {
+        // ES6 Imports
         ImportDeclaration: function(path) {
             let name = path.node.source.value.includes('./')? ResolveRelative(entry.name,path.node.source.value) : path.node.source.value
             TreeBuilder(name,currentBranch,tree,isTree,path)
-            path.remove()
+            path.remove();
         },
+        //CommonJS Requires!
         VariableDeclarator: function(path){
             if(path.node.init !== null && path.node.init.type === 'CallExpression' && path.node.init.callee.type === 'Identifier' && path.node.init.callee.name === 'require'){
                 let name = path.node.init.arguments[0].value.includes('./') && entry.name.includes('./')? ResolveRelative(entry.name,path.node.init.arguments[0].value) : path.node.init.arguments[0].value
                 TreeBuilder(name,currentBranch,tree,isTree,path)
-                path.remove()
+                path.remove();
+                // Interop Require Wildcard!!
+            } else if(path.node.init !== null && path.node.init.type === "CallExpression" && path.node.init.callee.type === "Identifier" 
+            && path.node.init.callee.name.includes("_interop") && path.node.init.arguments[0].type === "CallExpression" 
+            && path.node.init.arguments[0].callee.type === "Identifier" && path.node.init.arguments[0].callee.name === "require") {
+                let name = path.node.init.arguments[0].arguments[0].value.includes('./') && entry.name.includes('./')? ResolveRelative(entry.name,path.node.init.arguments[0].arguments[0].value) : path.node.init.arguments[0].arguments[0].value
+                TreeBuilder(name,currentBranch,tree,isTree,path);
+                path.remove();
             }
         },
+        //Envify Modules!
         MemberExpression: function(path){
             if(path.node.object.type === 'MemberExpression' && path.node.object.object.type === 'Identifier' && path.node.object.object.name === 'process' 
             && path.node.object.property.name === 'env' && path.node.property.name === 'NODE_ENV'){
@@ -620,20 +632,36 @@ function fetchLPEntry(entry_name:string){
     }
 }
 
-function fetchAddressFromTree(addressID:string,tree_OR_branch:LiveTree|LiveModule){
+/**
+ * Recursivly fetches Live Branch from tree!
+ * @param {string} addressID 
+ * @param {LiveTree|LiveModule} tree_OR_branch 
+ */
+
+function fetchAddressFromTree(addressID:string,tree_OR_branch:LiveTree|LiveModule):LiveTree|LiveModule{
     if(tree_OR_branch.ID === addressID){
         return tree_OR_branch
     }
-
-    for(let branch of tree_OR_branch.branches){
-        if(branch instanceof LiveModule){
-            if(branch.ID === addressID){
-                return branch
-            }
-            else{
-                fetchAddressFromTree(addressID,branch)
+    else {
+        for(let branch of tree_OR_branch.branches){
+            if(branch instanceof LiveModule){
+                if(branch.ID === addressID){
+                    return branch
+                }else {
+                    var subBranch = fetchAddressFromTree(addressID,branch);
+                    if(subBranch){
+                        return subBranch
+                    }
+                }
             }
         }
+
+        // for(let branch of tree_OR_branch.branches){
+        //     if(branch instanceof LiveModule){
+        //         return fetchAddressFromTree(addressID,branch);
+        //     }
+        // }
+
     }
 }
 
@@ -649,7 +677,7 @@ function normalizeModuleName(name:string){
     if(name[0] === '@'){
         name = name.slice(1);
     }
-    let NASTY_CHARS = /(@|\/|\^|\$|#|\*|&|!|%|-)/g
+    let NASTY_CHARS = /(@|\/|\^|\$|#|\*|&|!|%|-|\.|\\)/g
     return name.replace(NASTY_CHARS,"_");
 }
 
@@ -670,13 +698,7 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
         } else {
             let shortEntry = entry.slice(2)
         
-            while(shortEntry.includes('/')){
-                let i = shortEntry.indexOf('/')
-                let a = shortEntry.slice(0,i)
-                let b = shortEntry.slice(i+1)
-                shortEntry = `${a}\\${b}`
-            }
-            return `./${shortEntry}`
+            return `./${shortEntry.replace(/\//g,"\\")}`
         }
     }
     function amendEntryPoint2(entry:string){
@@ -684,14 +706,7 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
             return entry
         } else {
             let shortEntry = entry.slice(2)
-        
-            while(shortEntry.includes('/')){
-                let i = shortEntry.indexOf('/')
-                let a = shortEntry.slice(0,i)
-                let b = shortEntry.slice(i+1)
-                shortEntry = `${a}\\\\${b}`
-            }
-            return `./${shortEntry}`
+            return `./${shortEntry.replace(/\//g,"\\\\")}`
         }
     }
 
@@ -956,17 +971,16 @@ async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
 
     const pushStage = ora({prefixText:chalk.yellowBright('Pushing...'),spinner:cliSpinners.bouncingBar});
 
-
     // Modules to Watch (Includes Entry Point!)
     var modulesToWatch = loadedModules.filter(filename => filename.includes('./'));
 
     var Watcher = new chokidar.FSWatcher({persistent:true})
 
+    TREE.preProcessQueue = TREE.preProcessQueue.filter(entry => entry.name.includes('./'));
+
     Watcher.add(modulesToWatch);
 
     watcher.start();
-
-    let PreProcessQUEUE = TREE.preProcessQueue.filter(entry => entry.name.includes('./'));
 
     Watcher.on("change",(filename) => {
         filename = './'+filename
@@ -974,7 +988,7 @@ async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
         watcher.stop();
         pushStage.start();
 
-        updateTree(filename,TREE,PreProcessQUEUE,htmlDir).then(({liveTree,delta}) => {
+        updateTree(filename,TREE,TREE.preProcessQueue,htmlDir).then(({liveTree,delta}) => {
             TREE = liveTree;
 
             if(delta.length > 0){
@@ -1002,7 +1016,7 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
 
     let priorLoadedModules:string[] = new Array<string>(...loadedModules);
     
-    let newFile = (await transformAsync((await fs.readFile(filename)).toString(),{sourceType:'module',presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code
+    let newFile = (await transformAsync((await fs.readFile(filename)).toString(),{sourceType:'module',presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code;
 
     let oldTrans = preProcessQueue.find(entry => entry.name === filename).code
 
@@ -1142,13 +1156,10 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
     if(loadedModules.length > priorLoadedModules.length){
         let newloadedModules = loadedModules.filter(module => !priorLoadedModules.includes(module));
 
-        console.log(newloadedModules,liveTree);
-
         delta = newloadedModules;
         
         for(let module of newloadedModules){
             let Entry = fetchLPEntry(module)
-            console.log(module);
             for(let request of fetchAddressFromTree(module,liveTree).requests){
                 await buildImportsFromNewModule(Entry,request,liveTree.loadContext(request.contextID),liveTree);
             }
@@ -1168,16 +1179,14 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
     return {liveTree,delta};
 
 }
-
-
-
+ 
 interface RequestDiff {
     source:string
     added:boolean
     removed:boolean
     newRequests?:string[]|["NONE"]
     removedRequests?:string[]|["NONE"]
-    namespace:string
+    namespace?:string
 }
 
 
@@ -1238,7 +1247,7 @@ async function buildImportsFromNewModule(Entry:LPEntry,contextRequest:ContextReq
 
         let VARDEC = t.variableDeclaration('var',imports)
 
-        ast.program.body.unshift(VARDEC);
+        Entry.ast.program.body.unshift(VARDEC);
 
         if(liveTree.memoryExists(Entry.name)){
             liveTree.addImportToMemory(Entry.name,VARDEC,context.provider);
@@ -1280,7 +1289,8 @@ async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
     for(let node of ADDED_AST.program.body){
         if(node.type === "ImportDeclaration"){
             if(node.specifiers.length > 0){
-                possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:node.specifiers.map(specifier => specifier.local.name),namespace:node.specifiers.find(specifier => specifier.type === "ImportDefaultSpecifier").local.name});
+                possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:node.specifiers.map(specifier => specifier.local.name),
+                    namespace:node.specifiers.find(specifier => specifier.type === "ImportDefaultSpecifier")? node.specifiers.find(specifier => specifier.type === "ImportDefaultSpecifier").local.name : undefined});
             } else {
                 possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:["NONE"]});
             }
@@ -1306,7 +1316,7 @@ async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
                     request.added = undefined;
                 }
             } else {
-                possibleRequests.push({source:node.source.value,added:undefined,removed:true});
+                possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:["NONE"]});
             }
         } else if(node.type === "ExpressionStatement" && node.expression.type === "AssignmentExpression" 
         && node.expression.left.type === "Identifier" && node.expression.right.type === "CallExpression" 
@@ -1330,6 +1340,8 @@ async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
             let buffer = diff.newRequests;
             diff.newRequests = diff.newRequests.filter(value => !diff.removedRequests.includes(value));
             diff.removedRequests = diff.removedRequests.filter(value => !buffer.includes(value));
+            diff.removed = undefined;
+            diff.added = undefined;
         }
     }
 
@@ -1364,7 +1376,8 @@ function removeImportsAndExportsFromAST(ast:t.File){
                 if(path.node.declaration.type === "ClassDeclaration"){
                     path.replaceWith(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),path.node.declaration))
                 } else if(path.node.declaration.type === "FunctionDeclaration"){
-                    path.replaceWith(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),path.node.declaration))
+                    path.replaceWith(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),
+                    t.functionExpression(path.node.declaration.id,path.node.declaration.params,path.node.declaration.body,path.node.declaration.generator,path.node.declaration.async)))
                 }
             }
         },
@@ -1387,8 +1400,8 @@ async function processJSForRequests(code:string){
 
     let newCode = code.replace(commentregex,"");
 
-    let matches = newCode.match(requestregex)
-    return matches === null? "" : matches.join("\n")
+    let matches = newCode.match(requestregex);
+    return matches === null? "" : matches.join("\n");
     
 }
 

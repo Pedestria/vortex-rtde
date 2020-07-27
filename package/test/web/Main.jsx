@@ -3,8 +3,8 @@ import ReactDOM from 'react-dom'
 // const OtherThing = React.lazy(() => import('./Com.jsx'))
 // import './styles.css'
 import Logo from '../img/1200px-React-icon.png'
-import _ from 'lodash'
-import './HelloVue.js'
+// import _ from 'lodash'
+// import {Com} from './HelloVue.js'
 
 class MainComponent extends Component{
 
@@ -16,6 +16,7 @@ class MainComponent extends Component{
                 <h1>Test WebApp</h1>
                 <p>I am a Paragraph Describing Stuff!</p>
                 <OtherComponent/>
+                {/* <Com/> */}
                 <h3 onClick={(e)=> {this.setState({bird:'YARN CAT!!'})}}>Not So Profane!</h3>
                 {this.state.bird}
                 {/* //<Suspense fallback={<h1>Loading...</h1>}> */}
@@ -38,6 +39,6 @@ class OtherComponent extends Component {
     }
 }
 
-console.log(_.intersection([3,4,2],[4,1,2]))
+// console.log(_.intersection([3,4,2],[4,1,2]))
 
 ReactDOM.render(<MainComponent/>, document.getElementById('root'));

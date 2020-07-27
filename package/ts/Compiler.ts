@@ -44,7 +44,7 @@ function fixDependencyName(name:string){
     if(name[0] === '@'){
         name = name.slice(1);
     }
-    let NASTY_CHARS = /(@|\/|\^|\$|#|\*|&|!|%|-)/g
+    let NASTY_CHARS = /(@|\/|\^|\$|#|\*|&|!|%|-|\.|\\)/g
     return name.replace(NASTY_CHARS,"_");
 }
 

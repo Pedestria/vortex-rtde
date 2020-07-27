@@ -35,16 +35,14 @@ function parseRequests(code){
 console.log(parseRequests(code0));
 
 
-function fixDependencyName(name){
+function normalizeModuleName(name){
     if(name[0] === '@'){
         name = name.slice(1);
     }
-    let NASTY_CHARS = /(@|\/|\^|\$|#|\*|&|!|%|-)/g
+    let NASTY_CHARS = /(@|\/|\^|\$|#|\*|&|!|%|-|\.|\\)/g
     return name.replace(NASTY_CHARS,"_");
-
 }
-
-// console.log(fixDependencyName("react-dom"))
+console.log(normalizeModuleName('.\\test\\poop.js'))
 
 function minifyCss(styles) {
 
