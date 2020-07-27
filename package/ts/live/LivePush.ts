@@ -355,7 +355,7 @@ interface LiveFile {
 
 interface LPEntry {
     name:string,
-    ast:ParseResult
+    ast:t.File
 }
 
 interface ContextRequest {
@@ -549,6 +549,8 @@ function TraverseAndTransform(entry:LPEntry,currentBranch:LiveBranch&LiveAddress
     if(currentBranch instanceof LiveTree){
         isTree = true
     }
+    var defaultExport:t.ExpressionStatement
+    var rolledExports:t.ExpressionStatement[] = []
 
     traverse(entry.ast, {
         // ES6 Imports
@@ -578,8 +580,36 @@ function TraverseAndTransform(entry:LPEntry,currentBranch:LiveBranch&LiveAddress
             && path.node.object.property.name === 'env' && path.node.property.name === 'NODE_ENV'){
                 path.replaceWith(t.stringLiteral('live'));
             }
+        },
+        ExportNamedDeclaration: function(path){
+            if(path.node.specifiers.length > 0){
+                for(let specifier of path.node.specifiers){
+                    if(specifier.type === "ExportSpecifier"){
+                        rolledExports.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(specifier.exported)),t.identifier(specifier.local))));
+                    }
+                }
+                path.remove();
+            }  
+            else {
+                if(path.node.declaration.type === "ClassDeclaration"){
+                    rolledExports.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),t.identifier(path.node.declaration.id.name))))
+                    path.replaceWith(path.node.declaration)
+                } else if(path.node.declaration.type === "FunctionDeclaration"){
+                    path.replaceWith(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),
+                    t.functionExpression(path.node.declaration.id,path.node.declaration.params,path.node.declaration.body,path.node.declaration.generator,path.node.declaration.async)))
+                }
+            }
+        },
+        ExportDefaultDeclaration: function(path){
+            defaultExport = t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("module"),t.identifier("exports")),t.identifier(path.node.declaration.id.name)));
+            path.replaceWith(path.node.declaration)
         }
     })
+
+    entry.ast.program.body = entry.ast.program.body.concat(rolledExports);
+    if(defaultExport){
+        entry.ast.program.body.push(defaultExport);
+    }
 
 }
 
@@ -1022,7 +1052,7 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
 
     var CHANGES:Array<Change> = await diffLinesAsync(await processJSForRequests(oldTrans),await processJSForRequests(newFile));
 
-    var REQUESTDIFF = await diffRequests(CHANGES);
+    var REQUESTDIFF = await diffRequests(CHANGES,filename);
 
     preProcessQueue.find(entry => entry.name === filename).code = newFile;
 
@@ -1042,7 +1072,7 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
             //Import has been added!
             if(reqDiff.added){
                 if(liveTree.contextExists(reqDiff.source)){
-                    let context = liveTree.loadContext(reqDiff.source)
+                    let context = liveTree.loadContext(reqDiff.resolvedSource)
                     let module = fetchAddressFromTree(filename,liveTree)
                     let cntRqt:ContextRequest = {contextID:context.provider,requests:reqDiff.newRequests,type:'Module',namespaceRequest:reqDiff.namespace};
                     context.addAddress(module);
@@ -1112,7 +1142,7 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
                 //Import has been removed!
             } else if(reqDiff.removed){
                 REMOVED_OR_MODIFIED_IMPORTNAMES.push(reqDiff.source);
-                let context = liveTree.loadContext(reqDiff.source);
+                let context = liveTree.loadContext(reqDiff.resolvedSource);
                 let module:LiveModule = fetchAddressFromTree(filename,liveTree);
                 context.removeAddress(module.main);
                 module.requests.filter(contextrequest => contextrequest.contextID !== context.provider);
@@ -1123,7 +1153,7 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
                 //Import requests have been modified!
             } else {
                 REMOVED_OR_MODIFIED_IMPORTNAMES.push(reqDiff.source);
-                let context = liveTree.loadContext(reqDiff.source);
+                let context = liveTree.loadContext(reqDiff.resolvedSource);
                 let contextRequest = fetchAddressFromTree(filename,liveTree).requests.find(contextrequest => contextrequest.contextID === context.provider);
                 contextRequest.requests = contextRequest.requests.concat(reqDiff.newRequests);
                 contextRequest.requests.filter(request => !reqDiff.removedRequests.includes(request));
@@ -1179,9 +1209,20 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
     return {liveTree,delta};
 
 }
+
+/**
+ * Request Diff Object
+ */
  
 interface RequestDiff {
+    /**
+     * File location.
+     */
     source:string
+    /**
+     * Resolved file location
+     */
+    resolvedSource:string
     added:boolean
     removed:boolean
     newRequests?:string[]|["NONE"]
@@ -1265,7 +1306,7 @@ async function buildImportFromMemory(ast:t.File,IMPORT:t.VariableDeclaration){
 
 }
 
-async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
+async function diffRequests(changes:Change[],filename:string): Promise<RequestDiff[]>{
 
     if(changes.length === 0){
         return [];
@@ -1289,15 +1330,18 @@ async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
     for(let node of ADDED_AST.program.body){
         if(node.type === "ImportDeclaration"){
             if(node.specifiers.length > 0){
-                possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:node.specifiers.map(specifier => specifier.local.name),
+                possibleRequests.push({source:node.source.value,resolvedSource:node.source.value.includes('./')? ResolveRelative(filename,node.source.value) : node.source.value,
+                added:true,removed:undefined,newRequests:node.specifiers.map(specifier => specifier.local.name),
                     namespace:node.specifiers.find(specifier => specifier.type === "ImportDefaultSpecifier")? node.specifiers.find(specifier => specifier.type === "ImportDefaultSpecifier").local.name : undefined});
             } else {
-                possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:["NONE"]});
+                possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:["NONE"],resolvedSource:node.source.value.includes('./')? ResolveRelative(filename,node.source.value) : node.source.value});
             }
         } else if(node.type === "ExpressionStatement" && node.expression.type === "AssignmentExpression" 
         && node.expression.left.type === "Identifier" && node.expression.right.type === "CallExpression" 
         && node.expression.right.callee.type === "Identifier" && node.expression.right.callee.name === "require"){
-            possibleRequests.push({source:node.expression.right.arguments[0].value,added:true,removed:undefined,newRequests:[node.expression.left.name],namespace:node.expression.left.name})
+            possibleRequests.push({source:node.expression.right.arguments[0].value,
+                resolvedSource:node.expression.right.arguments[0].value.includes('./')? ResolveRelative(filename,node.expression.right.arguments[0].value) : node.expression.right.arguments[0].value,added:true,removed:undefined,
+                newRequests:[node.expression.left.name],namespace:node.expression.left.name})
         }
     }
 
@@ -1309,21 +1353,22 @@ async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
 
             if(node.specifiers.length > 0){
                 if(possibleRequests.findIndex(request => request.source === NODE.source.value) === -1){
-                    possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:node.specifiers.map(specifier => specifier.local.name)});
+                    possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:node.specifiers.map(specifier => specifier.local.name),resolvedSource:node.source.value.includes('./')? ResolveRelative(filename,node.source.value) : node.source.value});
                 } else {
                     let request = possibleRequests.find(request => request.source === NODE.source.value)
                     request.removedRequests = node.specifiers.map(specifier => specifier.local.name);
                     request.added = undefined;
                 }
             } else {
-                possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:["NONE"]});
+                possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:["NONE"],resolvedSource:node.source.value.includes('./')? ResolveRelative(filename,node.source.value) : node.source.value});
             }
         } else if(node.type === "ExpressionStatement" && node.expression.type === "AssignmentExpression" 
         && node.expression.left.type === "Identifier" && node.expression.right.type === "CallExpression" 
         && node.expression.right.callee.type === "Identifier" && node.expression.right.callee.name === "require"){
 
             if(possibleRequests.findIndex(request => request.source === node.expression.right.arguments[0].value) === -1){
-                possibleRequests.push({source:node.expression.right.arguments[0].value,added:undefined,removed:true,removedRequests:[node.expression.left.name]});
+                possibleRequests.push({source:node.expression.right.arguments[0].value,added:undefined,removed:true,removedRequests:[node.expression.left.name],
+                    resolvedSource:node.expression.right.arguments[0].value.includes('./')? ResolveRelative(filename,node.expression.right.arguments[0].value) : node.expression.right.arguments[0].value});
             }
             else{
                 let request = possibleRequests.find(request => request.source === node.expression.right.arguments[0].value)
@@ -1337,11 +1382,9 @@ async function diffRequests(changes:Change[]): Promise<RequestDiff[]>{
     //Amending ES Requests!!
     for(let diff of possibleRequests){
         if(diff.newRequests && diff.removedRequests){
-            let buffer = diff.newRequests;
+            let buffer = new Array<string>(...diff.newRequests);
             diff.newRequests = diff.newRequests.filter(value => !diff.removedRequests.includes(value));
             diff.removedRequests = diff.removedRequests.filter(value => !buffer.includes(value));
-            diff.removed = undefined;
-            diff.added = undefined;
         }
     }
 
