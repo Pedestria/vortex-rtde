@@ -1,11 +1,6 @@
 
 <img src="./package/public/vortex-bright-logo.png" style="background-color:white" alt="Vortex Logo">
 
-<style>
-html {
-    background-color:white
-}
-</style>
 
 # Vortex RTDE (Real Time Development Environment!)
 
