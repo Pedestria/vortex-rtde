@@ -12,4 +12,8 @@ types/
 
 test/LIVEPUSH.js
 
+test/GLOBAL_STYLES.css
+
+test/web/
+
 

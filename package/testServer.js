@@ -5,9 +5,7 @@ var express = require('express')
 var main = express()
 
 //create a server object:
-http.createServer(main).listen(8080,null,function() {
-    
-}); 
+var server = http.createServer(main);
 
 //the server object listens on port 8080
 
@@ -17,6 +15,6 @@ main.use(express.static(path.resolve(__dirname,'./test')))
 
 const {LivePush} = require('./lib/live/LivePush')
 
-new LivePush('',path.resolve(__dirname,'./test/live.html'),'./test/web/Main.jsx',main);
+new LivePush('',path.resolve(__dirname,'./test/live.html'),'./test/web/Main.jsx',main,server,8080,true);
 
 

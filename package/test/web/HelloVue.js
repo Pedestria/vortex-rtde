@@ -9,12 +9,12 @@ var app = new Vue({
     el:'#app',
     render,
     data: {
-        message: 'FUCK WEBPACK DEV SERVER!!!!'
+        message: 'FUCK WEBPACK DEV SERVER!!!!!!! Hell yeah!!!'
     }
 })
 
 export function Com (props){
     return (<div>
-        <h1>Hello From Com</h1>
+        <h1>Hello From Com!!! React Update!!!</h1>
     </div>);
 }

@@ -50,6 +50,10 @@ function minifyCss(styles) {
     return styles.replace(regexp,"");
 }
 
+var otherregex = new RegExp("(\\.s[ac]ss$)","g")
+
+console.log(otherregex)
+
 // let file = readFileSync("./test/web/styles.css").toString()
 
 // console.log(minifyCss(file))

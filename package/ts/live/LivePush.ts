@@ -1,5 +1,5 @@
 /*Vortex RTDE
- LivePush 0.4.9
+ LivePush 0.5.1
  Copyright Alex Topper 2020 
 */
 
@@ -17,9 +17,15 @@ import * as chalk from 'chalk'
 import * as chokidar from 'chokidar'
 import {diffLines, Change} from 'diff'
 import {platform} from 'os'
+import * as io from 'socket.io'
+
+var tag = "Reload"
+
 
 import * as _ from 'lodash'
 import cliSpinners = require('cli-spinners')
+import { Server } from 'http'
+import { v4 } from 'uuid'
 
 var resolveAsync =  promisify(resolve)
 var diffLinesAsync = promisify(diffLines)
@@ -29,6 +35,12 @@ var LooseParseOptions:ParserOptions = {sourceType:"module",allowReturnOutsideFun
 var loadedModules:string[] = []
 
 var queue:Array<LPEntry> = []
+
+var htmlClientDependenciesAdded:boolean
+
+var globalStylesFile = '/GLOBAL_STYLES.css'
+
+var stylesheets:CodeEntry[] = []
 
 
 var NON_JS_EXNTS = ['.png','.css','.scss']
@@ -40,7 +52,7 @@ var INITSTAGE = `
                         
     =============================
 `
-
+var IO:io.Server
 
 /**
  * 
@@ -57,10 +69,19 @@ export class LivePush{
      * @param {string} dirToEntry Dir To Entry. **(Resolved PLEASE!)**
      * @param {string} dirToHTML Dir to HTML Page **(Resolved PLEASE!)**
      * @param {string} dirToControlPanel Dir to Vortex Config Panel
-     * @param {Express} expressRouter
+     * @param {Express} expressRouter Server router
+     * @param {Server} server Node.js Server object (Used for binding socket.io)
+     * @param {number} portNum Port num for given node.js server to listen on.
+     * @param {boolean} preLoadHTMLPage Option to load from already prepared HTML page.
      */
-    constructor(name:string,dirToHTML:string,dirToEntry:string,expressRouter:Express){
+    constructor(name:string,dirToHTML:string,dirToEntry:string,expressRouter:Express,server:Server,portNum:number,preLoadHTMLPage:boolean){
         this.name = name;
+        IO = io(server);
+
+        htmlClientDependenciesAdded = preLoadHTMLPage;
+
+        server.listen(portNum);
+
         this.run(dirToHTML,dirToEntry,expressRouter);
     }
 
@@ -107,6 +128,10 @@ interface IMPORT {
 }
 
 class LiveTree {
+
+    cssFactory:any
+
+    dirToCssPlanet:string
 
     factory: any
 
@@ -217,6 +242,7 @@ interface LiveAddress {
 
 interface LiveContext {
 
+    
     provider:string
     addresses:Array<string>
 
@@ -497,6 +523,7 @@ function TreeBuilder(name:string,currentBranch:LiveAddress&LiveBranch|LiveTree,t
                     if(module){
                         if(module instanceof LiveCSS){
                             context = new CSSContext();
+                            context.provider = name
                         }
                         else {
                             context = new ModuleContext();
@@ -535,7 +562,7 @@ function TreeBuilder(name:string,currentBranch:LiveAddress&LiveBranch|LiveTree,t
 
 
 }
-/**
+/**Traverses Branch and Builds Imports/Requests
  * 
  * @param {LPEntry} entry 
  * @param {LiveBranch&LiveAddress|LiveTree} currentBranch 
@@ -655,11 +682,7 @@ async function RecursiveTraverse(branch:LiveModule,liveTree:LiveTree,queue:LPEnt
 }
 
 function fetchLPEntry(entry_name:string){
-    for(let ent of queue){
-        if(ent.name === entry_name){
-            return ent
-        }
-    }
+    return queue.find(entry => entry.name === entry_name);
 }
 
 /**
@@ -696,11 +719,7 @@ function fetchAddressFromTree(addressID:string,tree_OR_branch:LiveTree|LiveModul
 }
 
 function loadRequestFromAddress(address:LiveAddress,context_ID:string){
-    for(let request of address.requests){
-        if(request.contextID === context_ID){
-            return request
-        }
-    }
+    return address.requests.find(request => request.contextID === context_ID)
 }
 
 function normalizeModuleName(name:string){
@@ -828,10 +847,15 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
                     }
                 }
             }
+        } else if (context instanceof CSSContext) {
+            stylesheets.push({name:context.provider,code:(await fs.readFile(context.provider)).toString()});
         }
     }
 
-    let factory:string = `var loadedModules = [];
+    var STYLENAME = `${path.dirname(dirToHtml)}${globalStylesFile}`
+
+    let factory:string = `
+    var loadedModules = [];
     var loadedExportsByModule = {};
   
     function loadExports(module0, namespace) {
@@ -940,12 +964,143 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
       });
       loadedModules.push(mod_name);
     }
+
+    ${stylesheets.length > 0? ` 
+    var cssPlanet = document.createElement("link");
+    cssPlanet.rel = "stylesheet";
+    cssPlanet.href = "${'.'+globalStylesFile}";
+    document.head.appendChild(cssPlanet);
+    ` : ''}
   
     return loadExports('${platform() === "win32"? ROOT2 : ROOT}');`
 
+    let styleFactory = `
+    var loadedModules = [];
+    var loadedExportsByModule = {};
+  
+    function loadExports(module0, namespace) {
+      if (loadedModules.includes(module0)) {
+        if (namespace && !loadedExportsByModule[module0].cachedExports.exports) {
+          var namespace0 = {};
+          Object.defineProperty(namespace0, namespace, {
+            writable: false,
+            enumerable: true,
+            value: loadedExportsByModule[module0].cachedExports
+          });
+          var obj = Object.entries(loadedExportsByModule[module0].cachedExports).concat(Object.entries(namespace0));
+          return Object.fromEntries(obj);
+        } else if(namespace && loadedExportsByModule[module0].cachedExports.exports) {
+          var namespace0 = {};
+          Object.defineProperty(namespace0, namespace, {
+            writable: false,
+            enumerable: true,
+            value: loadedExportsByModule[module0].cachedExports.exports
+          });
+          console.log(namespace0)
+          return namespace0;
+        }
+        else {
+          return loadedExportsByModule[module0].cachedExports;
+        }
+      } else {
+        //Named Exports
+        var exports = {}; //Default Export
+  
+        var module = {};
+  
+        live_modules[module0](loadExports,exports,module);
+  
+        if (module0.includes('./')) {
+          var obj = {};
+          Object.defineProperty(obj, namespace, {
+            value: module,
+            enumerable: true
+          });
+  
+          if (namespace) {
+            var exps = Object.assign(exports, obj);
+            cacheExports(module0, exps);
+            return exps;
+          } else {
+            var exps = Object.assign(exports, module.exports);
+            cacheExports(module0, exps);
+            return exps;
+          }
+        } else {
+          if (namespace && module.exports && Object.entries(module).length > 1) {
+            var finalNamespace = {};
+            Object.defineProperty(finalNamespace, namespace, {
+              value: exports,
+              enumerable: true,
+              writable: false
+            });
+            var entries = Object.entries(exports).concat(Object.entries(finalNamespace));
+            var exps = Object.fromEntries(entries);
+            cacheExports(module0, exports);
+            return exps;
+  
+          }else if (namespace && module.exports && Object.entries(module).length === 1){
+            var finalName = {};
+            cacheExports(module0,module);
+            Object.defineProperty(finalName,namespace, {
+              value:module.exports,
+              enumerable:true,
+              writable:false
+            });
+            return finalName
+  
+        } else if(namespace && !module.exports){
+          var finalNamespac1 = {};
+          Object.defineProperty(finalNamespac1,namespace, {
+            value:exports,
+            enumerable:true,
+            writable:false
+          })
+  
+          var entries = Object.entries(exports).concat(Object.entries(finalNamespac1))
+          cacheExports(module0,exports)
+          var exps = Object.fromEntries(entries)
+          return exps
+        } 
+        else if (Object.entries(exports).length > 0) {
+            cacheExports(module0, exports);
+            return exports;
+          } else if (module.exports && Object.entries(module).length > 0) {
+            cacheExports(module0, module);
+            return module;
+          }
+        }
+      }
+    }
+  
+    function cacheExports(mod_name, mod_exports) {
+      var o = new Object(mod_name);
+      Object.defineProperty(o, 'cachedExports', {
+        value: mod_exports,
+        writable: false
+      });
+      Object.defineProperty(loadedExportsByModule, mod_name, {
+        value: o
+      });
+      loadedModules.push(mod_name);
+    }
+    var cssPlanet = document.createElement("link");
+    cssPlanet.rel = "stylesheet";
+    cssPlanet.href = "${'.'+globalStylesFile}";
+    document.head.appendChild(cssPlanet);
+  
+    return loadExports('${platform() === "win32"? ROOT2 : ROOT}')`
+
+    if(stylesheets.length > 0){
+        await fs.writeFile(STYLENAME,stylesheets.map(entry => entry.code).join('\n'));
+        liveTree.dirToCssPlanet = STYLENAME;
+    }
+
     let parsedFactory =  (await parseAsync(factory,{sourceType:'module',parserOpts:{allowReturnOutsideFunction:true}})).program.body
+    let parsedCSSFactory = (await parseAsync(styleFactory,{sourceType:'module',parserOpts:{allowReturnOutsideFunction:true}})).program.body
 
     liveTree.factory = parsedFactory;
+    liveTree.cssFactory = parsedCSSFactory;
 
     
     let buffer:t.ObjectProperty[] = []
@@ -959,8 +1114,9 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
     let final0 = t.objectExpression(buffer);
 
     let final1 = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier('live_modules')],t.blockStatement(parsedFactory)),[final0])])))
-
-    await appendToHTMLPage(dirToHtml,final1.code);
+    if(!htmlClientDependenciesAdded){
+        await appendToHTMLPage(dirToHtml,final1.code);
+    }
 
     return liveTree;
 
@@ -993,22 +1149,28 @@ async function appendToHTMLPage(dirToHTML:string,livePushPackage:string){
 
 }
 
+var CSSREGEX = /\.css$/
+
 async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
 
-    const watcher = ora({prefixText:'Watching Files...',spinner:cliSpinners.bounce})
+    var reloadcount:number = 0;
+
+    reloadHTML(true,tag+"0");
+
+    const watcher = ora({prefixText:'Watching Files...',spinner:cliSpinners.circleHalves})
 
     var TREE = Tree
 
     const pushStage = ora({prefixText:chalk.yellowBright('Pushing...'),spinner:cliSpinners.bouncingBar});
 
     // Modules to Watch (Includes Entry Point!)
-    var modulesToWatch = loadedModules.filter(filename => filename.includes('./'));
+    var modulesAndStylesToWatch = loadedModules.filter(filename => filename.includes('./')).concat(stylesheets.map(entry => entry.name));
 
     var Watcher = new chokidar.FSWatcher({persistent:true})
 
     TREE.preProcessQueue = TREE.preProcessQueue.filter(entry => entry.name.includes('./'));
 
-    Watcher.add(modulesToWatch);
+    Watcher.add(modulesAndStylesToWatch);
 
     watcher.start();
 
@@ -1018,31 +1180,46 @@ async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
         watcher.stop();
         pushStage.start();
 
-        updateTree(filename,TREE,TREE.preProcessQueue,htmlDir).then(({liveTree,delta}) => {
-            TREE = liveTree;
+        if(CSSREGEX.test(filename)){
+            updateCSS(filename,TREE.dirToCssPlanet).then(() => {
+                pushStage.succeed();
+                console.log(chalk.redBright('Successfully Pushed CSS Changes!'));
+                reloadcount += 1
+                reloadHTML(false,tag+reloadcount);
+                watcher.start();
+            }).catch(err => console.log(err));
+        } else if(isModule(filename)){
 
-            if(delta.length > 0){
-                let newModulesToWatch = delta.filter(filename => filename.includes('./'));
+            updateTree(filename,TREE,TREE.preProcessQueue,htmlDir).then(({liveTree,delta}) => {
+                TREE = liveTree;
 
-                if(newModulesToWatch.length > 0){
-                    Watcher.add(newModulesToWatch);
-                    console.log('Watching new modules:'+newModulesToWatch.join(','));
+                if(delta.length > 0){
+                    let newModulesToWatch = delta.filter(filename => filename.includes('./'));
+
+                    if(newModulesToWatch.length > 0){
+                        Watcher.add(newModulesToWatch);
+                        console.log('Watching new modules:'+newModulesToWatch.join(','));
+                    }
+
+                    console.log('New modules added to project:'+delta.join(','))
                 }
-
-                console.log('New modules added to project:'+delta.join(','))
-            }
-            pushStage.succeed();
-            console.log(chalk.greenBright("Successfully Pushed Changes!"))
-            watcher.start();
-        }).catch(err => {
-            console.log(err)
-        })
+                pushStage.succeed();
+                console.log(chalk.greenBright("Successfully Pushed Changes!"));
+                reloadcount += 1
+                reloadHTML(false,tag+reloadcount);
+                watcher.start();
+            }).catch(err => {
+                console.log(err);
+            });
+        }
     })
-
 
 }
 
+
 async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Array<CodeEntry>,dirToHTML:string) {
+
+    let priorloadedStyles:string[] = new Array<string>(...stylesheets.map(entry => entry.name))
 
     let priorLoadedModules:string[] = new Array<string>(...loadedModules);
     
@@ -1062,6 +1239,8 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
 
     fetchLPEntry(filename).ast = AST;
 
+    var delta:string[] = [];
+
     if(REQUESTDIFF.length > 0){
 
         let REMOVED_OR_MODIFIED_IMPORTNAMES:string[] = [];
@@ -1071,7 +1250,13 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
         for(let reqDiff of REQUESTDIFF){
             //Import has been added!
             if(reqDiff.added){
-                if(liveTree.contextExists(reqDiff.source)){
+                if(liveTree.contextExists(reqDiff.resolvedSource)){
+                    //If Css is added already, continue!!!
+                    if(CSSREGEX.test(reqDiff.source)){
+                        let context:CSSContext = liveTree.loadContext(reqDiff.resolvedSource);
+                        context.addresses.push(filename);
+                        continue;
+                    }
                     let context = liveTree.loadContext(reqDiff.resolvedSource)
                     let module = fetchAddressFromTree(filename,liveTree)
                     let cntRqt:ContextRequest = {contextID:context.provider,requests:reqDiff.newRequests,type:'Module',namespaceRequest:reqDiff.namespace};
@@ -1088,8 +1273,21 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
                     if(isModule(NAME)){
                         newModule = new LiveModule(NAME);
                     }else{
-                        if(NAME.includes('.css')){
-                            newModule = new LiveCSS(NAME);
+                        //If new Css module is added to system, continue!!!
+                        if(CSSREGEX.test(NAME)){
+                            let cssContext = new CSSContext();
+                            cssContext.provider = reqDiff.resolvedSource;
+                            cssContext.addresses.push(filename);
+                            liveTree.contexts.push(cssContext);
+
+                            if(liveTree.factory !== liveTree.cssFactory){
+                                liveTree.factory = liveTree.cssFactory;
+                            }
+
+                            delta.push(NAME);
+
+                            stylesheets.push({name:NAME,code:(await fs.readFile(NAME)).toString()});
+                            continue;
                         }
                     }
 
@@ -1110,7 +1308,7 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
                                 await RecursiveTraverse(newModule,liveTree,queue);
                             }
                         } else{
-                            let libloc = await resolveNodeLibrary(NAME)
+                            let libloc = await resolveNodeLibrary(NAME);
                             newModule.libLoc = libloc;
                             let ENTRY:LPEntry = {name:NAME,ast:await parseAsync((await fs.readFile(libloc)).toString(),{sourceType:'module'})}
                             queue.push(ENTRY)
@@ -1141,6 +1339,16 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
                 }
                 //Import has been removed!
             } else if(reqDiff.removed){
+                if(CSSREGEX.test(reqDiff.source)){
+                    let cssContext:CSSContext = liveTree.loadContext(reqDiff.resolvedSource);
+                    cssContext.removeAddress(filename);
+                    if(cssContext.addresses.length === 0){
+                        liveTree.removeContext(reqDiff.resolvedSource);
+                        stylesheets.filter(entry => entry.name !== reqDiff.resolvedSource);
+                    } 
+                    continue;
+                }
+
                 REMOVED_OR_MODIFIED_IMPORTNAMES.push(reqDiff.source);
                 let context = liveTree.loadContext(reqDiff.resolvedSource);
                 let module:LiveModule = fetchAddressFromTree(filename,liveTree);
@@ -1156,13 +1364,13 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
                 let context = liveTree.loadContext(reqDiff.resolvedSource);
                 let contextRequest = fetchAddressFromTree(filename,liveTree).requests.find(contextrequest => contextrequest.contextID === context.provider);
                 contextRequest.requests = contextRequest.requests.concat(reqDiff.newRequests);
-                contextRequest.requests.filter(request => !reqDiff.removedRequests.includes(request));
+                contextRequest.requests = contextRequest.requests.filter(request => !reqDiff.removedRequests.includes(request));
 
                 await buildImports(AST,contextRequest,context,NEWMEMORYIMPORTS);
             }
         }
 
-        let OLDMEMORYIMPORTS = liveTree.loadMemory(filename).imports.filter(IMPORT => !REMOVED_OR_MODIFIED_IMPORTNAMES.includes(IMPORT.name))
+        let OLDMEMORYIMPORTS = liveTree.loadMemory(filename).imports.filter(IMPORT => !REMOVED_OR_MODIFIED_IMPORTNAMES.includes(IMPORT.name));
 
         for(let imp of OLDMEMORYIMPORTS){
             await buildImportFromMemory(AST,imp.varDeclaration);
@@ -1180,8 +1388,6 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
     //Replace Module in Buffer!! Technically same as HMR.
     liveTree.moduleBuffer.find(value => value.key.value === updatedModule.key.value).value = updatedModule.value;
 
-    var delta:string[] = [];
-
     //If new modules were added on push!!
     if(loadedModules.length > priorLoadedModules.length){
         let newloadedModules = loadedModules.filter(module => !priorLoadedModules.includes(module));
@@ -1197,6 +1403,14 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
             let newModule = t.objectProperty(t.stringLiteral(module),t.callExpression(t.identifier(''),[t.functionExpression(null,[t.identifier('loadExports'),t.identifier('exports'),t.identifier('module')],t.blockStatement(Entry.ast.program.body))]));
 
             liveTree.moduleBuffer.push(newModule);
+        }
+    }
+
+    if(priorloadedStyles.length < stylesheets.map(entry => entry.name).length){
+        let cssPlanetloc = path.dirname(dirToHTML)+globalStylesFile;
+        await fs.writeFile(cssPlanetloc,stylesheets.map(entry => entry.code).join('\n'));
+        if(!liveTree.dirToCssPlanet){
+            liveTree.dirToCssPlanet = cssPlanetloc;
         }
     }
 
@@ -1439,13 +1653,27 @@ function removeImportsAndExportsFromAST(ast:t.File){
 async function processJSForRequests(code:string){
 
     let commentregex:RegExp = /(\/\/.*)|(\/\*(.|\n)*\*\/)/g
-    let requestregex:RegExp = /(import ((['|"][\w\/.]+['|"])|({[\w\W,]+} from ['|"][\w\/.]+['|"])|(\w+)[,| ](?:(?<=,)( {\w+} from ['|"][\w\/.]+['|"])|(from ['|"]\w+['|"]))))|((const|var|let)( +[\w$!]+ *= *require\(['|"][\w\/.]+['|"]\)))/g
+    let requestregex:RegExp = /(import ((['|"][\w\/.]+['|"])|( *{[\w\W,]+} from ['|"][\w\/.]+['|"])|(\w+ *[, ] *(?:(?<=,)( *{[\w, ]+} from ['|"][\w\/.]+['|"])|(?<!,)(from ['|"][\w\/.]+['|"]))|(from ['|"]\w+['|"])))|((const|var|let)( +[\w$!]+ *= *require\(['|"][\w\/.]+['|"]\))))/g
 
     let newCode = code.replace(commentregex,"");
 
     let matches = newCode.match(requestregex);
+
     return matches === null? "" : matches.join("\n");
     
+}
+
+async function updateCSS(filename:string,cssPlanetLocation:string){
+
+    let newCSS = (await fs.readFile(filename)).toString();
+    stylesheets.find(entry => entry.name === filename).code = newCSS;
+    await fs.writeFile(cssPlanetLocation,stylesheets.map(entry => entry.code).join('\n'));
+
+    return;
+}
+
+function reloadHTML(initStage:boolean,tag:string){
+    IO.emit("LP_RELOAD",tag);
 }
 
 

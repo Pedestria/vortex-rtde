@@ -1,19 +1,19 @@
-import React, {Component, Fragment} from 'react'
+import React, {Component} from 'react'
 import ReactDOM from 'react-dom'
 // const OtherThing = React.lazy(() => import('./Com.jsx'))
-// import './styles.css'
+import './styles.css'
 import Logo from '../img/1200px-React-icon.png'
 import _ from 'lodash'
 import {Com} from './HelloVue.js'
 
 class MainComponent extends Component{
-
     state = {bird:"bo bo bo bo bo bo bo"};
+
 
     render(){
         return(
             <div>
-                <h1>Test WebApp</h1>
+                <h1>So Explicit</h1>
                 <p>I am a Paragraph Describing Stuff!</p>
                 <OtherComponent/>
                 <Com/>
