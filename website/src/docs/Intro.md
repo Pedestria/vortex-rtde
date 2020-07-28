@@ -1,9 +1,10 @@
+![Vortex Logo](../../../package/public/vortex-bright-logo.png)
+
 Why Vortex - RTDE?
 ===
 
 Vortex is a real time development environment (hence the name RTDE), and a web application bundler. (Like Webpack, Rollup.js, Parcel, Browserify, etc.)
 
-IN DEVELOPENT!!!!
 
 
 

@@ -1,2 +1,2 @@
 @ECHO off
-yarn tsc &&yarn tsc -p tsconfig-fold.json && node lib/Index.js
+yarn tsc -p tsconfig-fold.json && yarn rollup test/vortex/Index.js --file dist/vortex-rtde.js --format cjs --plugin terser

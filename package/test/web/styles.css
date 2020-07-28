@@ -1,12 +1,22 @@
-/* @font-face {
+@font-face {
     font-family: Avenir;
-    src: url('./AvenirLTStd-Medium.otf');
-} */
+    src: url('./web/AvenirLTStd-Medium.otf');
+}
 
 h1 {
     font-size: 25px;
+    color:green;
+    font-family: Avenir;
 }
 
 body {
-    background-color: green;
+    background-color: bisque;
+    font-family: Avenir;
+}
+
+button.stupid {
+    font-family: Avenir;
+    background-color: aqua;
+    height: 50px;
+    width: 100px;
 }

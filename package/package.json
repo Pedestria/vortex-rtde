@@ -5,12 +5,9 @@
   "license": "MIT",
   "description": "A real time web application/js library development environment.",
   "main": "./lib/Index.js",
-  "scripts": {
-    "cleanup": "prettier --write dep-graph.json",
-    "roll": "rollup -c",
-    "minify": "terser out/vortex.bundle.js --compress -o out/vortex.min.js",
-    "babel": "babel test/web --out-dir test/bin"
-  },
+  "files": [
+    "./lib/live/LivePush.js"
+  ],
   "types": "./index.d.ts",
   "private": true,
   "dependencies": {
@@ -86,6 +83,7 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "rollup": "^2.16.1",
+    "rollup-plugin-terser": "^6.1.0",
     "stylus": "^0.54.7",
     "vue": "^2.6.11",
     "vue-template-compiler": "^2.6.11"

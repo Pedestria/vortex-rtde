@@ -1,5 +1,5 @@
 
-<img src="./package/public/vortex-bright-logo.png" style="background-color:white" alt="Vortex Logo">
+<img src="./package/public/vortex-dark-logo.png" style="background-color:#0000" alt="Vortex Logo">
 
 
 # Vortex RTDE (Real Time Development Environment!)
