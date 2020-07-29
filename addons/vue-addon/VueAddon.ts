@@ -1,5 +1,4 @@
-import { VortexAddon, ExportsHandler, VortexAddonModule, CustomDependencyGrapher, CustomGraphDependencyMapObject, Grapher, ImportsTransformer, Transformer, CompilerCustomDependencyMap } from "../Addon";
-import * as API from '../API'
+import {VortexRTDEAPI} from "../../package";
 import {readFile} from 'fs/promises'
 import * as VueUtils from '@vue/component-compiler-utils'
 import { v4 } from "uuid";
@@ -8,21 +7,24 @@ import * as sass from 'node-sass'
 import * as less from 'less'
 // import {nodes} from 'stylus'
 import * as Pug from 'pug'
+import {promisify} from 'util'
+
+var renderAsync = promisify(sass.render)
 // import * as Bluebird from 'bluebird'
 
 // const compileStylus = Bluebird.Promise.promisify(stylus.render)
 
-export class VVueAddon extends VortexAddon {
-    constructor(name:string,handler:ExportsHandler){
+export class VVueAddon extends VortexRTDEAPI.Addons.VortexAddon {
+    constructor(name:string,handler:VortexRTDEAPI.Addons.ExportsHandler){
         super(name,handler);
     }
 }
 
-class VueComponentDependency extends API.Dependency{
+class VueComponentDependency extends VortexRTDEAPI.Dependency{
 
     componentName:string
 
-    constructor(name:string,initImportLocation:API.MDImportLocation){
+    constructor(name:string,initImportLocation:VortexRTDEAPI.MDImportLocation){
         super(name,initImportLocation);
         //Finds component name from Import location! (Assuming all locations import it the same way!!!)
         this.componentName = initImportLocation.modules[0].name
@@ -31,15 +33,15 @@ class VueComponentDependency extends API.Dependency{
 }
 
 
-const SearchAndGraphInVueDep:Grapher = async (Dependency:API.Dependency,Graph:API.VortexGraph,planetName?:string) => {
+const SearchAndGraphInVueDep:VortexRTDEAPI.Addons.Grapher = async (Dependency:VortexRTDEAPI.Dependency,Graph:VortexRTDEAPI.VortexGraph,planetName?:string) => {
 
     let buffer = await readFile(Dependency.name)
     let file = buffer.toString()
     var {script,styles,template} = VueUtils.parse({compiler:VueTemplateCompiler,source:file,filename:Dependency.name})
     let code = await CompileComponent({script,styles,template},Dependency.name)
-    const entry = new API.QueueEntry(Dependency.name,API.ParseCode(code,{sourceType:"module"}))
-    API.addQueueEntry(entry)
-    API.NativeDependencyGrapher(API.loadQueueEntry(entry.name),Graph,planetName) 
+    const entry = new VortexRTDEAPI.QueueEntry(Dependency.name,VortexRTDEAPI.ParseCode(code,{sourceType:"module"}))
+    VortexRTDEAPI.addQueueEntry(entry)
+    VortexRTDEAPI.NativeDependencyGrapher(VortexRTDEAPI.loadQueueEntry(entry.name),Graph,planetName) 
 
     return;
 
@@ -53,7 +55,7 @@ const SearchAndGraphInVueDep:Grapher = async (Dependency:API.Dependency,Graph:AP
 
 async function CompileComponent(component:RawVueComponent,DependencyName:string){
 
-    var cssPlanet:boolean = API.ControlPanel.cssPlanet
+    var cssPlanet:boolean = VortexRTDEAPI.ControlPanel.cssPlanet
 
     var scopeID = `data-v-${v4()}`
 
@@ -71,7 +73,7 @@ async function CompileComponent(component:RawVueComponent,DependencyName:string)
 
     const renderFuncBody = VueUtils.compileTemplate({source:template,compiler:VueTemplateCompiler,filename:DependencyName,transformAssetUrls:true})
 
-    const ASTRenderFuncBody = API.ParseCode(renderFuncBody.code,{allowReturnOutsideFunction:true})
+    const ASTRenderFuncBody = VortexRTDEAPI.ParseCode(renderFuncBody.code,{allowReturnOutsideFunction:true})
 
     let styled = component.styles[0] !== undefined
 
@@ -83,7 +85,7 @@ async function CompileComponent(component:RawVueComponent,DependencyName:string)
         if(component.styles[0].lang !== undefined){
             switch(component.styles[0].lang){
                 case 'scss'||'sass':
-                    cssResult = sass.renderSync({file:component.styles[0].content}).css.toString()
+                    cssResult = (await renderAsync({file:component.styles[0].content})).css.toString()
                     break;
                 case 'less':
                     cssResult = (await less.render(component.styles[0].content)).css
@@ -99,23 +101,23 @@ async function CompileComponent(component:RawVueComponent,DependencyName:string)
         }
     }
 
-    const MainAST = API.ParseCode((await API.BabelCompile(component.script.content)).code,{sourceType:"module"})
+    const MainAST = VortexRTDEAPI.ParseCode((await VortexRTDEAPI.BabelCompile(component.script.content)).code,{sourceType:"module"})
 
     let index = findDefaultExportExpression()
 
     let props = MainAST.program.body[index].declaration.properties
 
     for(let prop of props){
-        if(prop.type === 'ObjectProperty' && prop.key === API.BabelTypes.identifier('render')){
-            prop.value = API.BabelTypes.identifier('render')
+        if(prop.type === 'ObjectProperty' && prop.key === VortexRTDEAPI.ESTreeTypes.identifier('render')){
+            prop.value = VortexRTDEAPI.ESTreeTypes.identifier('render')
             return;
         }
     }
-    props.push(API.BabelTypes.objectProperty(API.BabelTypes.identifier('render'),API.BabelTypes.identifier('render')))
+    props.push(VortexRTDEAPI.ESTreeTypes.objectProperty(VortexRTDEAPI.ESTreeTypes.identifier('render'),VortexRTDEAPI.ESTreeTypes.identifier('render')))
 
     if(styled){
         if(scoped){
-            props.push(API.BabelTypes.objectProperty(API.BabelTypes.identifier('_scopeId'),API.BabelTypes.stringLiteral(scopeID)))
+            props.push(VortexRTDEAPI.ESTreeTypes.objectProperty(VortexRTDEAPI.ESTreeTypes.identifier('_scopeId'),VortexRTDEAPI.ESTreeTypes.stringLiteral(scopeID)))
         }
     }
 
@@ -124,12 +126,12 @@ async function CompileComponent(component:RawVueComponent,DependencyName:string)
     MainAST.program.body.reverse()
 
     if(styled && !cssPlanet){
-        MainAST.program.body.push(API.InjectCSS({DEPNAME:API.BabelTypes.stringLiteral(DependencyName),CSS:API.BabelTypes.stringLiteral(cssResult)}))
+        MainAST.program.body.push(VortexRTDEAPI.InjectCSS({DEPNAME:VortexRTDEAPI.ESTreeTypes.stringLiteral(DependencyName),CSS:VortexRTDEAPI.ESTreeTypes.stringLiteral(cssResult)}))
     } else if(styled && cssPlanet){
-        API.pipeCSSContentToBuffer(cssResult)
+        VortexRTDEAPI.pipeCSSContentToBuffer(cssResult)
     }
 
-    return API.GenerateCode(MainAST).code
+    return VortexRTDEAPI.GenerateCode(MainAST).code
 
 
     function findDefaultExportExpression () {
@@ -151,35 +153,35 @@ interface RawVueComponent {
     template:VueUtils.SFCBlock
 }
 
-const TransformVueComponentImports:ImportsTransformer = (AST:API.BabelTypes.File,Dependency:VueComponentDependency,CurrentImportLocation:API.MDImportLocation) => {
+const TransformVueComponentImports:VortexRTDEAPI.Addons.ImportsTransformer = (AST:VortexRTDEAPI.ESTreeTypes.File,Dependency:VueComponentDependency,CurrentImportLocation:VortexRTDEAPI.MDImportLocation) => {
 
     //Lie to Native Transformer to allow transformations!!
 
-    let newDep = new API.EsModuleDependency(Dependency.name,Dependency.importLocations[0]);
+    let newDep = new VortexRTDEAPI.EsModuleDependency(Dependency.name,Dependency.importLocations[0]);
     newDep.importLocations = Dependency.importLocations;
-    return API.TransformNativeImports(AST,CurrentImportLocation,newDep)
+    return VortexRTDEAPI.TransformNativeImports(AST,CurrentImportLocation,newDep)
 
 }
 
-const TransformVueComponentExports:Transformer = (AST:API.BabelTypes.File,Dependency:API.Dependency) => {
+const TransformVueComponentExports:VortexRTDEAPI.Addons.ExportsTransformer = (AST:VortexRTDEAPI.ESTreeTypes.File,Dependency:VortexRTDEAPI.Dependency) => {
 
-    API.TraverseCode(AST,{
+    VortexRTDEAPI.TraverseCode(AST,{
         ExportDefaultDeclaration: function(path){
-            path.replaceWith(API.BabelTypes.assignmentExpression('=',API.BabelTypes.memberExpression(API.BabelTypes.identifier('shuttle_exports'),API.BabelTypes.identifier('MAPPED_DEFAULT')),path.node.declaration))
+            path.replaceWith(VortexRTDEAPI.ESTreeTypes.assignmentExpression('=',VortexRTDEAPI.ESTreeTypes.memberExpression(VortexRTDEAPI.ESTreeTypes.identifier('shuttle_exports'),VortexRTDEAPI.ESTreeTypes.identifier('MAPPED_DEFAULT')),path.node.declaration))
         }
     })
 
 }
 
 
-var EXPORTS = new ExportsHandler()
-var MODULE_OBJECT:VortexAddonModule = {};
+var EXPORTS = new VortexRTDEAPI.Addons.ExportsHandler();
+var MODULE_OBJECT:VortexRTDEAPI.Addons.VortexAddonModule = {};
 
-var VUE_DEPENDENCY:CustomGraphDependencyMapObject = {extension:'.vue',dependency:VueComponentDependency, bundlable:true}
+var VUE_DEPENDENCY:VortexRTDEAPI.Addons.CustomGraphDependencyMapObject = {extension:'.vue',dependency:VueComponentDependency, bundlable:true}
 
-var VUE_GRAPHER:CustomDependencyGrapher = {name:'.vue',grapher:SearchAndGraphInVueDep}
+var VUE_GRAPHER:VortexRTDEAPI.Addons.CustomDependencyGrapher = {name:'.vue',grapher:SearchAndGraphInVueDep}
 
-var VUE_TRANSFORMERS:CompilerCustomDependencyMap = {extname:'.vue',importsTransformer:TransformVueComponentImports,exportsTransformer:TransformVueComponentExports}
+var VUE_TRANSFORMERS:VortexRTDEAPI.Addons.CompilerCustomDependencyMap = {extname:'.vue',importsTransformer:TransformVueComponentImports,exportsTransformer:TransformVueComponentExports}
 
 
 MODULE_OBJECT.JS_EXNTS = ['.vue']

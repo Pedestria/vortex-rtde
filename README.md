@@ -1,5 +1,5 @@
 
-<img src="./package/public/vortex-dark-logo.png" style="background-color:#0000" alt="Vortex Logo">
+<img src="./package/public/vortex-bright-logo.png" style="background-color:#0000" alt="Vortex Logo">
 
 
 # Vortex RTDE (Real Time Development Environment!)
@@ -8,11 +8,11 @@
 
 ## Checklist:
 
-- Design Logo for Vortex
-
 - Build docs webpage.
 
 - (Add UMD Bundle Mode support for libraries)
+
+- Common JS IIFE
 
 - Add syntax word to change name of Planet.
 

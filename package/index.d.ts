@@ -1,6 +1,6 @@
 
 import {LivePush} from './ts/live/LivePush'
-
+import VortexRTDEAPI from './ts/API'
 declare namespace VortexRTDE {
 
     /**Creates a star Package
@@ -9,7 +9,7 @@ declare namespace VortexRTDE {
  */
   export function createStarPackage(resolvedPath:string):Promise<void>
 
-  export {LivePush}
+  export {LivePush, VortexRTDEAPI}
 
 }
 

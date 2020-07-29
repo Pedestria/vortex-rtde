@@ -4,7 +4,7 @@
   "author": "Alex Topper",
   "license": "MIT",
   "description": "A real time web application/js library development environment.",
-  "main": "./lib/Index.js",
+  "main": "./dist/vortex-rtde.js",
   "files": [
     "./lib/live/LivePush.js"
   ],
