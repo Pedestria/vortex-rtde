@@ -1,10 +1,43 @@
-import { VortexAddon } from "./ts/Addon";
+import VortexRTDEAPI from "./ts/API";
+
+interface LivePushOptions {
+    /**
+     * Entry point for program!
+     * (Multiple Entry Point Support will come eventually!)
+     */
+    entry:string
+    /**
+     * Resolved Directory to Html
+     * @example
+     * path.resolve(__dirname,"./client/index.html")
+     */
+    dirToHTML:string
+    /**
+     * Directories to use when resolving file dependencies
+     */
+    fileDependencyDirs:Array<string>
+
+    /**
+     * Externals!
+     */
+
+    CDNImports:Array<CDNImport>
+}
+
+interface CDNImport{
+    libraryName:string
+    namespace:string
+}
 
     declare var Panel:{
         /**
          * Type of program to bundle for
          */
-        type:'app'|'library'|'live'
+        type:'app'|'library'
+        /**
+         * LivePush Config!
+         */
+        livePushOptions:LivePushOptions
         /**
          * The Mode of which to bundle the program in.
          */
@@ -38,7 +71,7 @@ import { VortexAddon } from "./ts/Addon";
         /**
          * Addon Objects to Add to Vortex RTDE
          */
-        addons:Array<VortexAddon>
+        addons:Array<VortexRTDEAPI.Addons.VortexAddon>
 
         /**
          * Libraries to NOT include in bundle. Links browser global to shuttle_exports.

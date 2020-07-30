@@ -1,5 +1,5 @@
 /*Vortex RTDE
- LivePush 0.5.1
+ LivePush 0.6.1
  Copyright Alex Topper 2020 
 */
 
@@ -11,13 +11,14 @@ import generate from '@babel/generator'
 import * as Parse5 from 'parse5'
 import * as resolve from 'resolve'
 import { promisify} from 'util'
-import {Express} from 'express'
+import {Express,static} from 'express'
 import * as ora from 'ora'
 import * as chalk from 'chalk'
 import * as chokidar from 'chokidar'
 import {diffLines, Change} from 'diff'
 import {platform} from 'os'
 import * as io from 'socket.io'
+import * as Panel from '../../vortex.panel'
 
 var tag = "Reload"
 
@@ -43,7 +44,8 @@ var globalStylesFile = '/GLOBAL_STYLES.css'
 var stylesheets:CodeEntry[] = []
 
 
-var NON_JS_EXNTS = ['.png','.css','.scss']
+var NON_JS_REGEX = /(\.css|\.ttf|\.png|\.jpe?g)$/g
+var fileRegex = /(\.ttf|\.png|\.jpe?g)/g
 
 var INITSTAGE = `
     ============================= 
@@ -52,6 +54,30 @@ var INITSTAGE = `
                         
     =============================
 `
+
+var controlPanelDIR:string
+
+var InternalLivePushOptions:{
+    externals:{
+        libraryName:string
+        namespace:string
+    }[]
+    entry:string
+    dirToHTML:string
+    fileDirectories:string[]
+};
+
+function readControlPanel(ControlPanelObject:typeof Panel):typeof InternalLivePushOptions{
+
+    return {
+        externals:ControlPanelObject.livePushOptions.CDNImports,
+        entry:ControlPanelObject.livePushOptions.entry,
+        dirToHTML:ControlPanelObject.livePushOptions.dirToHTML,
+        fileDirectories:ControlPanelObject.livePushOptions.fileDependencyDirs
+    }
+}
+
+
 var IO:io.Server
 
 /**
@@ -61,28 +87,27 @@ var IO:io.Server
  */
 export class LivePush{
 
-    name:string
-
     /**
      * 
-     * @param {string} name Name of Interpreter
-     * @param {string} dirToEntry Dir To Entry. **(Resolved PLEASE!)**
-     * @param {string} dirToHTML Dir to HTML Page **(Resolved PLEASE!)**
-     * @param {string} dirToControlPanel Dir to Vortex Config Panel
+     * @param {string} dirToControlPanel Resolved Dir to Vortex Control Panel
      * @param {Express} expressRouter Server router
      * @param {Server} server Node.js Server object (Used for binding socket.io)
      * @param {number} portNum Port num for given node.js server to listen on.
      * @param {boolean} preLoadHTMLPage Option to load from already prepared HTML page.
      */
-    constructor(name:string,dirToHTML:string,dirToEntry:string,expressRouter:Express,server:Server,portNum:number,preLoadHTMLPage:boolean){
-        this.name = name;
+    constructor(dirToControlPanel:string,expressRouter:Express,server:Server,portNum:number,preLoadHTMLPage:boolean){
+        controlPanelDIR = dirToControlPanel;
+        const Panel = require(dirToControlPanel);
+
+        InternalLivePushOptions = readControlPanel(Panel);
+        //Init Socket.Io
         IO = io(server);
 
         htmlClientDependenciesAdded = preLoadHTMLPage;
 
         server.listen(portNum);
 
-        this.run(dirToHTML,dirToEntry,expressRouter);
+        this.run(InternalLivePushOptions.dirToHTML,InternalLivePushOptions.entry,expressRouter);
     }
 
     /**
@@ -103,6 +128,11 @@ export class LivePush{
 
         initLiveDependencyTree(dirToEntry,dirToHTML).then(LiveTree => {
             router.get('/*',(req,res) => {res.sendFile(dirToHTML)});
+
+            for(let fileDir of InternalLivePushOptions.fileDirectories){
+                router.use(fileDir,static(path.resolve(path.dirname(controlPanelDIR),fileDir)))
+            }
+            
             initStage.stop();
             console.log(chalk.greenBright(INITSTAGE))
 
@@ -394,11 +424,11 @@ interface ContextRequest {
 
 function isModule(moduleName:string){
 
-    if(NON_JS_EXNTS.includes(path.extname(moduleName))){
+    if(NON_JS_REGEX.test(moduleName)){
         return false
     } else if (!path.extname(moduleName)){
         return true
-    } else if (path.extname(moduleName).includes('.js') || path.extname(moduleName).includes('.mjs')){
+    } else if (/\.m?jsx?$/g.test(moduleName)){
         return true
     }
 
@@ -495,16 +525,12 @@ function pushRequests(currentBranch:LiveAddress&LiveBranch|LiveTree,path:NodePat
 function TreeBuilder(name:string,currentBranch:LiveAddress&LiveBranch|LiveTree,tree:LiveTree,isTree:boolean,path:NodePath<t.ImportDeclaration>|NodePath<t.VariableDeclarator>){
 
             let module
-            var file:LiveFile
-
 
             if(isModule(name)){
                 name = name.includes('./')? addJSExtIfPossible(name) : name
                 module = new LiveModule(name);
             } else if(name.includes('.css')) {
                 module = new LiveCSS(name);
-            } else {
-                file = {fileLocation:name}
             }
 
             //If is live Branch
@@ -553,15 +579,17 @@ function TreeBuilder(name:string,currentBranch:LiveAddress&LiveBranch|LiveTree,t
                 }   
             }
 
-            if(!module){
-                currentBranch.fileBin.push(file)
-            }
-            else {
-                currentBranch.addBranch(module)
-            }
+            currentBranch.addBranch(module)
+        
 
 
 }
+
+function resolvePathToHTMLPage(resolvedPath:string){
+    return PATH.relative(PATH.dirname(InternalLivePushOptions.dirToHTML),PATH.resolve(PATH.dirname(controlPanelDIR),resolvedPath))
+}
+
+const PATH = path
 /**Traverses Branch and Builds Imports/Requests
  * 
  * @param {LPEntry} entry 
@@ -583,8 +611,13 @@ function TraverseAndTransform(entry:LPEntry,currentBranch:LiveBranch&LiveAddress
         // ES6 Imports
         ImportDeclaration: function(path) {
             let name = path.node.source.value.includes('./')? ResolveRelative(entry.name,path.node.source.value) : path.node.source.value
-            TreeBuilder(name,currentBranch,tree,isTree,path)
-            path.remove();
+            if(fileRegex.test(name)){
+                path.replaceWith(t.variableDeclaration("var",[t.variableDeclarator(t.identifier(path.node.specifiers[0].local.name),t.stringLiteral(resolvePathToHTMLPage(name)))]));
+                return;
+            }else{
+                TreeBuilder(name,currentBranch,tree,isTree,path);
+                path.remove();
+            }
         },
         //CommonJS Requires!
         VariableDeclarator: function(path){
@@ -1117,6 +1150,9 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
     if(!htmlClientDependenciesAdded){
         await appendToHTMLPage(dirToHtml,final1.code);
     }
+    else{
+        await fs.writeFile(path.dirname(dirToHtml)+'/LIVEPUSH.js',final1.code);
+    }
 
     return liveTree;
 
@@ -1180,6 +1216,8 @@ async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
         watcher.stop();
         pushStage.start();
 
+        console.log(filename);
+
         if(CSSREGEX.test(filename)){
             updateCSS(filename,TREE.dirToCssPlanet).then(() => {
                 pushStage.succeed();
@@ -1219,6 +1257,8 @@ async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
 
 async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Array<CodeEntry>,dirToHTML:string) {
 
+    console.log("Hello");
+
     let priorloadedStyles:string[] = new Array<string>(...stylesheets.map(entry => entry.name))
 
     let priorLoadedModules:string[] = new Array<string>(...loadedModules);
@@ -1235,7 +1275,7 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
 
     let AST:t.File = await parseAsync(newFile,{sourceType:'module',parserOpts:{strictMode:false}});
 
-    removeImportsAndExportsFromAST(AST);
+    removeImportsAndExportsFromAST(AST,filename);
 
     fetchLPEntry(filename).ast = AST;
 
@@ -1601,19 +1641,24 @@ async function diffRequests(changes:Change[],filename:string): Promise<RequestDi
             diff.removedRequests = diff.removedRequests.filter(value => !buffer.includes(value));
         }
     }
-
-    return possibleRequests
+    //Removes File Dependency diffs
+    return possibleRequests.filter(requestdiff => !fileRegex.test(requestdiff.source))
 
 }
 
-function removeImportsAndExportsFromAST(ast:t.File){
+function removeImportsAndExportsFromAST(ast:t.File,currentFile:string){
 
     let exportsToBeRolled:t.ExpressionStatement[] = []
     let defaultExport:t.ExpressionStatement
 
     traverse(ast,{
         ImportDeclaration: function(path) {
-            path.remove();
+            if(fileRegex.test(path.node.source.value)){
+                path.replaceWith(t.variableDeclaration("var",[t.variableDeclarator(t.identifier(path.node.specifiers[0].local.name),t.stringLiteral(resolvePathToHTMLPage(ResolveRelative(currentFile,path.node.source.value))))]))
+            }
+            else {
+                path.remove();
+            }
         },
         VariableDeclarator: function(path){
             if(path.node.init.type === "CallExpression" && path.node.init.callee.type === "Identifier" && path.node.init.callee.name === "require"){

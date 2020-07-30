@@ -1,9 +1,12 @@
 {
   "name": "@vortex-rtde/vue-addon",
   "version": "0.0.0",
-  "main": "index.js",
+  "main": "./VueAddon.js",
   "license": "MIT",
   "private": true,
+  "scripts": {
+    "types":"tsc ./VueAddon.ts"
+  },
   "dependencies": {
     "@vue/component-compiler-utils": "^3.2.0",
     "less": "^3.12.2",
@@ -12,6 +15,7 @@
     "vue-template-compiler": "^2.6.11"
   },
   "devDependencies": {
-    "@types/node-sass": "^4.11.1"
+    "@types/node-sass": "^4.11.1",
+    "typescript": "^3.9.7"
   }
 }

@@ -4,9 +4,15 @@
 }
 
 h1 {
-    font-size: 25px;
-    color:green;
+    font-size: 40px;
+    color:blueviolet;
     font-family: Avenir;
+}
+
+p {
+    font-size: 25px;
+    font-family: Avenir;
+    color: aquamarine;
 }
 
 body {
@@ -19,4 +25,12 @@ button.stupid {
     background-color: aqua;
     height: 50px;
     width: 100px;
+}
+
+img {
+    height:400px;
+}
+
+body {
+    background-color:#353535;
 }

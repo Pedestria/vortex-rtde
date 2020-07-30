@@ -2,9 +2,9 @@ import React, {Component} from 'react'
 import ReactDOM from 'react-dom'
 // const OtherThing = React.lazy(() => import('./Com.jsx'))
 import './styles.css'
-import Logo from '../img/1200px-React-icon.png'
 import _ from 'lodash'
 import {Com} from './HelloVue.js'
+import Logo from '../img/vortex-bright-logo.png'
 
 class MainComponent extends Component{
     state = {bird:"bo bo bo bo bo bo bo"};
@@ -13,7 +13,9 @@ class MainComponent extends Component{
     render(){
         return(
             <div>
+                <img src={Logo}></img>
                 <button className="stupid">Stupid Button</button>
+                <h1>LivePush Is AWESOME!</h1>
                 <h1>So Explicit</h1>
                 <p>I am a Paragraph Describing Stuff!</p>
                 <OtherComponent/>
@@ -23,7 +25,6 @@ class MainComponent extends Component{
                 {/* //<Suspense fallback={<h1>Loading...</h1>}> */}
                     {/* <OtherThing/> */}
                 {/* </Suspense> */}
-                {/* <img src={Logo}></img> */}
             </div>
         );
     } 
@@ -34,6 +35,7 @@ class OtherComponent extends Component {
     render(){
         return(
             <div>
+                <h1>Nothing Special</h1>
                 <h1>Other Component Here!</h1>
             </div>
         );

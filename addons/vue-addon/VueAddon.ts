@@ -14,7 +14,7 @@ var renderAsync = promisify(sass.render)
 
 // const compileStylus = Bluebird.Promise.promisify(stylus.render)
 
-export class VVueAddon extends VortexRTDEAPI.Addons.VortexAddon {
+class VVueAddon extends VortexRTDEAPI.Addons.VortexAddon {
     constructor(name:string,handler:VortexRTDEAPI.Addons.ExportsHandler){
         super(name,handler);
     }

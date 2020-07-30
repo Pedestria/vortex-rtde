@@ -15,6 +15,6 @@ main.use(express.static(path.resolve(__dirname,'./test')))
 
 const {LivePush} = require('./lib/live/LivePush')
 
-new LivePush('',path.resolve(__dirname,'./test/live.html'),'./test/web/Main.jsx',main,server,8080,true);
+new LivePush(path.resolve(__dirname,"./vortex.panel.js"),main,server,8080,true);
 
 
