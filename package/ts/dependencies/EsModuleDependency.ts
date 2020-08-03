@@ -16,7 +16,7 @@ export default class EsModuleDependency extends ModuleDependency {
 
     verifyImportedModules(entry:QueueEntry,currentImpLoc:MDImportLocation){
 
-        let modBuffer:Array<Module> = []
+        let modBuffer:Array<Module<keyof typeof ModuleTypes>> = []
 
         //let VDefImport = new RegExp('_VDefaultImport_')
         //let VNamImport = new RegExp('_VNamedImport_')
@@ -27,41 +27,41 @@ export default class EsModuleDependency extends ModuleDependency {
             ExportDefaultDeclaration : function(path) {
                     let defaultMod = path.node.declaration
                     let modid =  defaultMod.id.name
-                    modBuffer.push(new Module(modid,ModuleTypes.EsDefaultModule))
+                    modBuffer.push(new Module(modid,"EsDefaultModule"))
 
                     if(path.node.declaration.type === 'ClassDeclaration'){
                         let mod = path.node.declaration.id.name
-                        modBuffer.push(new Module(mod,ModuleTypes.EsDefaultModule))
+                        modBuffer.push(new Module(mod,"EsDefaultModule"))
                     }
                     if(path.node.declaration.type === 'FunctionDeclaration'){
                         let mod = path.node.declaration.id.name
-                        modBuffer.push(new Module(mod,ModuleTypes.EsDefaultModule))
+                        modBuffer.push(new Module(mod,"EsDefaultModule"))
                     }
 
                 },
             ExportNamedDeclaration : function(path){
                 if(path.node.declaration.type === 'VariableDeclaration'){
                     let mod = path.node.declaration.declarations[0].id.name
-                    modBuffer.push(new Module(mod,ModuleTypes.EsModule))
+                    modBuffer.push(new Module(mod,"EsModule"))
                 }
                 else if(path.node.declaration.type === 'ClassDeclaration'){
                     let mod = path.node.declaration.id.name
-                    modBuffer.push(new Module(mod,ModuleTypes.EsModule))
+                    modBuffer.push(new Module(mod,"EsModule"))
                 }
                 else if(path.node.declaration.type === 'FunctionDeclaration'){
                     let mod = path.node.declaration.id.name
-                    modBuffer.push(new Module(mod,ModuleTypes.EsModule))
+                    modBuffer.push(new Module(mod,"EsModule"))
                 }
                 else{
                         for (let ExportType of path.node.specifiers){
                             if (ExportType.type === 'ExportSpecifier'){
                                 let mod = ExportType.exported.name
-                                modBuffer.push(new Module(mod,ModuleTypes.EsModule))
+                                modBuffer.push(new Module(mod,"EsModule"))
                             }
                         }
                             
                         let mod = path.node.declaration.id.name
-                        modBuffer.push(new Module(mod,ModuleTypes.EsModule))
+                        modBuffer.push(new Module(mod,"EsModule"))
                         }
                     }
                 }

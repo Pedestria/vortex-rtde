@@ -18,7 +18,7 @@ export default class CjsModuleDependency extends ModuleDependency{
 
     verifyImportedModules(entry:QueueEntry,currentImpLoc:MDImportLocation){
 
-        let modBuffer:Array<Module> = []
+        let modBuffer:Array<Module<keyof typeof ModuleTypes>> = []
 
         //console.log("Calling" + file)
 

@@ -11,7 +11,7 @@ import generate from '@babel/generator'
 import * as Parse5 from 'parse5'
 import * as resolve from 'resolve'
 import { promisify} from 'util'
-import {Express,static} from 'express'
+import * as e from 'express'
 import * as ora from 'ora'
 import * as chalk from 'chalk'
 import * as chokidar from 'chokidar'
@@ -19,6 +19,7 @@ import {diffLines, Change} from 'diff'
 import {platform} from 'os'
 import * as io from 'socket.io'
 import * as Panel from '../../vortex.panel'
+import * as FSEXTRA from 'fs-extra'
 
 var tag = "Reload"
 
@@ -40,6 +41,10 @@ var queue:Array<LPEntry> = []
 var htmlClientDependenciesAdded:boolean
 
 var globalStylesFile = '/GLOBAL_STYLES.css'
+
+var assetsFolder = '/assets'
+
+var IO:io.Server
 
 var stylesheets:CodeEntry[] = []
 
@@ -64,7 +69,6 @@ var InternalLivePushOptions:{
     }[]
     entry:string
     dirToHTML:string
-    fileDirectories:string[]
 };
 
 function readControlPanel(ControlPanelObject:typeof Panel):typeof InternalLivePushOptions{
@@ -73,12 +77,9 @@ function readControlPanel(ControlPanelObject:typeof Panel):typeof InternalLivePu
         externals:ControlPanelObject.livePushOptions.CDNImports,
         entry:ControlPanelObject.livePushOptions.entry,
         dirToHTML:ControlPanelObject.livePushOptions.dirToHTML,
-        fileDirectories:ControlPanelObject.livePushOptions.fileDependencyDirs
     }
 }
 
-
-var IO:io.Server
 
 /**
  * 
@@ -95,9 +96,9 @@ export class LivePush{
      * @param {number} portNum Port num for given node.js server to listen on.
      * @param {boolean} preLoadHTMLPage Option to load from already prepared HTML page.
      */
-    constructor(dirToControlPanel:string,expressRouter:Express,server:Server,portNum:number,preLoadHTMLPage:boolean){
+    constructor(dirToControlPanel:string,expressRouter:e.Express,server:Server,portNum:number,preLoadHTMLPage:boolean){
         controlPanelDIR = dirToControlPanel;
-        const Panel = require(dirToControlPanel);
+        const Panel = require(dirToControlPanel);/*vortexRetain*/
 
         InternalLivePushOptions = readControlPanel(Panel);
         //Init Socket.Io
@@ -117,7 +118,7 @@ export class LivePush{
      * @param {Express} router
      */
 
-    run(dirToHTML:string,dirToEntry:string,router:Express){
+    run(dirToHTML:string,dirToEntry:string,router:e.Express){
 
         //Start Spinner!
 
@@ -128,15 +129,14 @@ export class LivePush{
 
         initLiveDependencyTree(dirToEntry,dirToHTML).then(LiveTree => {
             router.get('/*',(req,res) => {res.sendFile(dirToHTML)});
+            FSEXTRA.ensureDir(path.resolve(path.dirname(dirToHTML),assetsFolder)).then(() =>{
+                router.use(assetsFolder,e.static(path.resolve(path.dirname(dirToHTML),assetsFolder)));
 
-            for(let fileDir of InternalLivePushOptions.fileDirectories){
-                router.use(fileDir,static(path.resolve(path.dirname(controlPanelDIR),fileDir)))
-            }
-            
-            initStage.stop();
-            console.log(chalk.greenBright(INITSTAGE))
+                initStage.stop();
+                console.log(chalk.greenBright(INITSTAGE))
 
-            initWatch(LiveTree,router,dirToHTML);
+                initWatch(LiveTree,router,dirToHTML);
+            })
         }).catch(err => console.log(err));
     }
 
@@ -585,8 +585,13 @@ function TreeBuilder(name:string,currentBranch:LiveAddress&LiveBranch|LiveTree,t
 
 }
 
-function resolvePathToHTMLPage(resolvedPath:string){
-    return PATH.relative(PATH.dirname(InternalLivePushOptions.dirToHTML),PATH.resolve(PATH.dirname(controlPanelDIR),resolvedPath))
+var fileDependencies = new Set<string>();
+
+function resolveAssetToHTMLPage(resolvedPath:string){
+    if(!fileDependencies.has(resolvedPath)){
+        fileDependencies.add(resolvedPath);
+    }
+    return path.join('.'+assetsFolder,path.basename(resolvedPath));
 }
 
 const PATH = path
@@ -612,7 +617,7 @@ function TraverseAndTransform(entry:LPEntry,currentBranch:LiveBranch&LiveAddress
         ImportDeclaration: function(path) {
             let name = path.node.source.value.includes('./')? ResolveRelative(entry.name,path.node.source.value) : path.node.source.value
             if(fileRegex.test(name)){
-                path.replaceWith(t.variableDeclaration("var",[t.variableDeclarator(t.identifier(path.node.specifiers[0].local.name),t.stringLiteral(resolvePathToHTMLPage(name)))]));
+                path.replaceWith(t.variableDeclaration("var",[t.variableDeclarator(t.identifier(path.node.specifiers[0].local.name),t.stringLiteral(resolveAssetToHTMLPage(name)))]));
                 return;
             }else{
                 TreeBuilder(name,currentBranch,tree,isTree,path);
@@ -1135,6 +1140,14 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
     liveTree.factory = parsedFactory;
     liveTree.cssFactory = parsedCSSFactory;
 
+    await FSEXTRA.ensureDir(path.resolve(path.dirname(InternalLivePushOptions.dirToHTML),'./assets/'))
+
+    if(fileDependencies.size > 0){
+        for(let dep of fileDependencies){
+            await FSEXTRA.copy(dep,path.resolve(path.dirname(InternalLivePushOptions.dirToHTML),path.join('./assets/',path.basename(dep))))
+        }
+    }
+
     
     let buffer:t.ObjectProperty[] = []
 
@@ -1187,7 +1200,7 @@ async function appendToHTMLPage(dirToHTML:string,livePushPackage:string){
 
 var CSSREGEX = /\.css$/
 
-async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
+async function initWatch(Tree:LiveTree,router:e.Express,htmlDir:string){
 
     var reloadcount:number = 0;
 
@@ -1258,6 +1271,8 @@ async function initWatch(Tree:LiveTree,router:Express,htmlDir:string){
 async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Array<CodeEntry>,dirToHTML:string) {
 
     console.log("Hello");
+
+    let priorloadedFiles = new Set<string>(...fileDependencies);
 
     let priorloadedStyles:string[] = new Array<string>(...stylesheets.map(entry => entry.name))
 
@@ -1446,11 +1461,19 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
         }
     }
 
+    //CSS Additions!
+
     if(priorloadedStyles.length < stylesheets.map(entry => entry.name).length){
         let cssPlanetloc = path.dirname(dirToHTML)+globalStylesFile;
         await fs.writeFile(cssPlanetloc,stylesheets.map(entry => entry.code).join('\n'));
         if(!liveTree.dirToCssPlanet){
             liveTree.dirToCssPlanet = cssPlanetloc;
+        }
+    }
+
+    for(let file of fileDependencies){
+        if(!priorloadedFiles.has(file)) {
+            await FSEXTRA.copy(file,path.resolve(path.dirname(InternalLivePushOptions.dirToHTML),path.join('./assets/',path.basename(file))))
         }
     }
 
@@ -1654,7 +1677,7 @@ function removeImportsAndExportsFromAST(ast:t.File,currentFile:string){
     traverse(ast,{
         ImportDeclaration: function(path) {
             if(fileRegex.test(path.node.source.value)){
-                path.replaceWith(t.variableDeclaration("var",[t.variableDeclarator(t.identifier(path.node.specifiers[0].local.name),t.stringLiteral(resolvePathToHTMLPage(ResolveRelative(currentFile,path.node.source.value))))]))
+                path.replaceWith(t.variableDeclaration("var",[t.variableDeclarator(t.identifier(path.node.specifiers[0].local.name),t.stringLiteral(resolveAssetToHTMLPage(ResolveRelative(currentFile,path.node.source.value))))]))
             }
             else {
                 path.remove();

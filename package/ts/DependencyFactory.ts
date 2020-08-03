@@ -6,14 +6,8 @@ import { FileImportLocation } from "./importlocations/FileImportLocation"
 import { FileDependency } from "./dependencies/FileDependency"
 import Dependency from "./Dependency"
 import { VortexError, VortexErrorType } from "./VortexError"
-import { ControlPanel } from "./Main"
 import _ = require("lodash")
 import * as path from 'path'
-
-export function getFileExtension(filename:string){
-    let i = filename.lastIndexOf('.')
-    return filename.slice(i)
-}
 
 /**Resolves a Non-JS dependency type.
  * 
@@ -49,7 +43,11 @@ export function resolveDependencyType(name:string,initImportLoc:FileImportLocati
  * @param {string} depName 
  */
 
-export function notNativeDependency(depName:string): boolean{
+export function notNativeDependency(depName:string,ControlPanel): boolean{
+
+    if(!ControlPanel.InstalledAddons){
+        return false
+    }
 
     let ALL_ADDON_EXNTS:Array<string> = _.concat(ControlPanel.InstalledAddons.extensions.js,ControlPanel.InstalledAddons.extensions.other)
 
@@ -61,7 +59,7 @@ export function notNativeDependency(depName:string): boolean{
     return false
 }
 
-export function resolveNonNativeDependency(depName:string,initImportLoc:ImportLocation){
+export function resolveNonNativeDependency(depName:string,initImportLoc:ImportLocation,ControlPanel){
 
     let resolvedDependency:Dependency
 
@@ -75,7 +73,7 @@ export function resolveNonNativeDependency(depName:string,initImportLoc:ImportLo
 
 }
 
-export function resolveGrapherForNonNativeDependency(Dependency:Dependency){
+export function resolveGrapherForNonNativeDependency(Dependency:Dependency,ControlPanel){
 
     for(let GrapherMap of ControlPanel.InstalledAddons.importedGraphers){
         if(GrapherMap.name === path.extname(Dependency.name)){
@@ -85,7 +83,7 @@ export function resolveGrapherForNonNativeDependency(Dependency:Dependency){
 
 }
 
-export function resolveTransformersForNonNativeDependency(Dependency:Dependency){
+export function resolveTransformersForNonNativeDependency(Dependency:Dependency,ControlPanel){
 
     for(let CompilerMap of ControlPanel.InstalledAddons.importedCompilers){
         if(CompilerMap.extname === path.extname(Dependency.name)){
@@ -95,7 +93,7 @@ export function resolveTransformersForNonNativeDependency(Dependency:Dependency)
     }
 }
 
-export function CustomDependencyIsBundlable(Dependency:Dependency){
+export function CustomDependencyIsBundlable(Dependency:Dependency,ControlPanel){
 
     for(let depMapObject of ControlPanel.InstalledAddons.importedDependencies){
         if(depMapObject.extension === path.extname(Dependency.name)){

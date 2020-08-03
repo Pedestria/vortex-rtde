@@ -1,5 +1,5 @@
-import VortexRTDEAPI from './API'
+// import VortexRTDEAPI from './API'
+import {createStarPackage} from './Main'
+import {LivePush}  from './live/LivePush'
 
-export {createStarPackage} from './Main'
-export {LivePush} from './live/LivePush'
-export {VortexRTDEAPI}
+export {createStarPackage,LivePush}/*vortexExpose*/

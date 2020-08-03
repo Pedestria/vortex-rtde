@@ -5,19 +5,18 @@ const path =require('path')
 module.exports = {
     type:'library',
     livePushOptions:{
-        entry:"./test/web/Main.jsx",
-        dirToHTML:path.resolve(__dirname,"./test/live.html"),
-        fileDependencyDirs:['./test/img'],
+        entry:"./debug/src/Index.jsx",
+        dirToHTML:path.resolve(__dirname,"./debug/debug.html"),
         CDNImports:[]
     },
     bundleMode:'neutronstar',
     useTerser:true,
     start:'./test/vortex/Index.js',
-    output:'./out/vortex.js',
+    output:'./dist/vortex.js',
     extensions: ['.css','.png','.otf'],
     encodeFilenames:true,
     polyfillPromise:false,
-    // addons:[VueVortexAddon],
+    addons:[],
     outBundle:['aws-sdk'],
     cssPlanet:true,
     minifyCssPlanet:true

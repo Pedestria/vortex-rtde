@@ -1,0 +1,16 @@
+html {
+    background-color:#353535;
+}
+
+img {
+    height: 200px;
+    display: block;
+    margin-top: -70px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.bar {
+    background-color: red;
+    height:15%;
+}

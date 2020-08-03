@@ -21,7 +21,6 @@ import * as path from 'path'
 import * as css from 'css'
 import { Planet, PlanetClusterMapObject } from "./Planet.js";
 import * as _ from 'lodash';
-import { ControlPanel } from "./Main.js";
 import {addEntryToQueue,loadEntryFromQueue, QueueEntry, queue, isInQueue} from "./GraphGenerator.js";
 import { notNativeDependency, resolveTransformersForNonNativeDependency, CustomDependencyIsBundlable } from "./DependencyFactory.js";
 import { v4 } from "uuid";
@@ -53,164 +52,102 @@ function fixDependencyName(name:string){
  * @param {VortexGraph} Graph The Dependency Graph created by the Graph Generator 
  * @returns {Promise<Bundle[]>} An Array of Bundle Code Objects
  */
-export async function Compile(Graph:VortexGraph){
+export async function Compile(Graph:VortexGraph,ControlPanel){
 
     let final
 
     if(ControlPanel.isLibrary){
         //Returns a single bundle code object
-        final = await LibCompile(Graph)
+        final = await LibCompile(Graph,ControlPanel)
     }
     else{
         //Returns single/many bundle code object/s.
-        final = await WebAppCompile(Graph)
+        final = await WebAppCompile(Graph,ControlPanel)
     }
 
     return final;
 }
 
-/**Compiles a library bundle from a given Vortex Graph
+/**Compiles a library bundle from a given Vortex Graph into CommonJS Format (Eventually into CommonJS IIFE!)
  * 
  * @param {VortexGraph} Graph 
  */
 
-async function LibCompile(Graph:VortexGraph){
+async function LibCompile(Graph:VortexGraph,ControlPanel){
 
     let libB = new LibBundle
-
-    let finalBundle:string = ""
 
     
     for(let dep of Graph.Star){
         if(dep instanceof ModuleDependency){
             for(let impLoc of dep.importLocations){
                 if(impLoc instanceof MDImportLocation){
-                    if(isInQueue(impLoc.name)){
-                        if(dep.name.includes('./') == false && impLoc.modules[0].type !== ModuleTypes.EsNamespaceProvider){
-                            mangleVariableNamesFromAst(loadEntryFromQueue(impLoc.name).ast,impLoc.modules)
-                        }
-                        removeImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
-                    }
-                    else{
-                        let filename = fs.readFileSync(impLoc.name).toString()
-                        addEntryToQueue(new BundleEntry(impLoc.name,Babel.parse(filename,{"sourceType":'module'})))
-                        if(dep.name.includes('./') == false && impLoc.modules[0].type !== ModuleTypes.EsNamespaceProvider){
-                            mangleVariableNamesFromAst(loadEntryFromQueue(impLoc.name).ast,impLoc.modules)
-                        }
-                        removeImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
+                    convertImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
 
-                        if(impLoc.name === Graph.entryPoint){
-                            removeExportsFromAST(loadEntryFromQueue(impLoc.name).ast,dep,libB)
-                        }
+                    if(impLoc.name === Graph.entryPoint){
+                        convertExportsFromAST(loadEntryFromQueue(impLoc.name).ast,dep,libB)
                     }
                 }
             }
             if(dep.outBundle !== true){
-                if(isInQueue(dep.name)){
-                    if(dep.importLocations[0].modules[0].type === ModuleTypes.EsNamespaceProvider){
-                        convertToNamespace(loadEntryFromQueue(dep.name).ast,dep.importLocations[0])
-                    }
-                    removeExportsFromAST(loadEntryFromQueue(dep.name).ast,dep,libB)
-                }
-                else{
                     //Libraries are skipped completely in Lib Bundle
-                    if(dep.name.includes('./')){
-                        let filename = fs.readFileSync(dep.name).toString()
-                        addEntryToQueue(new BundleEntry(dep.name,Babel.parse(filename,{"sourceType":'module'})))
-                        if(dep.importLocations[0].modules[0].type === ModuleTypes.EsNamespaceProvider){
-                            convertToNamespace(loadEntryFromQueue(dep.name).ast,dep.importLocations[0])
-                        }
-                        removeExportsFromAST(loadEntryFromQueue(dep.name).ast,dep,libB)
-                    }
+                if(dep.name.includes('./')){
+                    convertExportsFromAST(loadEntryFromQueue(dep.name).ast,dep,libB)
                 }
             }
         }
     }
 
+    console.log(libB.libs)
 
-    console.log(queue)
-    let finalAr = queue.reverse()
-    finalBundle += `/*NODE_REQUIRES*/ \n`
-    finalBundle += libB.libs.join('\n')
-    finalBundle += `\n /*LIB_CODE*/ \n`
-    for(let ent of finalAr){
-        finalBundle += Division()
-        finalBundle += generate(ent.ast).code
+    let cjsIIFE:string = `var fileExportBuffer = {};
+
+    ${libB.libs.join('\n')}
+
+    function _localRequire(id){
+        if(fileExportBuffer[id] && fileExportBuffer[id].built){
+            return fileExportBuffer[id].exports
+        }
+        else {
+            var localFile = {
+                built:false,
+                exports:{}
+            }
+            local_files[id](_localRequire,localFile.exports,${libB.namespaceLibNames.join(',')})
+
+            localFile.built = true
+
+            Object.defineProperty(fileExportBuffer,id,{
+                value:localFile,
+                writable:false,
+                enumerable:true
+            })
+
+            return localFile.exports
+        }
     }
-    finalBundle += `\n /*NODE_EXPORTS*/ \n`
-    finalBundle += libB.exports.join('\n')
+
+    return _localRequire("${Graph.shuttleEntry}");`
+
+    let parsedFactory = Babel.parse(cjsIIFE,{allowReturnOutsideFunction:true}).program.body
+
+    let localFileIIFEBuffer:Array<t.ObjectProperty> = []
+
+    let entryFuncArgs = libB.namespaceLibNames.map(arg => t.identifier(arg))
+
+    for (let entry of queue){
+        localFileIIFEBuffer.push(t.objectProperty(t.stringLiteral(entry.name),t.callExpression(t.identifier(""),[t.functionExpression(null,[t.identifier("_localRequire"),t.identifier("_localExports")].concat(entryFuncArgs),t.blockStatement(entry.ast.program.body))])))
+    }
+
+    let finalCode = generate(t.callExpression(t.callExpression(t.identifier(""),[t.functionExpression(null,[t.identifier("local_files")],t.blockStatement(parsedFactory))]),[t.objectExpression(localFileIIFEBuffer)]));
+
     
-    var o:Bundle = {value:'star',code:finalBundle}
+    var o:Bundle = {value:'star',code:finalCode.code}
     
     return [o]
     //console.log(code)
     //return libB.code
 
-}
-
-/**Converts entire dependency file to a ECMAScript Module Namespace.
- * 
- * @param {t.File} ast Abstract Syntax Tree (ESTree Format)
- * @param {MDImportLocation} imploc First MDImport Location of current dependency 
- */
-
-function convertToNamespace(ast:t.File,imploc:MDImportLocation){
-
-    var namespace = t.variableDeclaration('var',new Array(t.variableDeclarator(t.identifier(imploc.modules[0].name))))
-
-    traverse(ast,{
-        ExportNamedDeclaration: function(path){
-            if(path.node.declaration !== null){
-                addToNamespace(path.node.declaration,namespace)
-                path.remove()
-            }
-        },
-        ExportDefaultDeclaration: function(path){
-            if(path.node.declaration !== null){
-                addToNamespace(path.node.declaration,namespace)
-                path.remove()
-            }
-        }
-    })
-
-    ast.program.body.push(namespace)
-    ast.program.body.reverse();
-}
-
-/**Adds Node (Function/Class/Variable) to given namespace
- * 
- * @param {t.FunctionDeclaration|t.ClassDeclaration|t.VariableDeclaration} Node 
- * @param {t.VariableDeclaration} namespace 
- */
-
-function addToNamespace(Node:t.FunctionDeclaration | t.VariableDeclaration | t.ClassDeclaration ,namespace:t.VariableDeclaration){
-    if(namespace.declarations[0].init !== null){
-        if(namespace.declarations[0].init.type === 'ObjectExpression'){
-            if(Node.type === 'FunctionDeclaration'){
-                let name = Node.id
-                Node.id = null;
-                namespace.declarations[0].init.properties.push(t.objectProperty(name,t.functionExpression(null,Node.params,Node.body,Node.generator,Node.async)))
-            } else if (Node.type === 'ClassDeclaration'){
-                let name = Node.id
-                namespace.declarations[0].init.properties.push(t.objectProperty(name,t.classExpression(null,Node.superClass,Node.body)))
-            }
-        }
-    }
-    else{
-        let props = []
-            if(Node.type === 'FunctionDeclaration'){
-                let name = Node.id
-                Node.id = null;
-                props.push(t.objectProperty(name,t.functionExpression(null,Node.params,Node.body,Node.generator,Node.async)))
-                namespace.declarations[0].init = t.objectExpression(props)
-            } else if (Node.type === 'ClassDeclaration'){
-                let name = Node.id
-                props.push(t.objectProperty(name,t.classExpression(null,Node.superClass,Node.body)))
-                namespace.declarations[0].init = t.objectExpression(props)
-                
-            }
-    }
-        
 }
 
 
@@ -222,7 +159,7 @@ function addToNamespace(Node:t.FunctionDeclaration | t.VariableDeclaration | t.C
  * @param {LibBundle} libBund The Library Bundle
  */
 
- function removeImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDependency,libBund:LibBundle){
+ function convertImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDependency,libBund:LibBundle){
 
     //Grabs all requires/imports of libs and converts them to CJS and places them at the top of bundle
     //
@@ -233,46 +170,29 @@ function addToNamespace(Node:t.FunctionDeclaration | t.VariableDeclaration | t.C
             }
         }
 
-
             if(impLoc.modules[0].type === ModuleTypes.CjsNamespaceProvider){
 
-            traverse(ast,{
-                // Removes Require statements.
-                VariableDeclaration: function(path) {
-                    if (path.node.declarations[0].init !== null){
-                        if (path.node.declarations[0].init.type === 'CallExpression') {
-                            if(path.node.declarations[0].init.callee.name === 'require') {
-                                if(path.node.declarations[0].id.name === impLoc.modules[0].name && path.node.declarations[0].init.arguments[0].value === impLoc.relativePathToDep){
-                                    path.remove()
+                traverse(ast,{
+                    // Removes Require statements.
+                    VariableDeclaration: function(path) {
+                        if (path.node.declarations[0].init !== null){
+                            if (path.node.declarations[0].init.type === 'CallExpression') {
+                                if(path.node.declarations[0].init.callee.name === 'require') {
+                                    if(path.node.declarations[0].id.name === impLoc.modules[0].name && path.node.declarations[0].init.arguments[0].value === impLoc.relativePathToDep){
+                                        if(dep.name.includes('./')){
+                                            path.node.declarations[0].init.callee.name = "_localRequire"
+                                        } 
+                                        else {
+                                            path.remove()
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
-                },
-                //Removes Namespace from all references calls to namespace
-                MemberExpression : function(path){
-                    if(dep.name.includes('./')){
-
-                        if(path.node.object.name == impLoc.modules[0].name){
-                            if(path.node.property !== null){
-                                if(path.node.property.name === 'default'){
-                                    path.replaceWith(
-                                        t.identifier(findDefaultExportName(dep))
-                                    )
-                                }
-                                else{
-                                    path.replaceWith(
-                                        t.identifier(path.node.property.name)
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } 
-            })
-        }
-    } 
-    else if (dep instanceof EsModuleDependency){
+                });
+            }
+    } else if (dep instanceof EsModuleDependency){
             if(dep.name.includes('./') == false){
                 if(impLoc.modules[0].type === ModuleTypes.EsNamespaceProvider){
                     if(libBund.isLibEntryInCode(dep.name,impLoc.modules[0].name) == false){
@@ -293,9 +213,15 @@ function addToNamespace(Node:t.FunctionDeclaration | t.VariableDeclaration | t.C
             ImportDeclaration: function(path) {
                 //Removes imports regardless if dep is lib or local file.
                 //console.log(impLoc.relativePathToDep)
-                if(path.node.trailingComments === undefined){
+                if(path.node.trailingComments === undefined || path.node.trailingComments[0].value !== 'vortexRetain'){
                     if(path.node.source.value === impLoc.relativePathToDep){
-                        path.remove()
+                        if(dep.name.includes('./')){
+                        //TODO!! Make Function to Build Requests for imports
+                            path.replaceWith(buildImportsFromImportLocation(impLoc,dep));
+                        }
+                        else {
+                            path.remove();
+                        }
                     }
                 }      //Vortex retain feature
                 else if(path.node.trailingComments[0].value === 'vortexRetain' && dep.outBundle === true){
@@ -303,11 +229,7 @@ function addToNamespace(Node:t.FunctionDeclaration | t.VariableDeclaration | t.C
                         libBund.addEntryToLibs(impLoc.relativePathToDep,impLoc.modules[0].name);
                         path.remove()
                     }else{
-                        throw new VortexError(`Cannot use "vortexRetain" keyword on libraries. Line:${impLoc.line} File:${impLoc.name}`,VortexErrorType.StarSyntaxError)
-                    }
-                } else if(path.node.trailingComments[0].value !== 'vortexRetain') {
-                    if(path.node.source.value === impLoc.relativePathToDep){
-                        path.remove()
+                        throw new VortexError(`Cannot use "vortexRetain" keyword on libraries. Line:${impLoc.line} File:${impLoc.name}`,VortexErrorType.StarSyntaxError);
                     }
                 }
             },
@@ -327,18 +249,20 @@ function addToNamespace(Node:t.FunctionDeclaration | t.VariableDeclaration | t.C
             //     }
             // },
             Identifier: function(path) {
+                if(path.parent.type !== "MemberExpression"){
                 //Visits if dep is a lib but NOT a EsNamespaceProvider
-                if(dep.name.includes('./') == false){
-                    if(impLoc.modules[0].type !== ModuleTypes.EsNamespaceProvider){
-                        for(let mod of impLoc.modules){
-                            if(mod.type !== ModuleTypes.EsDefaultModule){
-                                if(path.node.name === '_'+mod.name){
-                                    path.replaceWith(t.memberExpression(t.identifier(namespace),t.identifier(mod.name)))
+                    if(dep.name.includes('./') == false){
+                        if(impLoc.modules[0].type !== ModuleTypes.EsNamespaceProvider){
+                            for(let mod of impLoc.modules){
+                                if(mod.type !== ModuleTypes.EsDefaultModule){
+                                    if(path.node.name === mod.name){
+                                        path.replaceWith(t.memberExpression(t.identifier(namespace),t.identifier(mod.name)))
+                                    }
                                 }
-                            }
-                            else if (mod.type === ModuleTypes.EsDefaultModule){
-                                if(path.node.name === '_'+mod.name){
-                                    path.replaceWith(t.memberExpression(t.identifier(namespace),t.identifier('default')))
+                                else if (mod.type === ModuleTypes.EsDefaultModule){
+                                    if(path.node.name === mod.name){
+                                        path.replaceWith(t.memberExpression(t.identifier(namespace),t.identifier('default')))
+                                    }
                                 }
                             }
                         }
@@ -349,65 +273,30 @@ function addToNamespace(Node:t.FunctionDeclaration | t.VariableDeclaration | t.C
     }
 }
 
-async function findDefaultExportName(dep:ModuleDependency){
+function buildImportsFromImportLocation(currentMDImpLoc:MDImportLocation,currentDependency:ModuleDependency):t.VariableDeclaration{
 
-    let buffer =  (await fs.readFile(dep.name)).toString()
+    let declarators:t.VariableDeclarator[] = []
 
-    let code = Babel.parse(buffer,{"sourceType":"module"})
-
-    let name
-
-    if (dep instanceof CjsModuleDependency){
-
-            traverse(code,{
-                ExpressionStatement: function(path){
-                    if(path.node.expression.type === 'AssignmentExpression'){
-                        if(path.node.expression.left.type === 'MemberExpression'){
-                            // if(path.node.expression.left !== null){
-                            //     if(path.node.expression.left.object.name === 'module' && path.node.expression.left.property.name === 'exports'){
-
-                            //     }
-                            // }
-                        
-                    if(path.node.expression.left !== null){
-                        if(path.node.expression.left.object.name === 'exports'){
-                            if(path.node.expression.left.property.name === 'default'){
-                                name = path.node.expression.right.name
-                            }
-                            }
-                        }
-                    }
-            
-                }
+    if(currentDependency instanceof EsModuleDependency){
+        if(currentMDImpLoc.modules[0].type === ModuleTypes.EsNamespaceProvider){
+            declarators.push(t.variableDeclarator(t.identifier(currentMDImpLoc.modules[0].name),t.callExpression(t.identifier("_localRequire"),[t.stringLiteral(currentDependency.name)])));
+            return t.variableDeclaration("var",declarators);
+        }
+        declarators.push(t.variableDeclarator(t.identifier(fixDependencyName(currentDependency.name.toUpperCase())),t.callExpression(t.identifier("_localRequire"),[t.stringLiteral(currentDependency.name)])));
+        for(let IMPORT of currentMDImpLoc.modules){
+            if(IMPORT.type === ModuleTypes.EsDefaultModule){
+                declarators.push(t.variableDeclarator(t.identifier(IMPORT.name),t.memberExpression(t.identifier(fixDependencyName(currentDependency.name.toUpperCase())),t.identifier("default"))))
+                continue;
             }
-        })
-    } else if (dep instanceof EsModuleDependency){
-
-        traverse(code,{
-            ExportDefaultDeclaration: function(path){
-                if(path.node.declaration !== null){
-                    name = path.node.declaration.id.name
-                }
-            },
-            ExportNamedDeclaration: function(path){
-                if(path.node.declaration == null){
-                    for(let ImpType of path.node.specifiers){
-                        if(ImpType.type === 'ExportSpecifier'){
-                            if(ImpType.exported.name === 'default'){
-                                name = ImpType.local.name
-                            }
-                        }
-                    }
-                }
-            }
-        })
-
+            declarators.push(t.variableDeclarator(t.identifier(IMPORT.name),t.memberExpression(t.identifier(fixDependencyName(currentDependency.name.toUpperCase())),t.identifier(IMPORT.name))));
+        }
     }
-    return name
+
+    return t.variableDeclaration("var",declarators);
 
 }
 
-function removeExportsFromAST(ast:t.File,dep:ModuleDependency,libbund:LibBundle){
+function convertExportsFromAST(ast:t.File,dep:ModuleDependency,libbund:LibBundle){
 
     if(dep instanceof CjsModuleDependency){
 
@@ -416,59 +305,76 @@ function removeExportsFromAST(ast:t.File,dep:ModuleDependency,libbund:LibBundle)
                 if(path.node.expression.type === 'AssignmentExpression'){
                     if(path.node.expression.left.type === 'MemberExpression'){
                         if(path.node.expression.left.object.name === 'module' && path.node.expression.left.property.name === 'exports'){
-                            path.remove()
+                            path.node.expression.left.object.name = "_localExports"
+                            path.node.expression.left.property.name = "default"
                         }
                     if(path.node.expression.left.object.name === 'exports'){
-                        path.remove()
+                        path.node.expression.left.object.name = "_localExports"
                     }
                 }
             }
         }})
     } 
     else if (dep instanceof EsModuleDependency){
+        let exposedExports:t.ExpressionStatement[] = []
+        let regularExports:t.ExpressionStatement[] = []
+
         traverse(ast,{
             ExportNamedDeclaration: function(path) {
-                if(path.node.declaration !== null){
+                if(path.node.declaration !== null && path.node.declaration){
                     if(path.node.declaration.type !== 'Identifier' || path.node.specifiers.length === 0){
+                        if(path.node.declaration.type === "VariableDeclaration"){
+                            regularExports.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("_localExports"),t.identifier(path.node.declaration.declarations[0].id.name)),t.identifier(path.node.declaration.declarations[0].id.name))));
+                            path.replaceWith(path.node.declaration);
+                            return;
+                        }
+
+                        regularExports.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("_localExports"),t.identifier(path.node.declaration.id.name)),t.identifier(path.node.declaration.id.name))))
                         path.replaceWith(path.node.declaration)
+                        return;
                     }
                     else{
+                        regularExports.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("_localExports"),t.identifier(path.node.declaration.name)),t.identifier(path.node.declaration.name))))
                         path.remove()
+                        return;
                     }
                 } 
                 else {
                     if (findVortexExpose(path.node)){
                         for(let exp of getExposures(path.node)){
-                                libbund.addEntryToExposedExports(exp)
+                                exposedExports.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(exp)),t.identifier(exp))));
                             }
                             path.remove()
                         }
                     else{
-                        path.remove()
+                        for(let exp of path.node.specifiers){
+                            if(exp.type === "ExportSpecifier"){
+                                regularExports.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("_localExports"),t.identifier(exp.exported.name)),t.identifier(exp.local.name))));
+                            }
+                        }
+                        path.remove();
                     }
                 }
 
             },
             ExportDefaultDeclaration: function(path) {
                 if(path.node.declaration.type !== 'Identifier'){
-                    path.replaceWith(path.node.declaration)
+                    regularExports.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("_localExports"),t.identifier("default")),t.identifier(path.node.declaration.id.name))));
+                    path.replaceWith(path.node.declaration);
                 }
                 else{
+                    regularExports.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("_localExports"),t.identifier("default")),t.identifier(path.node.declaration.name))));
                     path.remove()
                 }
             }
         })
 
+        ast.program.body = ast.program.body.concat(regularExports);
+        ast.program.body = ast.program.body.concat(exposedExports);
 
     }
 
 }
-
-function Division(){
-    let code = `\n /*VORTEX_DIVIDER*/ \n`
-    return code
-}
-
 /**
  * The Library Bundle used in libCompile
  */
@@ -479,19 +385,12 @@ class LibBundle {
     queue:Array<BundleEntry> = []
     /**Array of compiled requires */
     libs:Array<string> = [] 
+    namespaceLibNames:string[] = []
     /**Array of compiled exposures (exports) */
     exports:Array<string> = [] 
 
     constructor(){}
 
-    /**
-     * Adds an entry to the lib Bundle Queue
-     * @param {BundleEntry} entry 
-     */
-
-    addEntryToQueue(entry:BundleEntry){
-        this.queue.push(entry)
-    }
 
     /**
      * Adds a CommonJS require entry to bundle libraries
@@ -500,6 +399,8 @@ class LibBundle {
      */
 
     addEntryToLibs(libname:string,namespace:string){
+        this.namespaceLibNames.push(namespace);
+
             const lib = CommonJSTemplate({
                 NAMESPACE: t.identifier(namespace),
                 LIBNAME: t.stringLiteral(libname)
@@ -680,7 +581,31 @@ const ModuleEvalTemplate = template('eval(CODE)')
  * @returns {Object[]} WebApp Bundle
  */
 
-async function WebAppCompile (Graph:VortexGraph){
+async function WebAppCompile (Graph:VortexGraph,ControlPanel){
+
+    class Shuttle {
+        name:string
+        entry:string
+        buffer = t.objectExpression([])
+    
+        //[shuttle,_exports_]
+    
+        addModuleToBuffer(entry:string,evalModule:t.Statement|Array<t.Statement>){
+            let func = t.functionExpression(null,[t.identifier('shuttle'),t.identifier('shuttle_exports'),t.identifier('gLOBAL_STYLES')],t.blockStatement(ControlPanel.isProduction ? evalModule : [evalModule]),false,false)
+            this.buffer.properties.push(t.objectProperty(t.stringLiteral(entry),t.callExpression(t.identifier(''),[func])))
+        }
+    
+        isInBuffer(entry:string){
+            for(let ent of this.buffer.properties){
+                if(ent.type === 'ObjectProperty'){
+                    if(ent.key === t.stringLiteral(entry)){
+                        return true
+                    }
+                }
+            }
+            return false
+        }
+    }
 
    let shuttle = new Shuttle();
 
@@ -755,8 +680,8 @@ async function WebAppCompile (Graph:VortexGraph){
             for(let impLoc of dep.importLocations){
                  resolveFileDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc,localNewName)
             }
-        }else if(notNativeDependency(dep.name)){
-            let {importsTransformer,exportsTransformer} = resolveTransformersForNonNativeDependency(dep)
+        }else if(notNativeDependency(dep.name,ControlPanel)){
+            let {importsTransformer,exportsTransformer} = resolveTransformersForNonNativeDependency(dep,ControlPanel)
             for(let impLoc of dep.importLocations){
                 importsTransformer(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
             }
@@ -777,7 +702,7 @@ async function WebAppCompile (Graph:VortexGraph){
             }
 
         if(transdExps.includes(planet.entryModule) == false){
-            if(!notNativeDependency(planet.entryModule)){
+            if(!notNativeDependency(planet.entryModule,ControlPanel)){
                 TransformExportsFromAST(loadEntryFromQueue(planet.entryModule).ast,planet.entryDependency)
             } else{
                 let {exportsTransformer} = resolveTransformersForNonNativeDependency(planet.entryDependency)
@@ -833,8 +758,8 @@ async function WebAppCompile (Graph:VortexGraph){
                 for(let impLoc of dep.importLocations){
                     resolveFileDependencyIntoAST(loadEntryFromQueue(impLoc.name).ast,dep,impLoc,localNewName)
                 }
-            } else if(notNativeDependency(dep.name)){
-                let {importsTransformer,exportsTransformer} = resolveTransformersForNonNativeDependency(dep)
+            } else if(notNativeDependency(dep.name,ControlPanel)){
+                let {importsTransformer,exportsTransformer} = resolveTransformersForNonNativeDependency(dep,ControlPanel)
                 for(let impLoc of dep.importLocations){
                     importsTransformer(loadEntryFromQueue(impLoc.name).ast,dep,impLoc)
                 }
@@ -864,7 +789,7 @@ async function WebAppCompile (Graph:VortexGraph){
     // Pushes entrypoint into buffer to be compiled.
 
     const entry = loadEntryFromQueue(Graph.entryPoint)
-    stripNodeProcess(entry.ast)
+    stripNodeProcess(entry.ast,ControlPanel)
     const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
     const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n  //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
     shuttle.addModuleToBuffer(Graph.entryPoint,mod)
@@ -886,7 +811,7 @@ async function WebAppCompile (Graph:VortexGraph){
                             bufferNames.push(dep.libLoc)
                             continue;
                         }
-                        stripNodeProcess(entry.ast)
+                        stripNodeProcess(entry.ast,ControlPanel)
                         const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
                         const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                         shuttle.addModuleToBuffer(dep.libLoc,mod)
@@ -903,7 +828,7 @@ async function WebAppCompile (Graph:VortexGraph){
                             bufferNames.push(dep.name)
                             continue;
                         }
-                        stripNodeProcess(entry.ast)
+                        stripNodeProcess(entry.ast,ControlPanel)
                         const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
                         const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code  + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                         shuttle.addModuleToBuffer(dep.name,mod)
@@ -911,7 +836,7 @@ async function WebAppCompile (Graph:VortexGraph){
                     }
                 }
             }
-            else if (notNativeDependency(dep.name) && CustomDependencyIsBundlable(dep)){
+            else if (notNativeDependency(dep.name,ControlPanel) && CustomDependencyIsBundlable(dep,ControlPanel)){
                 if(bufferNames.includes(dep.name) == false){
                     const entry = loadEntryFromQueue(dep.name)
                     if(entry.external) {
@@ -921,7 +846,7 @@ async function WebAppCompile (Graph:VortexGraph){
                         bufferNames.push(dep.name)
                         continue;
                     }
-                    stripNodeProcess(entry.ast)
+                    stripNodeProcess(entry.ast,ControlPanel)
                     const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
                     const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code  + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                     shuttle.addModuleToBuffer(dep.name,mod)
@@ -943,7 +868,7 @@ async function WebAppCompile (Graph:VortexGraph){
         local_shuttle.entry = planet.entryModule
 
         const entry = loadEntryFromQueue(planet.entryModule)
-        stripNodeProcess(entry.ast)
+        stripNodeProcess(entry.ast,ControlPanel)
         const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
         const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
         local_shuttle.addModuleToBuffer(planet.entryModule,mod)
@@ -963,7 +888,7 @@ async function WebAppCompile (Graph:VortexGraph){
                                 bufferNames.push(dep.libLoc)
                                 continue;
                             }
-                            stripNodeProcess(entry.ast)
+                            stripNodeProcess(entry.ast,ControlPanel)
                             const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
                             const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //# sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                             local_shuttle.addModuleToBuffer(dep.libLoc,mod)
@@ -980,7 +905,7 @@ async function WebAppCompile (Graph:VortexGraph){
                                 bufferNames.push(dep.name)
                                 continue;
                             }
-                            stripNodeProcess(entry.ast)
+                            stripNodeProcess(entry.ast,ControlPanel)
                             const COMP = generate(entry.ast,{sourceMaps:true,sourceFileName:path.relative(path.dirname(ControlPanel.outputFile),entry.name)})
                             const mod = ControlPanel.isProduction ? entry.ast.program.body : ModuleEvalTemplate({CODE:t.stringLiteral(COMP.code + `\n //#sourceURL=${path.resolve(entry.name)} \n //# sourceMappingURL=data:text/json;base64,${Buffer.from(JSON.stringify(COMP.map)).toString('base64')}`)})
                             local_shuttle.addModuleToBuffer(dep.name,mod)
@@ -988,7 +913,7 @@ async function WebAppCompile (Graph:VortexGraph){
                         }
                     }
                 }
-                else if (notNativeDependency(dep.name) && CustomDependencyIsBundlable(dep)){
+                else if (notNativeDependency(dep.name,ControlPanel) && CustomDependencyIsBundlable(dep,ControlPanel)){
                     if(bufferNames.includes(dep.name) == false){
                         const entry = loadEntryFromQueue(dep.name)
                         if(entry.external) {
@@ -1192,7 +1117,7 @@ async function WebAppCompile (Graph:VortexGraph){
     let finalCode = generate(t.expressionStatement(t.callExpression(t.identifier(''),[t.callExpression(t.functionExpression(null,[t.identifier("modules")],t.blockStatement(parsedFactory),false,false),[shuttle.buffer])])),{compact: ControlPanel.isProduction? true : false}).code;
     
     if(ControlPanel.cssPlanet){
-        await writeCSSPlanet(cssStorage);
+        await writeCSSPlanet(cssStorage,ControlPanel);
     }
 
     let codeEntries:Array<Bundle> = []
@@ -1216,29 +1141,6 @@ async function WebAppCompile (Graph:VortexGraph){
 
 }
 
-class Shuttle {
-    name:string
-    entry:string
-    buffer = t.objectExpression([])
-
-    //[shuttle,_exports_]
-
-    addModuleToBuffer(entry:string,evalModule:t.Statement|Array<t.Statement>){
-        let func = t.functionExpression(null,[t.identifier('shuttle'),t.identifier('shuttle_exports'),t.identifier('gLOBAL_STYLES')],t.blockStatement(ControlPanel.isProduction ? evalModule : [evalModule]),false,false)
-        this.buffer.properties.push(t.objectProperty(t.stringLiteral(entry),t.callExpression(t.identifier(''),[func])))
-    }
-
-    isInBuffer(entry:string){
-        for(let ent of this.buffer.properties){
-            if(ent.type === 'ObjectProperty'){
-                if(ent.key === t.stringLiteral(entry)){
-                    return true
-                }
-            }
-        }
-        return false
-    }
-}
 //Shuttle Module Templates:
 
 
@@ -1503,7 +1405,7 @@ export function TransformExportsFromAST(ast:t.File,dep:ModuleDependency){
  * @param {t.File} ast Abstract Syntax Tree (ESTree Format)
  */
 
-function stripNodeProcess(ast:t.File){
+function stripNodeProcess(ast:t.File,ControlPanel){
     traverse(ast,{
         CallExpression: function(path){
             if(path.node.callee.type === 'MemberExpression' && path.node.callee.object.type === "Identifier" && path.node.callee.object.name === 'Object' && path.node.callee.property.name === 'defineProperty' && path.node.arguments[0].type === 'Identifier' && path.node.arguments[0].name === 'exports'){
@@ -1685,7 +1587,7 @@ function TransformAsyncClusterImportFromAST(ast:t.File,planetClusterMap:PlanetCl
 
 }
 
-async function writeCSSPlanet(stylesheetBuffer:Array<string>){
+async function writeCSSPlanet(stylesheetBuffer:Array<string>,ControlPanel){
     let cssPlanetLoc = LocalizedResolve(ControlPanel.outputFile,`./${CSS_PLANET_ID}.css`)
     let OUT_STYLESHEET = stylesheetBuffer.join('')
     if(ControlPanel.minifyCssPlanet) {

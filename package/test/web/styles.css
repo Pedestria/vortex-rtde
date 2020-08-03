@@ -20,13 +20,6 @@ body {
     font-family: Avenir;
 }
 
-button.stupid {
-    font-family: Avenir;
-    background-color: aqua;
-    height: 50px;
-    width: 100px;
-}
-
 img {
     height:400px;
 }

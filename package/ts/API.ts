@@ -162,22 +162,12 @@ interface ExportHandlerMap {
 }
 
 
-interface InternalVortexAddons{
-    extensions:{
-        js:Array<string>
-        other:Array<string>
-    }
-    importedDependencies:Array<CustomGraphDependencyMapObject>
-    importedGraphers:Array<CustomDependencyGrapher>
-    importedCompilers:Array<CompilerCustomDependencyMap>
-}
-
 interface Grapher {
     /**
      * Construct Grapher with Dependency Input.
      * Often used with Precompilers.
      */
-    (Dependency:Dependency,Graph:VortexGraph,planetName?:string):Promise<void>
+    (Dependency:Dependency,Graph:VortexGraph,planetName?:string,ControlPanel):Promise<void>
     /**
      * Construct Grapher with Queue Entry Input
      */
@@ -196,10 +186,19 @@ declare namespace Addons {
         ImportsTransformer,
         CompilerCustomDependencyMap,
         VortexAddonModule,
-        InternalVortexAddons,
         Grapher
     }
 
+}
+
+interface InternalVortexAddons{
+    extensions:{
+        js:Array<string>
+        other:Array<string>
+    }
+    importedDependencies:Array<CustomGraphDependencyMapObject>
+    importedGraphers:Array<CustomDependencyGrapher>
+    importedCompilers:Array<CompilerCustomDependencyMap>
 }
 
 
@@ -230,7 +229,6 @@ declare namespace VortexRTDEAPI{
         loadEntryFromQueue as loadQueueEntry,
         FileImportLocation,
         pipeCSSContentToBuffer,
-        ControlPanel,
         Addons,
         t as ESTreeTypes  
     }

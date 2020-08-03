@@ -1,5 +1,4 @@
 import Dependency from "../Dependency.js";
-import Module from "../Module.js";
 import MDImportLocation from "../importlocations/MDImportLocation.js";
 
 /**
@@ -10,7 +9,6 @@ import MDImportLocation from "../importlocations/MDImportLocation.js";
  */
 export default abstract class ModuleDependency extends Dependency {
 
-    acquiredModules:Array<Module>
     libLoc:string
     outBundle:boolean
 

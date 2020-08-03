@@ -1,12 +1,7 @@
-// const test = require('./test/cjsiife');
+const vortex = require('./dist/vortex.min');
 
-// test.hello();
-// console.log(test.LodashVersion);
+console.log(vortex);
 
-var regex = "\.ttf|\.png|\.jpe?g"
+// const test = require('./test/cjsiife')
 
-var otherregex = "\.css"
-
-var combined = new RegExp(`(${regex}|${otherregex})$`);
-
-console.log(combined)
+// console.log(test);

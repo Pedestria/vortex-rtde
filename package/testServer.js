@@ -9,7 +9,7 @@ var server = http.createServer(main);
 
 //the server object listens on port 8080
 
-main.use(express.static(path.resolve(__dirname,'./test')))
+main.use(express.static(path.resolve(__dirname,'./debug')))
 
 // main.get('/*', function(req,res) {res.sendFile(path.resolve(__dirname,'./test/test.html'))})
 

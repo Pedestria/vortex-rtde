@@ -6,9 +6,7 @@ import EsModuleDependency from "./dependencies/EsModuleDependency.js";
 import CjsModuleDependency from "./dependencies/CjsModuleDependency.js";
 import MDImportLocation from "./importlocations/MDImportLocation.js";
 import * as Babel from '@babel/parser'
-import * as fs from 'fs-extra'
-import { isInQueue, loadEntryFromQueue, addEntryToQueue, QueueEntry } from "./GraphGenerator.js";
-import {ControlPanel} from "./Main.js";
+import {readFileSync} from 'fs-extra'
 import {transformSync} from "@babel/core";
 import { BabelSettings } from "./Options.js";
 import { ModuleTypes } from "./Module.js";
@@ -22,9 +20,9 @@ import { searchForDefaultNamespace } from "./dependencies/NamespaceSearch.js";
  * @param {string} CurrentFile Current file being loading from. 
  * @param {MDImportLocation} CurrentMDImpLoc Curret Module Dependency Import Location
  */
-export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,planetName?:string){
+export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,planetName?:string,ControlPanel,ASTQueue){
 
-    verifyModules(Dependency,CurrentFile,CurrentMDImpLoc);
+    verifyModules(Dependency,CurrentFile,CurrentMDImpLoc,ControlPanel,ASTQueue);
 
     //If transporting to Star 
     if(planetName === undefined){
@@ -47,7 +45,7 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
     return;
 }
 
-function verifyModules(Dependency:Dependency,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation){
+function verifyModules(Dependency:Dependency,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,ControlPanel,ASTQueue){
 
     let str = './'
 
@@ -57,30 +55,30 @@ function verifyModules(Dependency:Dependency,CurrentFile:string,CurrentMDImpLoc?
                 //If local file, then resolve it to root dir.
                 Dependency.updateName(LocalizedResolve(CurrentFile,addJsExtensionIfNecessary(Dependency.name)))
                     if(Dependency instanceof EsModuleDependency || Dependency instanceof CjsModuleDependency){
-                        if(isInQueue(Dependency.name)){
+                        if(ASTQueue.isInQueue(Dependency.name)){
                             if(CurrentMDImpLoc.modules.length > 0){
-                                Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
+                                Dependency.verifyImportedModules(ASTQueue.loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
                             }
                         }
                         else{
-                            let file = fs.readFileSync(Dependency.name).toString()
+                            let file = readFileSync(Dependency.name).toString()
                             if(!ControlPanel.isLibrary){
                                 file = transformSync(file,BabelSettings).code
                             }
-                            addEntryToQueue(new QueueEntry(Dependency.name,Babel.parse(file,{"sourceType":'module'})))
+                            ASTQueue.addEntryToQueue(new ASTQueue.QueueEntry(Dependency.name,Babel.parse(file,{"sourceType":'module'})))
                             if(CurrentMDImpLoc.modules.length > 0){
-                                Dependency.verifyImportedModules(loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
+                                Dependency.verifyImportedModules(ASTQueue.loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
                             }
                         }
                     }
             }
-            else{
+            else if(!ControlPanel.isLibrary){
                 // Else Find library bundle location
                 if(Dependency instanceof ModuleDependency){
-                    Dependency.libLoc = resolveLibBundle(Dependency.name)
+                    Dependency.libLoc = resolveLibBundle(Dependency.name,ControlPanel)
                     if(CurrentMDImpLoc.modules[0] !== undefined){
                         if(Dependency instanceof EsModuleDependency && CurrentMDImpLoc.modules[0].type === ModuleTypes.EsDefaultModule){
-                            if(searchForDefaultNamespace(Dependency.libLoc,CurrentMDImpLoc.modules[0].name)){
+                            if(searchForDefaultNamespace(Dependency.libLoc,CurrentMDImpLoc.modules[0].name,ControlPanel)){
                                 CurrentMDImpLoc.modules[0].type = ModuleTypes.EsDefaultNamespaceProvider
                                 // console.log(CurrentMDImpLoc.modules[0].name)
                             }

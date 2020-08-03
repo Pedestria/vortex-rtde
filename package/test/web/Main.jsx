@@ -14,7 +14,6 @@ class MainComponent extends Component{
         return(
             <div>
                 <img src={Logo}></img>
-                <button className="stupid">Stupid Button</button>
                 <h1>LivePush Is AWESOME!</h1>
                 <h1>So Explicit</h1>
                 <p>I am a Paragraph Describing Stuff!</p>

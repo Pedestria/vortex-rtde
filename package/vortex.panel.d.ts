@@ -13,11 +13,6 @@ interface LivePushOptions {
      */
     dirToHTML:string
     /**
-     * Directories to use when resolving file dependencies
-     */
-    fileDependencyDirs:Array<string>
-
-    /**
      * Externals!
      */
 

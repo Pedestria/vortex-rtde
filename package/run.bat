@@ -1,2 +1,2 @@
 @ECHO off
-yarn tsc && node lib/Index.js
+yarn tsc && node run.js

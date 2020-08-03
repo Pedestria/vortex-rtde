@@ -1,7 +1,6 @@
 import traverse from '@babel/traverse'
 import * as Babel from '@babel/parser'
 import * as fs from 'fs-extra'
-import {ControlPanel} from '../Main';
 import { ParseSettings } from '../Options';
 
 export function findModulesUnderNamespace(file:string,Namespace:string){
@@ -54,7 +53,7 @@ export function searchForModuleUnderNamespace(file:string,Module:string,Namespac
     return rc
 }
 
-export function searchForDefaultNamespace(file:string,Namespace:string){ 
+export function searchForDefaultNamespace(file:string,Namespace:string,ControlPanel){ 
     const buffer = fs.readFileSync(file).toString()
 
     const jsCode = Babel.parse(buffer,ParseSettings)

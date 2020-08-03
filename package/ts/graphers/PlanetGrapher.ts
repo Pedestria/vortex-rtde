@@ -15,7 +15,7 @@ function namePlanet(Graph:VortexGraph){
  * @param {VortexGraph} Graph 
  */
 
-export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph){
+export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph,ControlPanel){
 
     traverse(entry.ast, {
         CallExpression: function(path){
@@ -29,7 +29,7 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph){
                     ent = LocalizedResolve(entry.name,name)
                     isLib = false
                 } else{
-                    ent = resolveLibBundle(name)
+                    ent = resolveLibBundle(name,ControlPanel)
                     isLib = true
                 }
 
@@ -58,7 +58,7 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph){
                                 ent = LocalizedResolve(entry.name,name)
                                 isLib = false
                             } else{
-                                ent = resolveLibBundle(name)
+                                ent = resolveLibBundle(name,ControlPanel)
                                 isLib = true
                             }
 

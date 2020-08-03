@@ -2,12 +2,10 @@ import * as path from 'path'
 import * as resolve from 'resolve'
 import * as Babel from '@babel/parser'
 import traverse from '@babel/traverse'
-import * as fs from 'fs-extra'
+import {readFileSync} from 'fs-extra'
 import {DefaultQuarkTable, QuarkLibEntry} from './QuarkTable'
-import {ControlPanel} from  './Main'
 import * as chalk from 'chalk'
 import { ParseSettings } from './Options'
-import { getFileExtension } from './DependencyFactory'
 import { VortexError, VortexErrorType } from './VortexError'
 import { file } from '@babel/types'
 
@@ -41,7 +39,7 @@ export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:st
  * @returns {string} A Locally Resolved library bundle location __(Depending on global config, will return either minified or development bundle. If a minified bundle does NOT exist, a cache directory will be made and the bundle will be minfied using _Terser_ )__
  */
 
-export function resolveLibBundle(nodeLibName:string){
+export function resolveLibBundle(nodeLibName:string,ControlPanel){
     //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
     let STD_NODE_LIBS = ['path','fs','module','os','fs/promises']
 
@@ -110,7 +108,7 @@ export function ResolveLibrary(packageName:string){
 
 function LibraryRelayVerify(packageIndexDirname:string){
 
-    const buffer = fs.readFileSync(packageIndexDirname,'utf-8').toString();
+    const buffer = readFileSync(packageIndexDirname,'utf-8').toString();
 
     let regexp = new RegExp('./')
 
@@ -149,12 +147,12 @@ export function addJsExtensionIfNecessary(file:string){
     }
 }
 
-export function isJs(filename:string){
+export function isJs(filename:string,ControlPanel){
 
     if(path.basename(filename) === filename){
         return true
     }
-    else if(ControlPanel.extensions.includes(getFileExtension(filename))){
+    else if(ControlPanel.extensions.includes(path.extname(filename))){
         return false
     }
     else if(filename.includes('./') && path.extname(filename) === ''){
@@ -170,7 +168,7 @@ export function isJs(filename:string){
         return false;
     }
     else {
-        throw new VortexError(`Cannot resolve extension: "${getFileExtension(filename)}" If you wish to include this in your Solar System, include it in the resolvable extensions option in the vortex.panel.js`,VortexErrorType.PortalPanelError)
+        throw new VortexError(`Cannot resolve extension: "${path.extname(filename)}" If you wish to include this in your Solar System, include it in the resolvable extensions option in the vortex.panel.js`,VortexErrorType.PortalPanelError)
     }
 
 }
