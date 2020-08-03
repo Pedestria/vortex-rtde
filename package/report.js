@@ -1,4 +1,4 @@
-const vortex = require('./dist/vortex.min');
+const vortex = require('./');
 
 console.log(vortex);
 
