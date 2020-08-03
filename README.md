@@ -24,7 +24,7 @@
 - [x] Add Updater.
  - [x] mininize request diffs(make function that returns only import/require diffs.)
 - [x] Css Support
-- [ ] Support For Images.
+- [x] Support For Images.
 - [ ] Addon Support! 
 
 
