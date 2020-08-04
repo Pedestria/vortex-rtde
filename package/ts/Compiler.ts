@@ -98,8 +98,6 @@ async function LibCompile(Graph:VortexGraph,ControlPanel){
         }
     }
 
-    console.log(libB.libs)
-
     let cjsIIFE:string = `var fileExportBuffer = {};
 
     ${libB.libs.join('\n')}

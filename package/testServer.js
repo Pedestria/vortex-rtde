@@ -13,7 +13,7 @@ main.use(express.static(path.resolve(__dirname,'./debug')))
 
 // main.get('/*', function(req,res) {res.sendFile(path.resolve(__dirname,'./test/test.html'))})
 
-const {LivePush} = require('./lib/live/LivePush')
+const {LivePush} = require('./')
 
 new LivePush(path.resolve(__dirname,"./vortex.panel.js"),main,server,8080,true);
 

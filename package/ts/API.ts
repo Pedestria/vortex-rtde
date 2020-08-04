@@ -2,19 +2,17 @@ import Dependency from './Dependency'
 import ImportLocation from './ImportLocation'
 import ModuleDependency from './dependencies/ModuleDependency'
 import MDImportLocation from './importlocations/MDImportLocation'
-import { QueueEntry, addEntryToQueue, loadEntryFromQueue } from './GraphGenerator'
+import { QueueEntry, addEntryToQueue, loadEntryFromQueue, GraphDepsAndModsForCurrentFile } from './GraphGenerator'
 import traverse from '@babel/traverse'
 import { VortexGraph } from './Graph'
 import { transformAsync} from '@babel/core'
 import { BabelSettings, ParseSettings } from './Options'
-import { GraphDepsAndModsForCurrentFile } from './GraphGenerator'
 import generate from '@babel/generator'
 import {parse} from '@babel/parser'
 import {TransformImportsFromAST, TransformExportsFromAST, CSSInjector, pipeCSSContentToBuffer} from './Compiler'
 import EsModuleDependency from './dependencies/EsModuleDependency'
 import {CSSDependency} from './dependencies/CSSDependency'
 import {FileImportLocation} from './importlocations/FileImportLocation'
-import {ControlPanel} from './Main'
 
 function BabelCompile(code: string) {
     return transformAsync(code, BabelSettings)
@@ -93,7 +91,7 @@ class ExportsHandler {
 
 interface CustomGraphDependencyMapObject {
     extension:string
-    dependency:DependencyConstructor<VAbstractDependencies>,
+    dependency:DependencyConstructor<typeof Dependency>,
     bundlable:boolean
 }
 
@@ -120,7 +118,7 @@ interface CompilerCustomDependencyMap {
     exportsTransformer:ExportsTransformer
 }
 
-export interface VortexAddonModule {
+interface VortexAddonModule {
     JS_EXNTS:Array<string>
     NON_JS_EXNTS:Array<string>
     GRAPH_EXTSN:Array<CustomDependencyGrapher>
@@ -161,13 +159,53 @@ interface ExportHandlerMap {
 
 }
 
+interface ControlPanel {
+
+    /**
+     * If checked True, then Vortex will bundle with NO debug tools.
+     * If checked False, then Vortex will bundle with debug tools.
+     */
+    isProduction:boolean
+    /**
+     * If checked true, Vortex will consider your program a library instead of a web application.
+     */
+    isLibrary:boolean
+    /**
+     * If checked true, Terser will be used to minify production bundle. (Can NOT be used on development bundles.) (Labels it Neutron Star)
+     */
+    usingTerser:boolean
+
+    outputFile:string
+
+    /**If checked true, Vortex will encode File Dependency names with uuids.
+     */
+      encodeFilenames:boolean
+
+      useDebug:boolean;
+
+      startingPoint:string
+
+      extensions:Array<string>
+
+      polyfillPromise:boolean
+
+      externalLibs:Array<string>
+
+      InstalledAddons:InternalVortexAddons
+
+      cssPlanet:boolean
+
+      minifyCssPlanet:boolean
+
+}
+
 
 interface Grapher {
     /**
      * Construct Grapher with Dependency Input.
      * Often used with Precompilers.
      */
-    (Dependency:Dependency,Graph:VortexGraph,planetName?:string,ControlPanel):Promise<void>
+    (Dependency:Dependency,Graph:VortexGraph,planetName:string,ControlPanel:ControlPanel):Promise<void>
     /**
      * Construct Grapher with Queue Entry Input
      */
@@ -175,20 +213,10 @@ interface Grapher {
 
 }
 
-declare namespace Addons {
+var Addons = {
 
-    export {
-        VortexAddon,
-        ExportsHandler,
-        CustomGraphDependencyMapObject,
-        CustomDependencyGrapher,
-        ExportsTransformer,
-        ImportsTransformer,
-        CompilerCustomDependencyMap,
-        VortexAddonModule,
-        Grapher
-    }
-
+    VortexAddon:VortexAddon,
+    ExportsHandler:ExportsHandler,
 }
 
 interface InternalVortexAddons{
@@ -201,37 +229,59 @@ interface InternalVortexAddons{
     importedCompilers:Array<CompilerCustomDependencyMap>
 }
 
+type DependencyConstructor<T extends typeof Dependency> = InstanceType<T>
 
-type DependencyConstructor<T> = T extends CSSDependency?{new(name:string,initImportLocation:FileImportLocation,stylesheet:string):CSSDependency} :
-T extends Dependency?{new(name:string,initImportLocation:ImportLocation):Dependency} : never
+
+
 
 type VAbstractDependencies = Dependency|CSSDependency|ModuleDependency
 
-declare namespace VortexRTDEAPI{
-    export {
-        Dependency,
-        ImportLocation,
-        ModuleDependency,
-        CSSDependency,
-        MDImportLocation,
-        QueueEntry,
-        traverse as TraverseCode,
-        parse as ParseCode,
-        VortexGraph,
-        BabelCompile,
-        GraphDepsAndModsForCurrentFile as NativeDependencyGrapher,
-        generate as GenerateCode,
-        TransformImportsFromAST as TransformNativeImports,
-        TransformExportsFromAST as TransformNativeExports,
-        CSSInjector as InjectCSS,
-        addEntryToQueue as addQueueEntry,
-        EsModuleDependency,
-        loadEntryFromQueue as loadQueueEntry,
-        FileImportLocation,
-        pipeCSSContentToBuffer,
-        Addons,
-        t as ESTreeTypes  
-    }
-}
+export var VortexRTDEAPI:
+{
+    Dependency:typeof Dependency
+    ImportLocation:typeof ImportLocation
+    ModuleDependency:typeof ModuleDependency
+    CSSDependency:typeof CSSDependency
+    MDImportLocation:typeof MDImportLocation
+    QueueEntry:typeof QueueEntry
+    TraverseCode:typeof traverse
+    ParseCode:typeof parse
+    VortexGraph:typeof VortexGraph
+    BabelCompile:typeof BabelCompile
+    NativeDependencyGrapher:typeof GraphDepsAndModsForCurrentFile
+    GenerateCode:typeof generate
+    TransformNativeImports:typeof TransformImportsFromAST
+    TransformNativeExports:typeof TransformExportsFromAST
+    InjectCSS:typeof CSSInjector
+    addQueueEntry:typeof addEntryToQueue
+    EsModuleDependency:typeof EsModuleDependency
+    loadQueueEntry:typeof loadEntryFromQueue
+    FileImportLocation:typeof FileImportLocation
+    pipeCSSContentToBuffer:typeof pipeCSSContentToBuffer
+    Addons:typeof Addons
+    ESTreeTypes:typeof t
 
-export default VortexRTDEAPI;
+} = {
+        Dependency:Dependency,
+        ImportLocation:ImportLocation,
+        ModuleDependency:ModuleDependency,
+        CSSDependency:CSSDependency,
+        MDImportLocation:MDImportLocation,
+        QueueEntry:QueueEntry,
+        TraverseCode:traverse,
+        ParseCode:parse,
+        VortexGraph:VortexGraph,
+        BabelCompile:BabelCompile,
+        NativeDependencyGrapher:GraphDepsAndModsForCurrentFile,
+        GenerateCode:generate,
+        TransformNativeImports:TransformImportsFromAST,
+        TransformNativeExports:TransformExportsFromAST,
+        InjectCSS:CSSInjector,
+        addQueueEntry:addEntryToQueue,
+        EsModuleDependency:EsModuleDependency,
+        loadQueueEntry:loadEntryFromQueue,
+        FileImportLocation:FileImportLocation,
+        pipeCSSContentToBuffer:pipeCSSContentToBuffer,
+        Addons:Addons,
+        ESTreeTypes:t  
+};

@@ -1,4 +1,4 @@
-import VortexRTDEAPI from "./ts/API";
+import { VortexRTDEAPI } from "./ts/Index";
 
 interface LivePushOptions {
     /**

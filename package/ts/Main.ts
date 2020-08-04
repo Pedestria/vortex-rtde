@@ -3,14 +3,11 @@ import {readJSONSync,writeFileSync,ensureDirSync}from 'fs-extra'
 import {Compile, Bundle} from './Compiler.js';
 import * as terser from 'terser'
 import * as path from 'path'
-
-
 import * as chalk from 'chalk';
-import cliSpinners from 'cli-spinners'
+import * as cliSpinners from 'cli-spinners'
 import * as ora from 'ora'
 import * as os from 'os'
 import { assignDependencyType } from './Planet';
-import {InternalVortexAddons} from './API';
 import _ = require('lodash');
 import { notNativeDependency } from './DependencyFactory';
 import Dependency from './Dependency';
@@ -71,14 +68,27 @@ namespace ControlPanel {
 
 }
 
+interface CLI{
+    output:string
+    start:string
+    bundleMode:"neutronstar"|"star"
+    type:"app"|"library"  
+}
+
 
 /**Creates a Star/Neutron Star/Solar System from entry point.
  *  
  */ 
 
-export async function createStarPackage (resolvedPath:string){
+export async function createStarPackage (resolvedPath:string,CLI?:CLI){
 
-    const Panel = require(path.relative(__dirname,resolvedPath))/*vortexRetain*/
+    var Panel;
+
+    if(resolvedPath){
+        Panel = require(path.relative(__dirname,resolvedPath))/*vortexRetain*/
+    } else {
+        Panel = CLI
+    }
 
     ControlPanel.usingTerser = Panel.useTerser !== null? Panel.useTerser : false;
     ControlPanel.outputFile = Panel.output

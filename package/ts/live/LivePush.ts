@@ -25,7 +25,7 @@ var tag = "Reload"
 
 
 import * as _ from 'lodash'
-import cliSpinners = require('cli-spinners')
+import * as cliSpinners from 'cli-spinners';
 import { Server } from 'http'
 import { v4 } from 'uuid'
 
