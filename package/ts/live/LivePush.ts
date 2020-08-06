@@ -80,6 +80,22 @@ function readControlPanel(ControlPanelObject:typeof Panel):typeof InternalLivePu
     }
 }
 
+class LivePushRTEventSystem {
+
+    private ioserver:io.Server
+
+    constructor(io:io.Server){
+        this.ioserver = io
+    }
+
+    emitEvent(eventID:string,...args:[]){
+        this.ioserver.emit(eventID,...args)
+    }
+    on(eventID:string,listener:(socket:io.Socket)=>void){
+        this.ioserver.on(eventID,listener);
+    }
+}
+
 
 /**
  * 
@@ -87,6 +103,8 @@ function readControlPanel(ControlPanelObject:typeof Panel):typeof InternalLivePu
  * 
  */
 export class LivePush{
+
+    events:LivePushRTEventSystem
 
     /**
      * 
@@ -97,12 +115,13 @@ export class LivePush{
      * @param {boolean} preLoadHTMLPage Option to load from already prepared HTML page.
      */
     constructor(dirToControlPanel:string,expressRouter:e.Express,server:Server,portNum:number,preLoadHTMLPage:boolean){
+        //Init Socket.Io
+        IO = io(server);
+        this.events = new LivePushRTEventSystem(IO);
         controlPanelDIR = dirToControlPanel;
         const Panel = require(dirToControlPanel);/*vortexRetain*/
 
         InternalLivePushOptions = readControlPanel(Panel);
-        //Init Socket.Io
-        IO = io(server);
 
         htmlClientDependenciesAdded = preLoadHTMLPage;
 

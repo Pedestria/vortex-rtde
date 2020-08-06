@@ -15,5 +15,6 @@ export class VortexError{
 
 export enum VortexErrorType {
     PortalPanelError = 1,
-    StarSyntaxError = 2
+    StarSyntaxError = 2,
+    StarSelfImposedError = 3
 }

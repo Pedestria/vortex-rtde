@@ -152,7 +152,12 @@ export async function createStarPackage (resolvedPath:string,CLI?:CLI){
     spinner2.spinner = cliSpinners.dots11;
     spinner2.start();
 
-    let Graph = await GenerateGraph(entry,os.platform() === 'win32'? amendEntryPoint2(Panel.start) : Panel.start,ControlPanel).catch(err => {console.log(err);process.exit(1);});
+    let Graph = await GenerateGraph(entry,os.platform() === 'win32'? amendEntryPoint2(Panel.start) : Panel.start,ControlPanel)
+    .catch(err => {
+            spinner2.fail();
+            LogVortexError(err);
+            process.exit(1);
+        });
     let check = DependencyCircularCheck(Graph);
     if(check.size > 0){
         spinner2.fail();
@@ -171,7 +176,12 @@ export async function createStarPackage (resolvedPath:string,CLI?:CLI){
         }
     }
 
-    let bundles = await Compile(Graph,ControlPanel).catch(err => {console.log(err);process.exit(1);})
+    let bundles = await Compile(Graph,ControlPanel)
+    .catch(err => {
+        spinner3.fail();
+        LogVortexError(err);
+        process.exit(1);
+    })
 
     if(ControlPanel.usingTerser){
         spinner3.succeed();
@@ -331,8 +341,12 @@ function errorCircularDependencies(set:Set<string[]>){
 
     let loggedOutput = chains.map(chain => chain.join(' ~> ')).join('\n');
 
-    var error:VortexError = new VortexError("Error! Circular References!! \n "+loggedOutput,VortexErrorType.StarSyntaxError)
+    var error:VortexError = new VortexError("Error! Circular References!! \n "+loggedOutput,VortexErrorType.StarSelfImposedError)
     throw error.printOut();
+}
+
+function LogVortexError(err:any){
+    console.log(err);
 }
 
 export {VortexRTDEAPI}/*vortexExpose*/

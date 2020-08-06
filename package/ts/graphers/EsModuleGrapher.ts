@@ -11,6 +11,7 @@ import { QueueEntry } from "../GraphGenerator.js";
 import { resolveDependencyType, notNativeDependency, resolveNonNativeDependency } from "../DependencyFactory.js";
 import { FileImportLocation } from "../importlocations/FileImportLocation.js";
 import {isJs, LocalizedResolve} from '../Resolve'
+import {ControlPanel} from '../types/ControlPanel'
 
 /**Searchs and Graphs JS code for ECMAScript Module Dependencies
  * 
@@ -19,7 +20,7 @@ import {isJs, LocalizedResolve} from '../Resolve'
  */
 
 
-export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:string,ControlPanel,ASTQueue){
+export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:string,ControlPanel:ControlPanel,ASTQueue){
 
     traverse(entry.ast,{
         ImportDeclaration:function(path) {

@@ -16,6 +16,7 @@ import * as PlanetGrapher from './graphers/PlanetGrapher'
 import {readFile} from 'fs/promises'
 import * as path from 'path'
 import { notNativeDependency, resolveGrapherForNonNativeDependency } from './DependencyFactory.js'
+import {ControlPanel} from './types/ControlPanel'
 
 
 var readFileAsync = readFile
@@ -63,7 +64,7 @@ export class QueueEntry {
  * 
  */
 
-export async function GenerateGraph(entry:string,modEntry:string,ControlPanel){
+export async function GenerateGraph(entry:string,modEntry:string,ControlPanel:ControlPanel){
 
     var ASTQueue:{
         isInQueue:typeof isInQueue
@@ -286,7 +287,7 @@ export async function GenerateGraph(entry:string,modEntry:string,ControlPanel){
    return Graph;
 }
 
-export function GraphDepsAndModsForCurrentFile(entry:QueueEntry,Graph:VortexGraph,planetName?:string,panel,ASTQueue){
+export function GraphDepsAndModsForCurrentFile(entry:QueueEntry,Graph:VortexGraph,planetName:string,panel:ControlPanel,ASTQueue){
     EsModuleGrapher.SearchAndGraph(entry,Graph,planetName,panel,ASTQueue);
     CjsModuleGrapher.SearchAndGraph(entry,Graph,planetName,panel,ASTQueue);
     PlanetGrapher.SearchAndGraph(entry,Graph,panel);

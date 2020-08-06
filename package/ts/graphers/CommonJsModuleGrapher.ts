@@ -8,6 +8,7 @@ import { QueueEntry } from "../GraphGenerator.js";
 import { isJs } from "../Resolve.js";
 import { FileImportLocation } from "../importlocations/FileImportLocation.js";
 import { resolveDependencyType } from "../DependencyFactory.js";
+import {ControlPanel} from '../types/ControlPanel'
 
 /**Searchs and Graphs JS code for CommonJS Dependencies
  * 
@@ -15,7 +16,7 @@ import { resolveDependencyType } from "../DependencyFactory.js";
  * @param {VortexGraph} Graph 
  */
 
-export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:string,ControlPanel,ASTQueue){
+export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName:string,ControlPanel:ControlPanel,ASTQueue){
 
     // fs.writeJson('./debug.json',jsCode, err => {
     //         if (err) return console.error(err)

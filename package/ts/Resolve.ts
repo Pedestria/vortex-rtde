@@ -159,20 +159,20 @@ export function isJs(filename:string,ControlPanel:ControlPanel){
     else if(ControlPanel.extensions.includes(path.extname(filename))){
         return false
     }
-    else if(filename.includes('./') && path.extname(filename) === ''){
+    else if(filename.includes('./') || path.extname(filename) === ''){
         return true
     }
-    else if(/\.m?jsx?$/g.test(filename) && filename.includes('.') == false){
+    else if(/\.m?jsx?$/g.test(filename)){
         return true
     }
-    else if (ControlPanel.InstalledAddons.extensions.js.includes(path.extname(filename))){
+    else if (ControlPanel.InstalledAddons && ControlPanel.InstalledAddons.extensions.js.includes(path.extname(filename))){
         return true
     }
-    else if(ControlPanel.InstalledAddons.extensions.other.includes(path.extname(filename))){
+    else if(ControlPanel.InstalledAddons && ControlPanel.InstalledAddons.extensions.other.includes(path.extname(filename))){
         return false;
     }
     else {
-        throw new VortexError(`Cannot resolve extension: "${path.extname(filename)}" If you wish to include this in your Solar System, include it in the resolvable extensions option in the vortex.panel.js`,VortexErrorType.PortalPanelError)
+        throw new VortexError(`Cannot resolve extension: "${path.extname(filename)}" If you wish to include this in your Solar System, include it in the resolvable extensions option in the vortex.panel.js`,VortexErrorType.PortalPanelError).printOut()
     }
 
 }
@@ -193,7 +193,7 @@ export function DependencyCircularCheck(Graph:VortexGraph):Set<string[]>{
     for(let NAME of dependencyNames){
         let TraverseChain:Set<string> = new Set<string>();
         let chain = recursiveGotoandVerify(NAME,Graph.Star.filter(dep => dep.testForImportLocation(NAME)),TraverseChain,circdependencyNames)
-        if(chain.has(NAME)){
+        if(chain && chain.has(NAME)){
             circularDependencies.add([NAME].concat(convertSetToArray(chain)));
             circdependencyNames.push(NAME);
         }
@@ -228,11 +228,5 @@ export function DependencyCircularCheck(Graph:VortexGraph):Set<string[]>{
         }
         
     }
-
-}
-
-function concatSet<T>(...setsToMerge:Set<T>[]):Set<T>{
-
-    return new Set<T>(...setsToMerge);
 
 }
