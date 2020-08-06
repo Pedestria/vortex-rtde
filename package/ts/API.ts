@@ -23,7 +23,7 @@ import * as _ from 'lodash'
 /**
  * Vortex Addon Interface
  */
-class VortexAddon {
+export class VortexAddon {
 
     name:string
     handler:ExportsHandler
@@ -219,7 +219,7 @@ var Addons = {
     ExportsHandler:ExportsHandler,
 }
 
-interface InternalVortexAddons{
+export interface InternalVortexAddons{
     extensions:{
         js:Array<string>
         other:Array<string>

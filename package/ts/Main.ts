@@ -1,6 +1,7 @@
 import {queue,GenerateGraph} from './GraphGenerator'
-import {readJSONSync,writeFileSync,ensureDirSync}from 'fs-extra'
+import {readJSONSync,writeFileSync,ensureDirSync} from 'fs-extra'
 import {Compile, Bundle} from './Compiler.js';
+import {VortexRTDEAPI, InternalVortexAddons,VortexAddon} from './API'
 import * as terser from 'terser'
 import * as path from 'path'
 import * as chalk from 'chalk';
@@ -11,10 +12,13 @@ import { assignDependencyType } from './Planet';
 import _ = require('lodash');
 import { notNativeDependency } from './DependencyFactory';
 import Dependency from './Dependency';
+import {DependencyCircularCheck} from './Resolve'
+import { indexOf, chain } from 'lodash';
+import { VortexError, VortexErrorType } from './VortexError';
 
 function ParseAddons(Addons:Array<VortexAddon>){
 
-    var INTERALS = {
+    var INTERALS:InternalVortexAddons = {
         extensions:{
             js:_.flatten(Addons.map(addon => addon.handler.exports.extend.jsExtensions)),
             other:_.flatten(Addons.map(addon => addon.handler.exports.extend.extensions))
@@ -148,7 +152,12 @@ export async function createStarPackage (resolvedPath:string,CLI?:CLI){
     spinner2.spinner = cliSpinners.dots11;
     spinner2.start();
 
-    let Graph = await GenerateGraph(entry,os.platform() === 'win32'? amendEntryPoint2(Panel.start) : Panel.start,ControlPanel).catch(err => {console.log(err);process.exit(1);})
+    let Graph = await GenerateGraph(entry,os.platform() === 'win32'? amendEntryPoint2(Panel.start) : Panel.start,ControlPanel).catch(err => {console.log(err);process.exit(1);});
+    let check = DependencyCircularCheck(Graph);
+    if(check.size > 0){
+        spinner2.fail();
+        errorCircularDependencies(check);
+    }
     spinner2.succeed();
     spinner3.start();
 
@@ -313,6 +322,20 @@ function amendEntryPoint2(entry:string){
     }
     return `./${shortEntry}`
 }
+
+function errorCircularDependencies(set:Set<string[]>){
+
+    let chains:string[][] = [];
+
+    set.forEach(value => chains.push(value))
+
+    let loggedOutput = chains.map(chain => chain.join(' ~> ')).join('\n');
+
+    var error:VortexError = new VortexError("Error! Circular References!! \n "+loggedOutput,VortexErrorType.StarSyntaxError)
+    throw error.printOut();
+}
+
+export {VortexRTDEAPI}/*vortexExpose*/
 
 // if(Panel.type !== 'live'){
 //     createStarPackage();

@@ -65,7 +65,7 @@ export function resolveNonNativeDependency(depName:string,initImportLoc:ImportLo
 
     for(let depMapObject of ControlPanel.InstalledAddons.importedDependencies){
         if(depMapObject.extension === path.extname(depName)){
-            resolvedDependency = new depMapObject.dependency<Dependency>(depName,initImportLoc);
+            resolvedDependency = new depMapObject.dependency(depName,initImportLoc);
         }
     }
 

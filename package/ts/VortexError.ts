@@ -1,8 +1,15 @@
 import * as chalk from 'chalk'
 
-export class VortexError extends Error{
-    constructor(error_message:string,type:VortexErrorType) {
-        super(chalk.redBright(`${type} NOVA ${error_message}`));
+export class VortexError{
+
+    message:string
+
+    constructor(error_message:string,type:VortexErrorType){
+        this.message = chalk.redBright(`${VortexErrorType[type]} NOVA ${error_message}`);
+    }
+
+    printOut():string{
+        return this.message
     }
 }
 

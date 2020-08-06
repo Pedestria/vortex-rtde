@@ -4,10 +4,12 @@ import * as Babel from '@babel/parser'
 import traverse from '@babel/traverse'
 import {readFileSync} from 'fs-extra'
 import {DefaultQuarkTable, QuarkLibEntry} from './QuarkTable'
-import * as chalk from 'chalk'
 import { ParseSettings } from './Options'
 import { VortexError, VortexErrorType } from './VortexError'
-import { file } from '@babel/types'
+import {ControlPanel} from './types/ControlPanel'
+import {VortexGraph} from './Graph'
+import Dependency from './Dependency'
+import * as _ from 'lodash'
 
 /**Resolves dependency location based off of Import Location
  * __(To allow Node File System to read/verify imported modules)__
@@ -17,7 +19,7 @@ import { file } from '@babel/types'
  * @returns {string} A Resolved Dependency location. 
  */
 
-export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:string){
+export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:string):string{
 
     if(rootFileDirToEntry == dependencyLocalDir){
         return rootFileDirToEntry
@@ -39,7 +41,9 @@ export function LocalizedResolve(rootFileDirToEntry:string,dependencyLocalDir:st
  * @returns {string} A Locally Resolved library bundle location __(Depending on global config, will return either minified or development bundle. If a minified bundle does NOT exist, a cache directory will be made and the bundle will be minfied using _Terser_ )__
  */
 
-export function resolveLibBundle(nodeLibName:string,ControlPanel){
+export function resolveLibBundle(nodeLibName:string,ControlPanel:ControlPanel):string{
+
+    let bundleREGEXP = /\.(?:min|prod|slim)/g
     //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
     let STD_NODE_LIBS = ['path','fs','module','os','fs/promises']
 
@@ -55,12 +59,12 @@ export function resolveLibBundle(nodeLibName:string,ControlPanel){
         }
         for(let bund of bundles){
             if(ControlPanel.isProduction){
-                if(bund.includes('min') || bund.includes('prod')){
+                if(bundleREGEXP.test(bund)){
                     return addJsExtensionIfNecessary(bund)
                 } 
             }
             else{
-                if(!bund.includes('min') && !bund.includes('prod')){
+                if(!bundleREGEXP.test(bund)){
                     return addJsExtensionIfNecessary(bund)
                 }
             }
@@ -147,7 +151,7 @@ export function addJsExtensionIfNecessary(file:string){
     }
 }
 
-export function isJs(filename:string,ControlPanel){
+export function isJs(filename:string,ControlPanel:ControlPanel){
 
     if(path.basename(filename) === filename){
         return true
@@ -158,7 +162,7 @@ export function isJs(filename:string,ControlPanel){
     else if(filename.includes('./') && path.extname(filename) === ''){
         return true
     }
-    else if(filename.includes('.js') || filename.includes('.mjs') || filename.includes('.') == false){
+    else if(/\.m?jsx?$/g.test(filename) && filename.includes('.') == false){
         return true
     }
     else if (ControlPanel.InstalledAddons.extensions.js.includes(path.extname(filename))){
@@ -170,5 +174,65 @@ export function isJs(filename:string,ControlPanel){
     else {
         throw new VortexError(`Cannot resolve extension: "${path.extname(filename)}" If you wish to include this in your Solar System, include it in the resolvable extensions option in the vortex.panel.js`,VortexErrorType.PortalPanelError)
     }
+
+}
+
+export function DependencyCircularCheck(Graph:VortexGraph):Set<string[]>{
+    let circularDependencies:Set<string[]> = new Set<string[]>();
+    let circdependencyNames:Array<string> = new Array<string>();
+
+    function convertSetToArray <T> (set:Set<T>):Array<T> {
+        let newArray:Array<T> = []
+        for(let value of set.values()){
+            newArray.push(value);
+        }
+        return newArray
+    }
+
+    let dependencyNames = _.uniq([Graph.entryPoint].concat(Graph.Star.map(dep => dep.name),_.flatten(Graph.Planets.map(planet => planet.modules.map(mod => mod.name)))));
+    for(let NAME of dependencyNames){
+        let TraverseChain:Set<string> = new Set<string>();
+        let chain = recursiveGotoandVerify(NAME,Graph.Star.filter(dep => dep.testForImportLocation(NAME)),TraverseChain,circdependencyNames)
+        if(chain.has(NAME)){
+            circularDependencies.add([NAME].concat(convertSetToArray(chain)));
+            circdependencyNames.push(NAME);
+        }
+    }
+
+    return circularDependencies  
+
+    function recursiveGotoandVerify(name:string,currentDependencies:Dependency[],chain:Set<string>,circDepDict:string[]):Set<string>{
+        for(let dep of currentDependencies){
+            if(circDepDict.includes(dep.name)){
+                return chain
+            }
+            chain.add(dep.name);
+            if(dep.name ===  name){
+                return chain
+            }else {
+                let DEPNAME = dep.name
+                let newDependenciesToCheck:Dependency[] = Graph.Star.filter(dep => dep.testForImportLocation(DEPNAME));
+                for(let newName of newDependenciesToCheck.map(dep => dep.name)){
+                    if(chain.has(newName)){
+                        return chain
+                    }
+                }
+
+                if(newDependenciesToCheck.length === 0){
+                    return undefined
+                }
+                else {
+                    return recursiveGotoandVerify(name,newDependenciesToCheck,chain,circDepDict);
+                }
+            }
+        }
+        
+    }
+
+}
+
+function concatSet<T>(...setsToMerge:Set<T>[]):Set<T>{
+
+    return new Set<T>(...setsToMerge);
 
 }

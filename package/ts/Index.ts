@@ -1,8 +1,6 @@
-// import VortexRTDEAPI from './API'
 import {createStarPackage} from './Main'
 import {LivePush}  from './live/LivePush'
 import {Command} from 'commander'
-import {VortexRTDEAPI} from './API'
 
 if(/vortex\.(?:min\.)?js$/g.test(require.main.filename)){
 
@@ -42,4 +40,4 @@ if(/vortex\.(?:min\.)?js$/g.test(require.main.filename)){
 
 }
 
-export {createStarPackage,LivePush,VortexRTDEAPI}/*vortexExpose*/
+export {createStarPackage,LivePush}/*vortexExpose*/

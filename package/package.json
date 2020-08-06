@@ -4,8 +4,8 @@
   "author": "Alex Topper",
   "license": "MIT",
   "description": "A real time web application/js library development environment.",
-  "main": "./dist/vortex.js",
-  "files":[
+  "main": "./lib/Index.js",
+  "files": [
     "./dist/vortex.min.js"
   ],
   "types": "./index.d.ts",

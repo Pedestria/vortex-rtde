@@ -10,9 +10,9 @@ module.exports = {
         CDNImports:[]
     },
     bundleMode:'neutronstar',
-    useTerser:true,
-    start:'./test/vortex/Index.js',
-    output:'./dist/vortex.js',
+    useTerser:false,
+    start:'./test/ci/test.js',
+    output:'./dist/test.js',
     extensions: ['.css','.png','.otf'],
     encodeFilenames:true,
     polyfillPromise:false,

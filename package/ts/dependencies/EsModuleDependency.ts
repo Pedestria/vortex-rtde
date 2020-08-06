@@ -40,6 +40,18 @@ export default class EsModuleDependency extends ModuleDependency {
 
                 },
             ExportNamedDeclaration : function(path){
+                if(!path.node.declaration){
+                    for (let ExportType of path.node.specifiers){
+                        if (ExportType.type === 'ExportSpecifier'){
+                            let mod = ExportType.exported.name
+                            modBuffer.push(new Module(mod,"EsModule"))
+                        } else if(ExportType.type === "ExportDefaultSpecifier"){
+                            modBuffer.push(new Module(ExportType.exported.name,"EsDefaultModule"))
+                        }
+                    }
+                    verify(currentImpLoc,modBuffer,entry);
+                    return;
+                }
                 if(path.node.declaration.type === 'VariableDeclaration'){
                     let mod = path.node.declaration.declarations[0].id.name
                     modBuffer.push(new Module(mod,"EsModule"))
@@ -63,11 +75,21 @@ export default class EsModuleDependency extends ModuleDependency {
                         let mod = path.node.declaration.id.name
                         modBuffer.push(new Module(mod,"EsModule"))
                         }
+
+                        verify(currentImpLoc,modBuffer,entry);
+
+
+
                     }
                 }
             )
+ }
 
-        let dummyImpLoc = new MDImportLocation('buffer',0,modBuffer,'')
+}
+
+function verify(currentImpLoc:MDImportLocation,modBuffer:Module<keyof typeof ModuleTypes>[],entry:QueueEntry){
+
+    let dummyImpLoc = new MDImportLocation('buffer',0,modBuffer,'')
 
         //let confModImp = []
         //let confModExp = []
@@ -93,7 +115,5 @@ export default class EsModuleDependency extends ModuleDependency {
                 //currentImpLoc.modules[currentImpLoc.indexOfModuleByName(mod.name)].type = ModuleTypes.CjsNamespaceProvider
              }
          }
-     }
- 
- }
+}
  

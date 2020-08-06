@@ -82,17 +82,17 @@ async function LibCompile(Graph:VortexGraph,ControlPanel){
         if(dep instanceof ModuleDependency){
             for(let impLoc of dep.importLocations){
                 if(impLoc instanceof MDImportLocation){
-                    convertImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
+                    await convertImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
 
                     if(impLoc.name === Graph.entryPoint){
-                        convertExportsFromAST(loadEntryFromQueue(impLoc.name).ast,dep,libB)
+                        await convertExportsFromAST(loadEntryFromQueue(impLoc.name).ast,dep,libB)
                     }
                 }
             }
             if(dep.outBundle !== true){
                     //Libraries are skipped completely in Lib Bundle
                 if(dep.name.includes('./')){
-                    convertExportsFromAST(loadEntryFromQueue(dep.name).ast,dep,libB)
+                    await convertExportsFromAST(loadEntryFromQueue(dep.name).ast,dep,libB)
                 }
             }
         }
@@ -157,7 +157,7 @@ async function LibCompile(Graph:VortexGraph,ControlPanel){
  * @param {LibBundle} libBund The Library Bundle
  */
 
- function convertImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDependency,libBund:LibBundle){
+ async function convertImportsFromAST(ast:t.File,impLoc:MDImportLocation,dep:ModuleDependency,libBund:LibBundle){
 
     //Grabs all requires/imports of libs and converts them to CJS and places them at the top of bundle
     //
@@ -294,7 +294,7 @@ function buildImportsFromImportLocation(currentMDImpLoc:MDImportLocation,current
 
 }
 
-function convertExportsFromAST(ast:t.File,dep:ModuleDependency,libbund:LibBundle){
+async function convertExportsFromAST(ast:t.File,dep:ModuleDependency,libbund:LibBundle){
 
     if(dep instanceof CjsModuleDependency){
 

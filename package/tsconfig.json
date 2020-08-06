@@ -14,7 +14,8 @@
     ],
     "exclude": [
         "node_modules",
-        "../addons"
+        "../addons",
+        "./ts/types/*"
     ]
 
 }
