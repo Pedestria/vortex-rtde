@@ -1,4 +1,4 @@
-import {VortexRTDEAPI} from "../../package";
+import * as VortexRTDE from "../../package";
 import {readFile} from 'fs/promises'
 import * as VueUtils from '@vue/component-compiler-utils'
 import { v4 } from "uuid";
@@ -14,7 +14,7 @@ var renderAsync = promisify(sass.render)
 
 // const compileStylus = Bluebird.Promise.promisify(stylus.render)
 
-class VVueAddon extends VortexRTDEAPI.Addons.VortexAddon {
+class VVueAddon extends VortexRTDE.VortexRTDEAPI.Addons.VortexAddon {
     constructor(name:string,handler:VortexRTDEAPI.Addons.ExportsHandler){
         super(name,handler);
     }

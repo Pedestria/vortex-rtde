@@ -236,32 +236,34 @@ type DependencyConstructor<T extends typeof Dependency> = InstanceType<T>
 
 type VAbstractDependencies = Dependency|CSSDependency|ModuleDependency
 
-export var VortexRTDEAPI:
-{
-    Dependency:typeof Dependency
-    ImportLocation:typeof ImportLocation
-    ModuleDependency:typeof ModuleDependency
-    CSSDependency:typeof CSSDependency
-    MDImportLocation:typeof MDImportLocation
-    QueueEntry:typeof QueueEntry
-    TraverseCode:typeof traverse
-    ParseCode:typeof parse
-    VortexGraph:typeof VortexGraph
-    BabelCompile:typeof BabelCompile
-    NativeDependencyGrapher:typeof GraphDepsAndModsForCurrentFile
-    GenerateCode:typeof generate
-    TransformNativeImports:typeof TransformImportsFromAST
-    TransformNativeExports:typeof TransformExportsFromAST
-    InjectCSS:typeof CSSInjector
-    addQueueEntry:typeof addEntryToQueue
-    EsModuleDependency:typeof EsModuleDependency
-    loadQueueEntry:typeof loadEntryFromQueue
-    FileImportLocation:typeof FileImportLocation
-    pipeCSSContentToBuffer:typeof pipeCSSContentToBuffer
-    Addons:typeof Addons
-    ESTreeTypes:typeof t
+declare namespace VortexAPI {
+    export {
+        Dependency,
+        ImportLocation,
+        ModuleDependency,
+        CSSDependency,
+        MDImportLocation,
+        QueueEntry,
+        traverse as TraverseCode,
+        parse as ParseCode,
+        VortexGraph,
+        BabelCompile,
+        GraphDepsAndModsForCurrentFile as NativeDependencyGrapher,
+        generate as GenerateCode,
+        TransformImportsFromAST as TransformNativeImports,
+        TransformExportsFromAST as TransformNativeExports,
+        CSSInjector as InjectCSS,
+        addEntryToQueue as addQueueEntry,
+        EsModuleDependency,
+        loadEntryFromQueue as loadQueueEntry,
+        FileImportLocation,
+        pipeCSSContentToBuffer,
+        Addons,
+        t as ESTreeTypes
+    }
+}
 
-} = {
+export var VortexRTDEAPI:typeof VortexAPI = {
         Dependency:Dependency,
         ImportLocation:ImportLocation,
         ModuleDependency:ModuleDependency,

@@ -341,7 +341,7 @@ function errorCircularDependencies(set:Set<string[]>){
 
     let loggedOutput = chains.map(chain => chain.join(' ~> ')).join('\n');
 
-    var error:VortexError = new VortexError("Error! Circular References!! \n "+loggedOutput,VortexErrorType.StarSelfImposedError)
+    var error:VortexError = new VortexError(`Error! Circular Reference${chains.length > 1? 's' : ''}!! \n `+loggedOutput,VortexErrorType.StarSelfImposedError)
     throw error.printOut();
 }
 

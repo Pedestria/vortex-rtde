@@ -1,2 +1,0 @@
-@ECHO off
-yarn remove @types/diff @types/fs-extra @types/lodash @types/node @types/resolve @types/socket.io @types/uuid @types/yargs @types/babel__core @types/babel__generator @types/babel__parser @types/babel__traverse && yarn add @types/diff @types/fs-extra @types/lodash @types/node @types/resolve @types/socket.io @types/uuid @types/yargs @types/babel__core @types/babel__generator @types/babel__parser @types/babel__traverse -D 
