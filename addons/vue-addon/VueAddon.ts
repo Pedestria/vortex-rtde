@@ -1,4 +1,4 @@
-import * as VortexRTDE from "../../package";
+import {VortexRTDEAPI} from "../../package";
 import {readFile} from 'fs/promises'
 import * as VueUtils from '@vue/component-compiler-utils'
 import { v4 } from "uuid";
@@ -14,7 +14,7 @@ var renderAsync = promisify(sass.render)
 
 // const compileStylus = Bluebird.Promise.promisify(stylus.render)
 
-class VVueAddon extends VortexRTDE.VortexRTDEAPI.Addons.VortexAddon {
+class VVueAddon extends VortexRTDEAPI.Addons.VortexAddon {
     constructor(name:string,handler:VortexRTDEAPI.Addons.ExportsHandler){
         super(name,handler);
     }
@@ -33,7 +33,7 @@ class VueComponentDependency extends VortexRTDEAPI.Dependency{
 }
 
 
-const SearchAndGraphInVueDep:VortexRTDEAPI.Addons.Grapher = async (Dependency:VortexRTDEAPI.Dependency,Graph:VortexRTDEAPI.VortexGraph,planetName?:string) => {
+const SearchAndGraphInVueDep:VortexRTDEAPI.Addons.Grapher= async (Dependency:VortexRTDEAPI.Dependency,Graph:VortexRTDEAPI.VortexGraph,planetName?:string) => {
 
     let buffer = await readFile(Dependency.name)
     let file = buffer.toString()
@@ -53,9 +53,9 @@ const SearchAndGraphInVueDep:VortexRTDEAPI.Addons.Grapher = async (Dependency:Vo
  * @param {string} DependencyName 
  */
 
-async function CompileComponent(component:RawVueComponent,DependencyName:string){
+async function CompileComponent(component:RawVueComponent,DependencyName:string,ControlPanel:VortexRTDEAPI.ControlPanel){
 
-    var cssPlanet:boolean = VortexRTDEAPI.ControlPanel.cssPlanet
+    var cssPlanet:boolean = ControlPanel.cssPlanet
 
     var scopeID = `data-v-${v4()}`
 

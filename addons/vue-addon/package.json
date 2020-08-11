@@ -5,7 +5,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "types":"tsc ./VueAddon.ts"
+    "types": "tsc ./VueAddon.ts --module commonjs --target ESNext"
   },
   "dependencies": {
     "@vue/component-compiler-utils": "^3.2.0",
@@ -15,7 +15,10 @@
     "vue-template-compiler": "^2.6.11"
   },
   "devDependencies": {
+    "@types/less": "^3.0.1",
     "@types/node-sass": "^4.11.1",
+    "@types/pug": "^2.0.4",
+    "@types/uuid": "^8.0.1",
     "typescript": "^3.9.7"
   }
 }

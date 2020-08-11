@@ -1,0 +1,16 @@
+{
+  "name": "@vortex-rtde/more-styles-addon",
+  "version": "1.0.0",
+  "main": "./MoreStylesAddon.js",
+  "license": "MIT",
+  "dependencies": {
+    "node-sass": "^4.14.1"
+  },
+  "scripts": {
+    "types": "tsc ./MoreStylesAddon.ts --module commonjs --target ESNext"
+  },
+  "devDependencies": {
+    "@types/node-sass": "^4.11.1",
+    "typescript": "^3.9.7"
+  }
+}

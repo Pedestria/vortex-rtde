@@ -1,4 +1,4 @@
-import { VortexRTDEAPI } from "./ts/Index";
+import * as VORTEXAPI from  "./API_AND_Types";
 
 interface LivePushOptions {
     /**
@@ -66,7 +66,7 @@ interface CDNImport{
         /**
          * Addon Objects to Add to Vortex RTDE
          */
-        addons:Array<VortexRTDEAPI.Addons.VortexAddon>
+        addons:Array<VORTEXAPI.Addons.VortexAddon>
 
         /**
          * Libraries to NOT include in bundle. Links browser global to shuttle_exports.

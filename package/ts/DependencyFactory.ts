@@ -1,13 +1,14 @@
 import { CSSDependency } from "./dependencies/CSSDependency"
 import ImportLocation from "./ImportLocation"
 import * as fs from 'fs-extra'
-import { LocalizedResolve } from "./Resolve"
+import { LocalizedResolve, isJs } from "./Resolve"
 import { FileImportLocation } from "./importlocations/FileImportLocation"
 import { FileDependency } from "./dependencies/FileDependency"
 import Dependency from "./Dependency"
 import { VortexError, VortexErrorType } from "./VortexError"
 import _ = require("lodash")
 import * as path from 'path'
+import {ControlPanel} from './types/ControlPanel'
 
 /**Resolves a Non-JS dependency type.
  * 
@@ -43,7 +44,7 @@ export function resolveDependencyType(name:string,initImportLoc:FileImportLocati
  * @param {string} depName 
  */
 
-export function notNativeDependency(depName:string,ControlPanel): boolean{
+export function notNativeDependency(depName:string,ControlPanel:ControlPanel): boolean{
 
     if(!ControlPanel.InstalledAddons){
         return false
@@ -59,13 +60,17 @@ export function notNativeDependency(depName:string,ControlPanel): boolean{
     return false
 }
 
-export function resolveNonNativeDependency(depName:string,initImportLoc:ImportLocation,ControlPanel){
+export function resolveNonNativeDependency(depName:string,initImportLoc:ImportLocation,ControlPanel:ControlPanel){
 
     let resolvedDependency:Dependency
 
     for(let depMapObject of ControlPanel.InstalledAddons.importedDependencies){
         if(depMapObject.extension === path.extname(depName)){
-            resolvedDependency = new depMapObject.dependency(depName,initImportLoc);
+            if(!isJs(depName,ControlPanel)){
+                resolvedDependency = new depMapObject.dependency(depName,initImportLoc,fs.readFileSync(depName))
+            }else {
+                resolvedDependency = new depMapObject.dependency(depName,initImportLoc);
+            }
         }
     }
 
@@ -73,7 +78,7 @@ export function resolveNonNativeDependency(depName:string,initImportLoc:ImportLo
 
 }
 
-export function resolveGrapherForNonNativeDependency(Dependency:Dependency,ControlPanel){
+export function resolveGrapherForNonNativeDependency(Dependency:Dependency,ControlPanel:ControlPanel){
 
     for(let GrapherMap of ControlPanel.InstalledAddons.importedGraphers){
         if(GrapherMap.name === path.extname(Dependency.name)){
@@ -83,7 +88,7 @@ export function resolveGrapherForNonNativeDependency(Dependency:Dependency,Contr
 
 }
 
-export function resolveTransformersForNonNativeDependency(Dependency:Dependency,ControlPanel){
+export function resolveTransformersForNonNativeDependency(Dependency:Dependency,ControlPanel:ControlPanel){
 
     for(let CompilerMap of ControlPanel.InstalledAddons.importedCompilers){
         if(CompilerMap.extname === path.extname(Dependency.name)){
@@ -93,7 +98,7 @@ export function resolveTransformersForNonNativeDependency(Dependency:Dependency,
     }
 }
 
-export function CustomDependencyIsBundlable(Dependency:Dependency,ControlPanel){
+export function CustomDependencyIsBundlable(Dependency:Dependency,ControlPanel:ControlPanel){
 
     for(let depMapObject of ControlPanel.InstalledAddons.importedDependencies){
         if(depMapObject.extension === path.extname(Dependency.name)){

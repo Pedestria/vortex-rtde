@@ -1,0 +1,11 @@
+@import "./colors.scss";
+@import "./otherColors.scss";
+
+h1 {
+    font-size: 32px;
+    color:$somecolor
+}
+
+h2 {
+    color:$otherColor;
+}

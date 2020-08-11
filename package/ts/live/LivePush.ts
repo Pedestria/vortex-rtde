@@ -1,5 +1,5 @@
 /*Vortex RTDE
- LivePush 0.6.5
+ LivePush 0.7.0
  Copyright Alex Topper 2020 
 */
 
@@ -28,6 +28,7 @@ import * as _ from 'lodash'
 import * as cliSpinners from 'cli-spinners';
 import { Server } from 'http'
 import { v4 } from 'uuid'
+import { VortexError } from '../VortexError'
 
 var resolveAsync =  promisify(resolve)
 var diffLinesAsync = promisify(diffLines)
@@ -62,6 +63,63 @@ var INITSTAGE = `
 
 var controlPanelDIR:string
 
+declare class VortexAddon {
+    handler:ExportsHandler
+    constructor(name:string,handler:ExportsHandler)
+
+}
+
+declare class ExportsHandler {
+    exports:ExportHandlerMap
+}
+
+interface ExportHandlerMap {
+    extend: {
+        jsExtensions:Array<string>
+        extensions:Array<string>
+        custom: {
+            livePush:{
+                customBranches:Array<CustomBranchObject>  
+            }
+        }
+    }
+}
+
+interface InternalLivePushAddons {
+    JS_EXNTS:string[]
+    NON_JS_EXNTS:string[]
+    CUSTOM_BRANCHES:CustomBranchObject[]
+}
+
+interface CustomBranchObject {
+    ext:string
+    type:"Module"|"CSS"
+    precompiler:CustomPreCompiler
+}
+
+type CustomPreCompiler = (filename:string) => Promise<string>;
+
+class LivePushError<T extends keyof typeof LivePushErrorType> {
+    private message:string
+    type:LivePushErrorType
+    constructor(message:string,type:T){
+        this.message = chalk.redBright(`${type}: \n`+message)
+        this.type = LivePushErrorType[type];
+    }
+    get error (){
+        return this.message
+    }
+}
+
+function LogError(err:LivePushError<keyof typeof LivePushErrorType>){
+    console.log(err.error)
+}
+
+enum LivePushErrorType {
+    SyntaxError = 0,
+    AddonError = 1,
+}
+
 var InternalLivePushOptions:{
     externals:{
         libraryName:string
@@ -69,6 +127,7 @@ var InternalLivePushOptions:{
     }[]
     entry:string
     dirToHTML:string
+    addons:InternalLivePushAddons
 };
 
 function readControlPanel(ControlPanelObject:typeof Panel):typeof InternalLivePushOptions{
@@ -77,7 +136,44 @@ function readControlPanel(ControlPanelObject:typeof Panel):typeof InternalLivePu
         externals:ControlPanelObject.livePushOptions.CDNImports,
         entry:ControlPanelObject.livePushOptions.entry,
         dirToHTML:ControlPanelObject.livePushOptions.dirToHTML,
+        addons:parseAddons(ControlPanelObject.addons)
     }
+}
+
+function parseAddons(Addons:VortexAddon[]):InternalLivePushAddons{
+    return {
+        JS_EXNTS:_.flatten(Addons.map(addon => addon.handler.exports.extend.jsExtensions)),
+        NON_JS_EXNTS:_.flatten(Addons.map(addon => addon.handler.exports.extend.extensions)),
+        CUSTOM_BRANCHES:_.flatten(Addons.map(addon => addon.handler.exports.extend.custom.livePush.customBranches))
+    }
+}
+
+function isNotNative(depname:string){
+    let ALL_ADDON_EXTNS:Array<string> = _.concat(InternalLivePushOptions.addons.NON_JS_EXNTS,InternalLivePushOptions.addons.JS_EXNTS);
+    if(ALL_ADDON_EXTNS.includes(path.extname(depname))){
+        return true
+    } else {
+        return false
+    }
+}
+
+function resolveNonNativeBranch(depname:string):LiveBranch{
+    for(let branchObj of InternalLivePushOptions.addons.CUSTOM_BRANCHES){
+        if(branchObj.ext === path.extname(depname)){
+            if(branchObj.type === "Module"){
+                return new LiveModule(depname);
+            } else if(branchObj.type === "CSS"){
+                return new LiveCSS(depname);
+            }
+        }
+    }
+}
+
+async function resolveCompilerForNonNativeBranch(depname:string){
+    let branchObj = InternalLivePushOptions.addons.CUSTOM_BRANCHES.find(obj => obj.ext === path.extname(depname))
+    return branchObj.precompiler(depname).catch(err => {
+        LogError(new LivePushError(err,"AddonError"));
+    })
 }
 
 class LivePushRTEventSystem {
@@ -543,13 +639,15 @@ function pushRequests(currentBranch:LiveAddress&LiveBranch|LiveTree,path:NodePat
 
 function TreeBuilder(name:string,currentBranch:LiveAddress&LiveBranch|LiveTree,tree:LiveTree,isTree:boolean,path:NodePath<t.ImportDeclaration>|NodePath<t.VariableDeclarator>){
 
-            let module
+            let module:LiveBranch
 
             if(isModule(name)){
                 name = name.includes('./')? addJSExtIfPossible(name) : name
                 module = new LiveModule(name);
             } else if(name.includes('.css')) {
                 module = new LiveCSS(name);
+            } else if(isNotNative(name)){
+                module = resolveNonNativeBranch(name);
             }
 
             //If is live Branch
@@ -697,6 +795,13 @@ function TraverseAndTransform(entry:LPEntry,currentBranch:LiveBranch&LiveAddress
 
 }
 
+/**
+ * Recursively Traverses and Builds Live Tree
+ * @param {LiveModule} branch 
+ * @param {LiveTree} liveTree 
+ * @param {LPEntry[]} queue 
+ */
+
 async function RecursiveTraverse(branch:LiveModule,liveTree:LiveTree,queue:LPEntry[]){
 
     for(let subBranch of branch.branches){
@@ -704,8 +809,14 @@ async function RecursiveTraverse(branch:LiveModule,liveTree:LiveTree,queue:LPEnt
             if(!loadedModules.includes(subBranch.main)) {
                 if(subBranch.main.includes('./')){
                     let location = branch.libLoc? path.join(path.dirname(branch.libLoc),subBranch.main) : ResolveRelative(branch.main,subBranch.main);
-
-                    let transformed = (await transformAsync((await fs.readFile(location)).toString(),{sourceType:"module",presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code
+                    let transformed:string
+                    if(isNotNative(location)){
+                        transformed = await resolveCompilerForNonNativeBranch(location)
+                    }
+                    else {
+                        transformed = (await transformAsync((await fs.readFile(location)).toString(),{sourceType:"module",presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code
+                    }
+                   
 
                     liveTree.preProcessQueue.push({name:location,code:transformed});
 
@@ -835,7 +946,13 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
         if(branch instanceof LiveModule){
             if(!loadedModules.includes(branch.main)) {
                 if(branch.main.includes('./')){
-                    let transformed = (await transformAsync((await fs.readFile(branch.main)).toString(),{sourceType:"module",presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code
+                    let transformed:string
+                    if(isNotNative(branch.main)){
+                        transformed = await resolveCompilerForNonNativeBranch(branch.main)
+                    }
+                    else {
+                        transformed = (await transformAsync((await fs.readFile(branch.main)).toString(),{sourceType:"module",presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code
+                    }
 
                     liveTree.preProcessQueue.push({name:branch.main,code:transformed});
 
@@ -905,7 +1022,13 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
                 }
             }
         } else if (context instanceof CSSContext) {
-            stylesheets.push({name:context.provider,code:(await fs.readFile(context.provider)).toString()});
+            let entry:CodeEntry
+            if(isNotNative(context.provider)){
+                entry = {name:context.provider,code:(await resolveCompilerForNonNativeBranch(context.provider))}
+            }else {
+                entry = {name:context.provider,code:(await fs.readFile(context.provider)).toString()};
+            }
+            stylesheets.push(entry);
         }
     }
 
@@ -1190,6 +1313,12 @@ async function initLiveDependencyTree(root:string,dirToHtml:string): Promise<Liv
 
 }
 
+/**
+ * Appends Scripts to HTML Page
+ * @param {string} dirToHTML 
+ * @param {string} livePushPackage 
+ */
+
 async function appendToHTMLPage(dirToHTML:string,livePushPackage:string){
 
     let fileloc = path.dirname(dirToHTML)+'/LIVEPUSH.js'
@@ -1217,9 +1346,58 @@ async function appendToHTMLPage(dirToHTML:string,livePushPackage:string){
 
 }
 
+type UpdateResult = {
+    liveTree:LiveTree
+    delta:Array<string>
+}
+
 var CSSREGEX = /\.css$/
 
+/**
+ * Initialize File Watcher and Live Pushers
+ * @param {LiveTree} Tree 
+ * @param {e.Express} router 
+ * @param {string} htmlDir 
+ */
+
 async function initWatch(Tree:LiveTree,router:e.Express,htmlDir:string){
+
+    function LogErrorAndContinue(err:LivePushError<keyof typeof LivePushErrorType>){
+        pushStage.fail();
+        console.log(chalk.redBright.underline("Failed to Pushed Changes! Cause:"));
+        LogError(err);
+        reloadcount += 1
+        reloadHTML(false,tag+reloadcount);
+        watcher.start();
+    }
+
+    function ReloadAndWatchModule(result:UpdateResult){
+        TREE = result.liveTree;
+
+                if(result.delta.length > 0){
+                    let newModulesToWatch = result.delta.filter(filename => filename.includes('./'));
+
+                    if(newModulesToWatch.length > 0){
+                        Watcher.add(newModulesToWatch);
+                        console.log('Watching new modules:'+newModulesToWatch.join(','));
+                    }
+
+                    console.log('New modules added to project:'+result.delta.join(','))
+                }
+                pushStage.succeed();
+                console.log(chalk.greenBright("Successfully Pushed Changes!"));
+                reloadcount += 1
+                reloadHTML(false,tag+reloadcount);
+                watcher.start();
+    }
+
+    function CSSReloadAndWatch(){
+        pushStage.succeed();
+        console.log(chalk.redBright('Successfully Pushed CSS Changes!'));
+        reloadcount += 1
+        reloadHTML(false,tag+reloadcount);
+        watcher.start();
+    }
 
     var reloadcount:number = 0;
 
@@ -1244,60 +1422,85 @@ async function initWatch(Tree:LiveTree,router:e.Express,htmlDir:string){
 
     Watcher.on("change",(filename) => {
         filename = './'+filename
-        // console.log(`${filename} has been Changed!`)
         watcher.stop();
         pushStage.start();
 
         console.log(filename);
 
         if(CSSREGEX.test(filename)){
-            updateCSS(filename,TREE.dirToCssPlanet).then(() => {
-                pushStage.succeed();
-                console.log(chalk.redBright('Successfully Pushed CSS Changes!'));
-                reloadcount += 1
-                reloadHTML(false,tag+reloadcount);
-                watcher.start();
+            updateCSS(filename,TREE.dirToCssPlanet,false).then(() => {
+                CSSReloadAndWatch();
             }).catch(err => console.log(err));
         } else if(isModule(filename)){
 
-            updateTree(filename,TREE,TREE.preProcessQueue,htmlDir).then(({liveTree,delta}) => {
-                TREE = liveTree;
-
-                if(delta.length > 0){
-                    let newModulesToWatch = delta.filter(filename => filename.includes('./'));
-
-                    if(newModulesToWatch.length > 0){
-                        Watcher.add(newModulesToWatch);
-                        console.log('Watching new modules:'+newModulesToWatch.join(','));
-                    }
-
-                    console.log('New modules added to project:'+delta.join(','))
-                }
-                pushStage.succeed();
-                console.log(chalk.greenBright("Successfully Pushed Changes!"));
-                reloadcount += 1
-                reloadHTML(false,tag+reloadcount);
-                watcher.start();
+            updateTree(filename,TREE,TREE.preProcessQueue,htmlDir,false).then(result => {
+                ReloadAndWatchModule(result);
             }).catch(err => {
                 console.log(err);
             });
+        } else if(isNotNative(filename)){
+            updateNonNativeBranch(filename,TREE,TREE.preProcessQueue,htmlDir).catch(err => {
+                LogErrorAndContinue(new LivePushError(err,"AddonError"));
+                return "FAIL"
+            }).then(result => {
+                if(typeof result ==="undefined"){
+                    CSSReloadAndWatch();
+                } else if(typeof result !== "string") {
+                    ReloadAndWatchModule(result)
+                }
+            })
         }
     })
 
 }
 
+/**
+ * The Updater for Non Native Branches!
+ * @param {string} filename 
+ * @param {LiveTree} liveTree 
+ * @param {CodeEntry[]} preProcessQueue 
+ * @param {string} dirToHTML 
+ */
 
-async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Array<CodeEntry>,dirToHTML:string) {
+async function updateNonNativeBranch(filename:string,liveTree:LiveTree,preProcessQueue:CodeEntry[],dirToHTML:string):Promise<UpdateResult|void>{
 
-    console.log("Hello");
+    let customBranchObj = InternalLivePushOptions.addons.CUSTOM_BRANCHES.find(obj => path.extname(filename) === obj.ext);
+    if(customBranchObj.type === "Module"){
+        let preCompCode = await resolveCompilerForNonNativeBranch(filename);
+        let result = await updateTree(filename,liveTree,preProcessQueue,dirToHTML,true,preCompCode);
+        return result;
+    } else if(customBranchObj.type === "CSS"){
+        let preCompStylesheet = await resolveCompilerForNonNativeBranch(filename);
+        await updateCSS(filename,liveTree.dirToCssPlanet,true,preCompStylesheet);
+        return;
+    }
+}
+
+/**
+ * Updater for Live Modules!
+ * @param {string} filename 
+ * @param {LiveTree} liveTree 
+ * @param {CodeEntry[]} preProcessQueue 
+ * @param {string} dirToHTML 
+ * @param {boolean} isCodeNotFile 
+ * @param {string} code 
+ */
+
+
+async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Array<CodeEntry>,dirToHTML:string,isCodeNotFile:boolean,code?:string):Promise<UpdateResult> {
 
     let priorloadedFiles = new Set<string>(...fileDependencies);
 
     let priorloadedStyles:string[] = new Array<string>(...stylesheets.map(entry => entry.name))
 
     let priorLoadedModules:string[] = new Array<string>(...loadedModules);
-    
-    let newFile = (await transformAsync((await fs.readFile(filename)).toString(),{sourceType:'module',presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code;
+    let newFile:string
+    if(isCodeNotFile){
+        newFile = code;
+    }
+    else {
+        newFile = (await transformAsync((await fs.readFile(filename)).toString(),{sourceType:'module',presets:['@babel/preset-react'],plugins:['@babel/plugin-proposal-class-properties']})).code;
+    }
 
     let oldTrans = preProcessQueue.find(entry => entry.name === filename).code
 
@@ -1330,6 +1533,13 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
                         let context:CSSContext = liveTree.loadContext(reqDiff.resolvedSource);
                         context.addresses.push(filename);
                         continue;
+                    } else if(isNotNative(reqDiff.resolvedSource)){
+                        let CUSTOM_BRANCH_OBJECT = InternalLivePushOptions.addons.CUSTOM_BRANCHES.find(obj => path.extname(reqDiff.resolvedSource) === obj.ext);
+                        if(CUSTOM_BRANCH_OBJECT.type === "CSS"){
+                            let context:CSSContext = liveTree.loadContext(reqDiff.resolvedSource);
+                            context.addresses.push(filename);
+                            continue;
+                        }
                     }
                     let context = liveTree.loadContext(reqDiff.resolvedSource)
                     let module = fetchAddressFromTree(filename,liveTree)
@@ -1362,6 +1572,21 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
 
                             stylesheets.push({name:NAME,code:(await fs.readFile(NAME)).toString()});
                             continue;
+                        } else if(isNotNative(NAME)){
+                            let CUSTOM_BRANCH_OBJECT = InternalLivePushOptions.addons.CUSTOM_BRANCHES.find(obj => path.extname(NAME) === obj.ext);
+                            if(CUSTOM_BRANCH_OBJECT.type === "CSS"){
+                                let cssContext = new CSSContext();
+                                cssContext.provider = reqDiff.resolvedSource;
+                                cssContext.addresses.push(filename);
+                                liveTree.contexts.push(cssContext);
+
+                                if(liveTree.factory !== liveTree.cssFactory){
+                                    liveTree.factory = liveTree.cssFactory;
+                                }
+
+                                delta.push(NAME);
+                                stylesheets.push({name:NAME,code:(await resolveCompilerForNonNativeBranch(reqDiff.resolvedSource))});
+                            }
                         }
                     }
 
@@ -1421,6 +1646,17 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
                         stylesheets.filter(entry => entry.name !== reqDiff.resolvedSource);
                     } 
                     continue;
+                } else if(isNotNative(reqDiff.source)){
+                    let CUSTOM_BRANCH_OBJECT = InternalLivePushOptions.addons.CUSTOM_BRANCHES.find(obj => path.extname(reqDiff.source) === obj.ext);
+                    if(CUSTOM_BRANCH_OBJECT.type === "CSS"){
+                        let cssContext:CSSContext = liveTree.loadContext(reqDiff.resolvedSource);
+                        cssContext.removeAddress(filename);
+                        if(cssContext.addresses.length === 0){
+                            liveTree.removeContext(reqDiff.resolvedSource);
+                            stylesheets.filter(entry => entry.name !== reqDiff.resolvedSource);
+                        } 
+                        continue;
+                    }
                 }
 
                 REMOVED_OR_MODIFIED_IMPORTNAMES.push(reqDiff.source);
@@ -1526,6 +1762,14 @@ interface RequestDiff {
     namespace?:string
 }
 
+/**
+ * Builds Imports into AST from existing memory imports **and** new imports!
+ * @param {t.File} ast
+ * @param {ContextRequest} contextRequest 
+ * @param {LiveContext} context 
+ * @param {IMPORT[]} currentMemoryImports 
+ */
+
 
 async function buildImports(ast:t.File,contextRequest:ContextRequest,context:LiveContext,currentMemoryImports:IMPORT[]){
     
@@ -1558,6 +1802,14 @@ async function buildImports(ast:t.File,contextRequest:ContextRequest,context:Liv
         currentMemoryImports.push({name:context.provider,varDeclaration:VARDEC});
     }
 }
+
+/**
+ * Builds Imports from new imports only!
+ * @param {LPEntry} Entry 
+ * @param {ContextRequest} contextRequest 
+ * @param {LiveContext} context 
+ * @param {LiveTree} liveTree 
+ */
 
 async function buildImportsFromNewModule(Entry:LPEntry,contextRequest:ContextRequest,context:LiveContext,liveTree:LiveTree){
 
@@ -1596,11 +1848,23 @@ async function buildImportsFromNewModule(Entry:LPEntry,contextRequest:ContextReq
     }
 }
 
+/**
+ * Build Imports from only the Memory!
+ * @param {t.File} ast 
+ * @param {t.VariableDeclaration} IMPORT 
+ */
+
 async function buildImportFromMemory(ast:t.File,IMPORT:t.VariableDeclaration){
 
     ast.program.body.unshift(IMPORT);
 
 }
+
+/**
+ * Diffs Requests!
+ * @param {Change[]} changes 
+ * @param {string} filename 
+ */
 
 async function diffRequests(changes:Change[],filename:string): Promise<RequestDiff[]>{
 
@@ -1687,6 +1951,11 @@ async function diffRequests(changes:Change[],filename:string): Promise<RequestDi
     return possibleRequests.filter(requestdiff => !fileRegex.test(requestdiff.source))
 
 }
+/**
+ * Transforms Imports and Exports into AST!
+ * @param {t.File} ast 
+ * @param {string} currentFile 
+ */
 
 function removeImportsAndExportsFromAST(ast:t.File,currentFile:string){
 
@@ -1737,6 +2006,11 @@ function removeImportsAndExportsFromAST(ast:t.File,currentFile:string){
     }
 }
 
+/**
+ * Captures imports with precise Regexps!
+ * @param {string} code 
+ */
+
 async function processJSForRequests(code:string){
 
     let commentregex:RegExp = /(\/\/.*)|(\/\*(.|\n)*\*\/)/g
@@ -1750,9 +2024,22 @@ async function processJSForRequests(code:string){
     
 }
 
-async function updateCSS(filename:string,cssPlanetLocation:string){
+/**
+ * The Updater for CSS!
+ * @param {string} filename 
+ * @param {string} cssPlanetLocation 
+ * @param {boolean} useCodeNotReadFile 
+ * @param {string} stylesheet 
+ */
 
-    let newCSS = (await fs.readFile(filename)).toString();
+async function updateCSS(filename:string,cssPlanetLocation:string,useCodeNotReadFile:boolean,stylesheet?:string){
+    let newCSS:string
+    if(useCodeNotReadFile){
+        newCSS = stylesheet;
+    }
+    else {
+        newCSS = (await fs.readFile(filename)).toString();
+    }
     stylesheets.find(entry => entry.name === filename).code = newCSS;
     await fs.writeFile(cssPlanetLocation,stylesheets.map(entry => entry.code).join('\n'));
 

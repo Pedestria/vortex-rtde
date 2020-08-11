@@ -1,6 +1,6 @@
 
 import {LivePush} from './ts/live/LivePush'
-import {VortexRTDEAPI} from './ts/API'
+import VortexRTDEAPI from './API_AND_Types'
 declare namespace VortexRTDE {
 
     /**Creates a star Package

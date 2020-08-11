@@ -41,8 +41,8 @@ const SearchAndGraphInVueDep = async (Dependency, Graph, planetName) => {
  * @param {RawVueComponent} component
  * @param {string} DependencyName
  */
-async function CompileComponent(component, DependencyName) {
-    var cssPlanet = package_1.VortexRTDEAPI.ControlPanel.cssPlanet;
+async function CompileComponent(component, DependencyName, ControlPanel) {
+    var cssPlanet = ControlPanel.cssPlanet;
     var scopeID = `data-v-${uuid_1.v4()}`;
     var template;
     if (component.template.lang !== undefined) {

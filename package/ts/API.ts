@@ -51,7 +51,9 @@ class ExportsHandler {
                compiler:{
                    dependencyMapCompiler:[]
                },
-               livePush:{}
+               livePush:{
+                   customBranches:[]
+               }
            }
        },
        override:{
@@ -82,6 +84,10 @@ class ExportsHandler {
                     break;
                 case 'COMPILER_EXTSN':
                     this.exports.extend.custom.compiler.dependencyMapCompiler = _.concat(value)
+                    break;
+                case 'CUSTOM_BRANCHES':
+                    this.exports.extend.custom.livePush.customBranches = _.concat(value)
+                    break;
             }
         }
     }
@@ -124,8 +130,16 @@ interface VortexAddonModule {
     GRAPH_EXTSN:Array<CustomDependencyGrapher>
     CUSTOM_DEPENDENCIES:Array<CustomGraphDependencyMapObject>
     COMPILER_EXTSN:Array<CompilerCustomDependencyMap>
-
+    CUSTOM_BRANCHES:Array<CustomBranchObject>
 }
+
+interface CustomBranchObject {
+    ext:string
+    type:"Module"|"CSS"
+    precompiler:CustomPreCompiler
+}
+
+type CustomPreCompiler = (filename:string) => Promise<void>;
 
 interface ExportHandlerMap {
     extend: {
@@ -140,7 +154,7 @@ interface ExportHandlerMap {
                 dependencyMapCompiler:Array<CompilerCustomDependencyMap>
             }
             livePush: {
-
+                customBranches:Array<CustomBranchObject>
             }
         }
     }

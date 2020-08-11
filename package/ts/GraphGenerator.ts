@@ -17,6 +17,7 @@ import {readFile} from 'fs/promises'
 import * as path from 'path'
 import { notNativeDependency, resolveGrapherForNonNativeDependency } from './DependencyFactory.js'
 import {ControlPanel} from './types/ControlPanel'
+import { deprecate } from 'util'
 
 
 var readFileAsync = readFile
@@ -161,6 +162,7 @@ export async function GenerateGraph(entry:string,modEntry:string,ControlPanel:Co
                 else{
                     let sheet
                     if(notNativeDependency(dep.name,ControlPanel)){
+                        await dep.compile();
                         sheet = css.parse(dep.stylesheet,{source:dep.name})
                     }
                     else{
@@ -262,6 +264,7 @@ export async function GenerateGraph(entry:string,modEntry:string,ControlPanel:Co
                       else{
                         let sheet
                           if(notNativeDependency(dep.name,ControlPanel)){
+                              await dep.compile();
                               sheet = css.parse(dep.stylesheet,{source:dep.name})
                           }
                           else{
@@ -277,7 +280,7 @@ export async function GenerateGraph(entry:string,modEntry:string,ControlPanel:Co
 
                 let grapher = resolveGrapherForNonNativeDependency(dep,ControlPanel)
 
-                await grapher(dep,Graph,planet.name);
+                await grapher(dep,Graph,planet.name,ControlPanel);
             }
         }
     }

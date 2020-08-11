@@ -1,4 +1,5 @@
-// const {VueVortexAddon} = require('../addons/vue-addon')
+const {VortexMoreStylesAddon} = require("../addons/more-styles-addon")
+
 
 const path =require('path')
 
@@ -16,7 +17,7 @@ module.exports = {
     extensions: ['.css','.png','.otf'],
     encodeFilenames:true,
     polyfillPromise:false,
-    addons:[],
+    addons:[VortexMoreStylesAddon],
     outBundle:['aws-sdk'],
     cssPlanet:true,
     minifyCssPlanet:true
