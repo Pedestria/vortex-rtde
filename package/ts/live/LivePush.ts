@@ -548,6 +548,11 @@ function isModule(moduleName:string){
     }
 
 }
+/**
+ * Locally Resolves File Path from src `from` to dest `to`
+ * @param {string} from 
+ * @param {string}to 
+ */
 
 function ResolveRelative(from:string,to:string){
     return './'+path.join(path.dirname(from),to)
@@ -1896,12 +1901,14 @@ async function diffRequests(changes:Change[],filename:string): Promise<RequestDi
             } else {
                 possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:["NONE"],resolvedSource:node.source.value.includes('./')? ResolveRelative(filename,node.source.value) : node.source.value});
             }
-        } else if(node.type === "ExpressionStatement" && node.expression.type === "AssignmentExpression" 
-        && node.expression.left.type === "Identifier" && node.expression.right.type === "CallExpression" 
-        && node.expression.right.callee.type === "Identifier" && node.expression.right.callee.name === "require"){
-            possibleRequests.push({source:node.expression.right.arguments[0].value,
-                resolvedSource:node.expression.right.arguments[0].value.includes('./')? ResolveRelative(filename,node.expression.right.arguments[0].value) : node.expression.right.arguments[0].value,added:true,removed:undefined,
-                newRequests:[node.expression.left.name],namespace:node.expression.left.name})
+        } else if(node.type === "VariableDeclaration"){
+            for(let declarator of node.declarations){
+                if(declarator.init.type === "CallExpression"&& declarator.id.type === "Identifier" && declarator.init.callee.type === "Identifier" && declarator.init.callee.name === "require"){
+                    possibleRequests.push({source:declarator.init.arguments[0].value,
+                        resolvedSource:declarator.init.arguments[0].value.includes('./')? ResolveRelative(filename,declarator.init.arguments[0].value) : declarator.init.arguments[0].value,added:true,removed:undefined,
+                        newRequests:[declarator.id.name],namespace:declarator.id.name})
+                }
+            }
         }
     }
 
@@ -1922,18 +1929,21 @@ async function diffRequests(changes:Change[],filename:string): Promise<RequestDi
             } else {
                 possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:["NONE"],resolvedSource:node.source.value.includes('./')? ResolveRelative(filename,node.source.value) : node.source.value});
             }
-        } else if(node.type === "ExpressionStatement" && node.expression.type === "AssignmentExpression" 
-        && node.expression.left.type === "Identifier" && node.expression.right.type === "CallExpression" 
-        && node.expression.right.callee.type === "Identifier" && node.expression.right.callee.name === "require"){
+        } else if(node.type === "VariableDeclaration"){
 
-            if(possibleRequests.findIndex(request => request.source === node.expression.right.arguments[0].value) === -1){
-                possibleRequests.push({source:node.expression.right.arguments[0].value,added:undefined,removed:true,removedRequests:[node.expression.left.name],
-                    resolvedSource:node.expression.right.arguments[0].value.includes('./')? ResolveRelative(filename,node.expression.right.arguments[0].value) : node.expression.right.arguments[0].value});
-            }
-            else{
-                let request = possibleRequests.find(request => request.source === node.expression.right.arguments[0].value)
-                request.removedRequests = node.expression.left.name;
-                request.added = undefined;
+            for(let declarator of node.declarations){
+                if(declarator.init.type === "CallExpression"&& declarator.id.type === "Identifier" && declarator.init.callee.type === "Identifier" && declarator.init.callee.name === "require"){
+
+                    if(possibleRequests.findIndex(request => request.source === declarator.init.arguments[0].value) === -1){
+                        possibleRequests.push({source:declarator.init.arguments[0].value,added:undefined,removed:true,removedRequests:[declarator.id.name],
+                            resolvedSource:declarator.init.arguments[0].value.includes('./')? ResolveRelative(filename,declarator.init.arguments[0].value) : declarator.init.arguments[0].value});
+                    }
+                    else{
+                        let request = possibleRequests.find(request => request.source === declarator.init.arguments[0].value)
+                        request.removedRequests = declarator.id.name;
+                        request.added = undefined;
+                    }
+                }
             }
         }
     }
