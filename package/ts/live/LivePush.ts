@@ -1,5 +1,5 @@
 /*Vortex RTDE
- LivePush 0.7.0
+ LivePush 0.7.1
  Copyright Alex Topper 2020 
 */
 
@@ -553,7 +553,7 @@ function ResolveRelative(from:string,to:string){
     return './'+path.join(path.dirname(from),to)
 }
 function addJSExtIfPossible(filename:string){
-    let regexp = /\.m?js$/g
+    let regexp = /\.m?jsx?$/g
     return regexp.test(filename)? filename : filename+'.js'
 }
 
