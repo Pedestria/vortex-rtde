@@ -1,4 +1,4 @@
-# Public Release (Current Release: 0.9.1beta)
+# Public Release (Current Release: 0.9.3beta)
 
 >Vortex RTDE has been in development ever since May 2020, and has gone under some beta testing but we feel that it has been developed and tested enough to be opened to the public.
 
