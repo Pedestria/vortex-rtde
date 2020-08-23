@@ -62,3 +62,8 @@ main.use(express.static(path.resolve(__dirname,'./app')))
 new LivePush(path.resolve(__dirname,"./vortex.panel.js"),main,server,8080,true);
 ```
 
+
+### Interested in Becoming a Contributer?
+
+<!-- [See Here](./docs/Contributing.md) -->
+

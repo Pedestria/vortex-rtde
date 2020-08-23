@@ -1,4 +1,4 @@
-Bundler
+VORTEX as a Web Application Bundler
 ===
 
 Vortex RTDE traverses your project, fetching all modules, libraries, and other dependencies, and formatting them into one bundle that can execute inside the browser.
@@ -10,7 +10,7 @@ Vortex RTDE traverses your project, fetching all modules, libraries, and other d
 Example:
 
 ```javascript
-// *IMPORTS*
+**IMPORTS**
 
 //Default/Namespace Import
 import React from 'react'
@@ -19,7 +19,7 @@ import {render} from 'react-dom'
 //Typescript Namespace Import
 import * as $ from 'jquery'
 
-// *EXPORTS*
+**EXPORTS**
 
 //Named Exports
 
