@@ -1,8 +1,11 @@
 <img src="./public/vortex-bright-logo.png" alt="Vortex Logo"></img>
 
-## @vortex-rtde/core
 
+# VORTEX
+## Its not just another JS bundler/build tool for web applications, its a Web App IDE!
 > The core build of Vortex. (Includes LivePush, and API)
+ 
+*GitHub Repository Access and Website Coming Soon!*
 
 ### Installation
 

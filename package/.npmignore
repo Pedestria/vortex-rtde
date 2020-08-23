@@ -19,7 +19,12 @@ testServer.js
 vortex.panel.js
 vortex.panel.d.ts
 
+yarn.lock
+yarn-error.log
+
 *.bat
+
+Makefile
 
 *.js
 
