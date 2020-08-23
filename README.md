@@ -6,7 +6,10 @@
 
 ## The Next Gen Real Time Development Environent For Web.
 
-## Checklist:
+> See [Here](./package/PUBLICRELEASENOTICE.md)
+
+
+## Feature Checklist/Deadlines:
 
 - Build docs webpage.
 
