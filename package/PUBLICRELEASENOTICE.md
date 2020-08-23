@@ -7,6 +7,18 @@
 ### Bug Reporting/Feature Suggestions
 
 > Vortex is *early* in the beta development phase so bugs are to be expected.
+> **Please** use this template when reporting bugs and feature requests.  **Report at Issues tab.**
+
+________
+
+Name: NAME
+Topic : NAME OF TOPIC
+Description : BRIEF SUMMARY
+(Only for Bug Reporting) Reproduction of Issue: DETAILED STEPS OF HOW TO REPRODUCE
+(Optional) Log Output: OUTPUT LOG OF VORTEX
+
+________
+
 
 
 ## Want to Contribute?

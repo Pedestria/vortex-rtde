@@ -15,6 +15,7 @@ types/
 .prettierrc
 
 .gitattributes
+.gitignore
 
 testServer.js
 vortex.panel.js
@@ -31,3 +32,5 @@ Makefile
 
 tsconfig.json
 tsconfig-fold.json
+
+PUBLICRELEASENOTICE.md
