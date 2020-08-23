@@ -10,21 +10,10 @@
 
 - Build docs webpage.
 
-- (Add UMD Bundle Mode support for libraries)
-
-- Common JS IIFE
-
 - Add syntax word to change name of Planet.
 
-- Finish support for addons.
 
+## Become a Contributer
 
-### LivePush Checklist
-
-- [x] Add Updater.
- - [x] mininize request diffs(make function that returns only import/require diffs.)
-- [x] Css Support
-- [x] Support For Images.
-- [ ] Addon Support! 
 
 
