@@ -13,7 +13,5 @@
 - Add syntax word to change name of Planet.
 
 
-## Become a Contributer
-
-
-
+## Want to Become a Contributer?
+See [Here](./package/docs/Contributing.md)
