@@ -1,12 +1,24 @@
 {
   "name": "@vortex-rtde/core",
-  "version": "0.9.1beta",
+  "version": "0.9.3beta",
   "author": "Alex Topper",
+  "repository": {
+    "type": "git",
+    "url":"https://github.com/Pedestria/vortex-rtde"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "license": "MIT",
   "description": "A real time web application/js library development environment.",
   "main": "./dist/vortex.js",
   "files": [
-    "./dist/vortex.min.js"
+    "./README.md",
+    "./LICENSE",
+    "dist/",
+    "index.d.ts",
+    "API_AND_Types.d.ts",
+    "bin/"
   ],
   "types": "./index.d.ts",
   "private": false,
@@ -84,5 +96,8 @@
     "typescript": "^3.9.7",
     "vue": "^2.6.11",
     "vue-template-compiler": "^2.6.11"
+  },
+  "bin": {
+    "vortex-rtde":"./bin/vortex-rtde"
   }
 }

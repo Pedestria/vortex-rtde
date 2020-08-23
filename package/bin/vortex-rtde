@@ -1,0 +1,46 @@
+#!/usr/bin/env node
+
+/*Vortex RTDE
+Alex Topper
+@license
+MIT License
+0.9.3beta 
+*/
+
+var {Command} = require("commander")
+var {createStarPackage} = require("../")
+
+const program = new Command();
+program
+    .option("-c, --config <configLocation>","Vortex Panel Config location")
+    .on("--help", () => {
+        console.log(program.opts());
+    })
+    .option('-i, --input <input>',"Entry point for App")
+    .option('-o, --output-file <output>',"Output Location for bundle!")
+    .option("-n, --neutronstar","Vortex will bundle for production mode!")
+    .option("-m, --mode <modeType>","Webapp or library mode!","app")
+    .parse(process.argv);
+
+if(!program.config){
+
+    let programMode = program.mode === "app"? "app" : program.mode === "library"? "library" : undefined;
+    let isProduction = program.neutronstar? true : false
+    let input = program.input
+    let output = program.outputFile
+
+    createStarPackage(undefined,{
+        output:output,
+        start:input,
+        type:programMode,
+        bundleMode:isProduction? "neutronstar": "star"
+    }).then(() => {
+        process.exit(0);
+    })
+
+} else {
+    createStarPackage(program.config).then(() => {
+        process.exit(0);
+    });
+}
+

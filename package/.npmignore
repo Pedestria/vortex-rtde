@@ -12,6 +12,8 @@ docs/
 
 types/
 
+scripts/
+
 .prettierrc
 
 .gitattributes
