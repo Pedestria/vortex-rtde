@@ -12,7 +12,8 @@
     "less": "^3.12.2",
     "node-sass": "^4.14.1",
     "pug": "^3.0.0",
-    "vue-template-compiler": "^2.6.11"
+    "vue-template-compiler": "^2.6.11",
+    "@vortex-rtde/core": "^0.9.3-beta"
   },
   "devDependencies": {
     "@types/less": "^3.0.1",

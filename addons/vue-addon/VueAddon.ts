@@ -1,4 +1,4 @@
-import {VortexRTDEAPI} from "../../package";
+import {VortexRTDEAPI} from "@vortex-rtde/core";
 import {readFile} from 'fs/promises'
 import * as VueUtils from '@vue/component-compiler-utils'
 import { v4 } from "uuid";
@@ -33,12 +33,12 @@ class VueComponentDependency extends VortexRTDEAPI.Dependency{
 }
 
 
-const SearchAndGraphInVueDep:VortexRTDEAPI.Addons.Grapher= async (Dependency:VortexRTDEAPI.Dependency,Graph:VortexRTDEAPI.VortexGraph,planetName?:string) => {
+const SearchAndGraphInVueDep:VortexRTDEAPI.Addons.Grapher= async (Dependency:VortexRTDEAPI.Dependency,Graph:VortexRTDEAPI.VortexGraph,planetName:string,panel:VortexRTDEAPI.ControlPanel) => {
 
     let buffer = await readFile(Dependency.name)
     let file = buffer.toString()
     var {script,styles,template} = VueUtils.parse({compiler:VueTemplateCompiler,source:file,filename:Dependency.name})
-    let code = await CompileComponent({script,styles,template},Dependency.name)
+    let code = await CompileComponent({script,styles,template},Dependency.name,panel)
     const entry = new VortexRTDEAPI.QueueEntry(Dependency.name,VortexRTDEAPI.ParseCode(code,{sourceType:"module"}))
     VortexRTDEAPI.addQueueEntry(entry)
     VortexRTDEAPI.NativeDependencyGrapher(VortexRTDEAPI.loadQueueEntry(entry.name),Graph,planetName) 

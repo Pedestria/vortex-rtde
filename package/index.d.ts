@@ -1,5 +1,5 @@
 
-import {LivePush} from './ts/live/LivePush'
+import {LivePush} from './LivePush'
 import VortexRTDEAPI from './API_AND_Types'
 declare namespace VortexRTDE {
 

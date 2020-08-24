@@ -2,7 +2,7 @@
 
 > Note: Vortex is a Bootstrapped Bundler That Bundles it Self!
 
-1. Bootstrap! Goto packag.json and change entry point to `lib/Index.js`
+1. Bootstrap! Goto package.json and change entry point to `lib/Index.js`
 ```json
 ...
 main:"./dist/vortex.js"
