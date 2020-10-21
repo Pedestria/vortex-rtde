@@ -2006,7 +2006,8 @@ function removeImportsAndExportsFromAST(ast:t.File,currentFile:string){
             }
             else {
                 if(path.node.declaration.type === "ClassDeclaration"){
-                    path.replaceWith(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),path.node.declaration))
+                    exportsToBeRolled.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),t.identifier(path.node.declaration.id.name))))
+                    path.replaceWith(path.node.declaration)
                 } else if(path.node.declaration.type === "FunctionDeclaration"){
                     path.replaceWith(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),
                     t.functionExpression(path.node.declaration.id,path.node.declaration.params,path.node.declaration.body,path.node.declaration.generator,path.node.declaration.async)))
