@@ -27,10 +27,8 @@ var tag = "Reload"
 import * as _ from 'lodash'
 import * as cliSpinners from 'cli-spinners';
 import { Server } from 'http'
-import { v4 } from 'uuid'
-import { VortexError } from '../VortexError'
 
-var resolveAsync =  promisify(resolve)
+var resolveAsync =  promisify(resolve);
 var diffLinesAsync = promisify(diffLines)
 
 var LooseParseOptions:ParserOptions = {sourceType:"module",allowReturnOutsideFunction:true,allowImportExportEverywhere:true,allowSuperOutsideMethod:true,allowAwaitOutsideFunction:true,allowUndeclaredExports:true}
@@ -543,7 +541,7 @@ function isModule(moduleName:string){
         return false
     } else if (!path.extname(moduleName)){
         return true
-    } else if (/\.m?jsx?$/g.test(moduleName)){
+    } else if (/\.[m|c]?jsx?$/g.test(moduleName)){
         return true
     }
 
@@ -558,14 +556,23 @@ function ResolveRelative(from:string,to:string){
     return './'+path.join(path.dirname(from),to)
 }
 function addJSExtIfPossible(filename:string){
-    let regexp = /\.m?jsx?$/g
-    return regexp.test(filename)? filename : filename+'.js'
+    let regexp = /\.[m|c]?jsx?$/g
+    let filejsexts = [".js",".jsx",".mjs",".cjs"];
+    if(!regexp.test(filename)){
+        for(let ext of filejsexts){
+            if(FSEXTRA.existsSync(filename + ext)){
+                filename += ext
+                break;
+            }
+        }
+    }
+    return filename;
 }
 
 
 async function resolveNodeLibrary(nodelibName:string){
 
-    let stage1:string = await resolveAsync(nodelibName)
+    let stage1 = await resolveAsync(nodelibName) as string
 
     let stage2 = await RelayFetch(stage1)
 
@@ -593,7 +600,7 @@ async function RelayFetch(index:string){
             if(path.node.left.type === "MemberExpression" && path.node.left.object.type === 'Identifier' 
             && path.node.left.object.name === 'module' && path.node.left.property.name === 'exports' 
             && path.node.right.type === 'CallExpression' && path.node.right.callee.type === 'Identifier' && path.node.right.callee.name === 'require'){
-                exports.push(GLOBAL_RESOLVE(DIRNAME(index),addJSExtIfPossible(path.node.right.arguments[0].value)))
+                exports.push(GLOBAL_RESOLVE(DIRNAME(index),addJSExtIfPossible((path.node.right.arguments[0] as t.StringLiteral).value)))
             }
         }
     })

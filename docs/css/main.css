@@ -1,0 +1,38 @@
+@font-face {
+  font-family: Roboto;
+  src: url("../Roboto-Medium.ttf"); }
+
+html {
+  background-color: #353535; }
+
+img {
+  width: 500px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0px;
+  margin-top: -75px; }
+
+h1 {
+  font-family: Roboto;
+  color: #c9c9c9; }
+
+h2 {
+  font-family: Roboto;
+  color: #c9c9c9; }
+
+h3 {
+  font-family: Roboto;
+  color: #c9c9c9; }
+
+h4 {
+  font-family: Roboto;
+  color: #c9c9c9; }
+
+h5 {
+  font-family: Roboto;
+  color: #c9c9c9; }
+
+h6 {
+  font-family: Roboto;
+  color: #c9c9c9; }

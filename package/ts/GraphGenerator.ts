@@ -206,7 +206,7 @@ export async function GenerateGraph(entry:string,modEntry:string,ControlPanel:Co
 
             let grapher = resolveGrapherForNonNativeDependency(depLie,ControlPanel)
 
-            await grapher(depLie,Graph,planet.name);
+            await grapher(depLie,Graph,planet.name,ControlPanel);
 
         }
 

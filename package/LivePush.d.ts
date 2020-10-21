@@ -1,7 +1,6 @@
 /// <reference types="node" />
 import * as e from 'express';
 import * as io from 'socket.io';
-import { Server } from 'http';
 declare class LivePushRTEventSystem {
     private ioserver;
     constructor(io: io.Server);
@@ -19,7 +18,7 @@ export declare class LivePush {
      *
      * @param {string} dirToControlPanel Resolved Dir to Vortex Control Panel
      * @param {Express} expressRouter Server router
-     * @param {Server} server Node.js Server object (Used for binding socket.io)
+     * @param {io.Server} server Node.js Server object (Used for binding socket.io)
      * @param {number} portNum Port num for given node.js server to listen on.
      * @param {boolean} preLoadHTMLPage Option to load from already prepared HTML page.
      */

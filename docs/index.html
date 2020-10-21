@@ -1,0 +1,34 @@
+<html>
+    <head>
+        <link href="https://unpkg.com/prismjs@1.20.0/themes/prism-okaidia.css" rel="stylesheet" />
+        <link href="./css/main.css" type="text/css" rel="stylesheet"/>
+    </head>
+    <body>
+        <script src="https://unpkg.com/prismjs@1.20.0/components/prism-core.min.js"crossorigin></script>
+        <script src="https://unpkg.com/prismjs@1.20.0/plugins/autoloader/prism-autoloader.min.js"crossorigin></script>
+        <img src="./vortex-bright-logo.png"/>
+        <script src="main.js"></script>
+        <button>Docs</button>
+        <h2>A real time Web application build tool.</h2>
+        <p></p>
+        <pre>
+            <code class="language-javascript">
+                const {VortexVueAddon} = require('@vortex-rtde/vue-addon');
+                const {VortexMoreStylesAddon} = require('@vortex-rtde/more-styles-addon');
+
+                module.exports = {
+                    type:'app',
+                    bundleMode:'star',
+                    start:'./src/entry-point.js',
+                    output:'./dist/webapp.js',
+                    extensions: ['.css','.png','.otf'],
+                    encodeFilenames:true,
+                    addons:[VortexVueAddon,VortexMoreStylesAddon]
+                };
+            </code>
+        </pre>
+    </body>
+</html>
+
+
+

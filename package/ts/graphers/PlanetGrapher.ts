@@ -4,6 +4,8 @@ import { QueueEntry } from '../GraphGenerator';
 import { VortexGraph } from '../Graph';
 import { Planet, PlanetClusterMapObject, PlanetImportLocation } from '../Planet';
 import { LocalizedResolve, resolveLibBundle } from '../Resolve';
+import { ParseResult } from '@babel/core';
+import { ControlPanel } from '../types/ControlPanel';
 
 function namePlanet(Graph:VortexGraph){
     return `planet_${Graph.Planets.length}.js`
@@ -15,13 +17,13 @@ function namePlanet(Graph:VortexGraph){
  * @param {VortexGraph} Graph 
  */
 
-export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph,ControlPanel){
+export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph,ControlPanel:ControlPanel){
 
-    traverse(entry.ast, {
+    traverse(entry.ast as ParseResult, {
         CallExpression: function(path){
             //Dynamic Import Grapher
             if(path.node.callee.type === "Import"){
-                let name = path.node.arguments[0].value
+                let name = (path.node.arguments[0] as t.StringLiteral).value
                 let isLib:boolean
                 let ent:string
 
@@ -38,7 +40,7 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph,ControlPanel)
                 }
                 else{
                     let planet = new Planet(namePlanet(Graph),ent)
-                    planet.originalName = path.node.arguments[0].value
+                    planet.originalName = (path.node.arguments[0] as t.StringLiteral).value
                     planet.entryModuleIsLibrary = isLib
                     Graph.Planets.push(planet)
                     Graph.Planets[Graph.indexOfPlanet(ent)].importedAt.push(new PlanetImportLocation(entry.name,false))
@@ -50,7 +52,7 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph,ControlPanel)
                  if(path.node.arguments[0].type === 'ArrayExpression'){
                     for(let imprt of path.node.arguments[0].elements){
                             //imprt is a String Literal in this case!
-                            let name:string = imprt.value
+                            let name:string = (imprt as t.StringLiteral).value;
                             let isLib:boolean
                             let ent:string
 
@@ -67,7 +69,7 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph,ControlPanel)
                             }
                             else{
                                 let planet = new Planet(namePlanet(Graph),ent)
-                                planet.originalName = imprt.value
+                                planet.originalName = (imprt as t.StringLiteral).value
                                 originalNames.push(planet.originalName)
                                 newNames.push(planet.name)
                                 planet.entryModuleIsLibrary = isLib

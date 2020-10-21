@@ -1,0 +1,26 @@
+@font-face {
+    font-family: Roboto;
+    src: url('../Roboto-Medium.ttf');
+}
+
+$headings: h1,h2,h3,h4,h5,h6;
+
+html {
+    background-color:#353535;
+}
+
+img {
+    width: 500px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    padding:0px;
+    margin-top: -75px;
+}
+
+@each $heading in $headings{
+    #{$heading} {
+        font-family: Roboto;
+        color:#c9c9c9;
+    }
+}

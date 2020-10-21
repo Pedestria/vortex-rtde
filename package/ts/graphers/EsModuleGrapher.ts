@@ -12,6 +12,7 @@ import { resolveDependencyType, notNativeDependency, resolveNonNativeDependency 
 import { FileImportLocation } from "../importlocations/FileImportLocation.js";
 import {isJs, LocalizedResolve} from '../Resolve'
 import {ControlPanel} from '../types/ControlPanel'
+import { ParseResult } from "@babel/core";
 
 /**Searchs and Graphs JS code for ECMAScript Module Dependencies
  * 
@@ -20,9 +21,9 @@ import {ControlPanel} from '../types/ControlPanel'
  */
 
 
-export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName?:string,ControlPanel:ControlPanel,ASTQueue){
+export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName:string,ControlPanel:ControlPanel,ASTQueue:any){
 
-    traverse(entry.ast,{
+    traverse(entry.ast as ParseResult,{
         ImportDeclaration:function(path) {
             if(isJs(path.node.source.value,ControlPanel)){
                 let modules = []

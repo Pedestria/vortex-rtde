@@ -13,7 +13,7 @@ run:
 final: tscompile
 	node ./scripts/final.js
 
-ADDON_DIRS := ../addons/vue-addon ../addons/more-styles-addon
+ADDON_DIRS = ../addons/vue-addon ../addons/more-styles-addon
 
 
 addons:

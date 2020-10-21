@@ -1,6 +1,4 @@
-import Module from "./Module.js";
 import Dependency from './Dependency'
-import ModuleDependency from "./dependencies/ModuleDependency.js";
 import { Planet, PlanetClusterMapObject } from "./Planet.js";
 
 /**

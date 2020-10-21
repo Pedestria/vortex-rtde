@@ -9,6 +9,8 @@ import { isJs } from "../Resolve.js";
 import { FileImportLocation } from "../importlocations/FileImportLocation.js";
 import { resolveDependencyType } from "../DependencyFactory.js";
 import {ControlPanel} from '../types/ControlPanel'
+import  * as t from '@babel/types';
+import { ParseResult } from "@babel/core";
 
 /**Searchs and Graphs JS code for CommonJS Dependencies
  * 
@@ -22,7 +24,7 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName:str
     //         if (err) return console.error(err)
     //         console.log('Debug Written')
     //       })
-    traverse(entry.ast,{
+    traverse(entry.ast as ParseResult,{
         VariableDeclarator: function(path) {
             if(path.parent.type === "VariableDeclaration" && path.parent.trailingComments && path.parent.trailingComments.find(comment => comment.value === "vortexRetain")){
                 return;
@@ -30,25 +32,28 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName:str
                 let modules = []
                 if (path.node.init !== null){
                     if (path.node.init.type === 'CallExpression') {
-                        if(path.node.init.callee.name === 'require') {
+                        if((path.node.init.callee as t.Identifier).name === 'require') {
                             if(path.node.id.type === 'ObjectPattern'){
                                 for (let namedRequires of path.node.id.properties){
                                     //console.log(namedRequires.value)
-                                    modules.push(new Module(namedRequires.value.name,"CjsModule"))
+                                    modules.push(new Module(((namedRequires as t.ObjectProperty).value as t.Identifier).name,"CjsModule"))
                                 }
                             }
                             else{
-                            modules.push(new Module(path.node.id.name,"CjsNamespaceProvider"))
+                            modules.push(new Module((path.node.id as t.Identifier).name,"CjsNamespaceProvider"))
                             }
+
+                            let Literal = path.node.init.arguments[0] as t.StringLiteral;
                             //console.log(path.node.declarations[0].init.arguments[0].value)
-                            let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.init.arguments[0].value);
-                            Transport(new CjsModuleDependency(path.node.init.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue);
-                        } else if (path.node.init.callee.name === '_interopDefault'){
+                            let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,Literal.value);
+                            Transport(new CjsModuleDependency(Literal.value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue);
+                        } else if ((path.node.init.callee as t.Identifier).name === '_interopDefault'){
                             if(path.node.init.arguments[0].type === 'CallExpression'){
-                                if(path.node.init.arguments[0].callee.name === 'require'){
-                                    modules.push(new Module(path.node.id.name,"CjsInteropRequire"))
-                                    let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.init.arguments[0].arguments[0].value);
-                                    Transport(new CjsModuleDependency(path.node.init.arguments[0].arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
+                                if((path.node.init.arguments[0].callee as t.Identifier).name === 'require'){
+                                    modules.push(new Module((path.node.id as t.Identifier).name,"CjsInteropRequire"))
+                                    let Literal = path.node.init.arguments[0].arguments[0] as t.StringLiteral;
+                                    let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,Literal.value);
+                                    Transport(new CjsModuleDependency(Literal.value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
                                 }
                             }
                         }
@@ -58,24 +63,27 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName:str
                 let modules = []
                 if (path.node.expression.type === 'AssignmentExpression') {
                     if(path.node.expression.left.type === 'MemberExpression' && path.node.expression.right.type === 'CallExpression'){
-                        if(path.node.expression.right.callee.name === 'require') {
-                            modules.push(new Module(path.node.expression.right.arguments[0].value,"CjsNamespaceProvider"))
-                            let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.expression.right.arguments[0].value)
-                            Transport(new CjsModuleDependency(path.node.expression.right.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
+                        if((path.node.expression.right.callee as t.Identifier).name === 'require') {
+                            let Literal = path.node.expression.right.arguments[0] as t.StringLiteral;
+                            modules.push(new Module(Literal.value,"CjsNamespaceProvider"))
+                            let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,Literal.value)
+                            Transport(new CjsModuleDependency(Literal.value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
                         }
                     }
                 }
                 if(path.node.expression.type === 'CallExpression'){
                     if(path.node.expression.callee.type === 'Identifier' && path.node.expression.callee.name == 'require'){
+                        let Literal = path.node.expression.arguments[0] as t.StringLiteral;
                         modules.push(new Module('_Default_',"CjsDefaultModule"))
-                        let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.expression.arguments[0].value)
-                        Transport(new CjsModuleDependency(path.node.expression.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
+                        let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,Literal.value)
+                        Transport(new CjsModuleDependency(Literal.value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
                     }
                     if(path.node.expression.callee.type === 'CallExpression'){
-                        if (path.node.expression.callee.callee.name === 'require'){
+                        if ((path.node.expression.callee.callee as t.Identifier).name === 'require'){
+                            let Literal = path.node.expression.callee.arguments[0] as t.StringLiteral;
                             modules.push(new Module('_DefaultFunction_',"CjsDefaultFunction"));
-                            let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.expression.callee.arguments[0].value)
-                            Transport(new CjsModuleDependency(path.node.expression.callee.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
+                            let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,Literal.value)
+                            Transport(new CjsModuleDependency(Literal.value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
                         }
                     }
                 }
@@ -83,12 +91,13 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName:str
             ObjectProperty: function(path){
                 let modules =[]
                 if(path.node.value.type === 'CallExpression' && path.node.value.callee.type === 'Identifier' && path.node.value.callee.name === 'require'){
-                    if (isJs(path.node.value.arguments[0].value,ControlPanel)){ 
+                    let Literal = path.node.value.arguments[0] as t.StringLiteral;
+                    if (isJs(Literal.value,ControlPanel)){ 
                         modules.push(new Module('CJSLoad',"CJSLoad"))
-                        let currentImpLoc = new MDImportLocation(entry.name,0,modules,path.node.value.arguments[0].value);
-                        Transport(new CjsModuleDependency(path.node.value.arguments[0].value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
+                        let currentImpLoc = new MDImportLocation(entry.name,0,modules,Literal.value);
+                        Transport(new CjsModuleDependency(Literal.value,currentImpLoc),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
                     } else {
-                        nonModuleDependencyResolve(path.node.value.arguments[0].value,Graph);
+                        nonModuleDependencyResolve(Literal.value,Graph);
                     }
                 }
             }

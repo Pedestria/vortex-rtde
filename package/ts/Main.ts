@@ -13,7 +13,6 @@ import _ = require('lodash');
 import { notNativeDependency } from './DependencyFactory';
 import Dependency from './Dependency';
 import {DependencyCircularCheck} from './Resolve'
-import { indexOf, chain } from 'lodash';
 import { VortexError, VortexErrorType } from './VortexError';
 
 function ParseAddons(Addons:Array<VortexAddon>){
@@ -78,6 +77,14 @@ interface CLI{
     bundleMode:"neutronstar"|"star"
     type:"app"|"library"  
 }
+
+interface PackageJSON {
+    name:string
+    version:string
+    author:string
+    license:string
+    description:string
+};
 
 
 /**Creates a Star/Neutron Star/Solar System from entry point.
@@ -147,7 +154,7 @@ export async function createStarPackage (resolvedPath:string,CLI?:CLI){
     //PROGRAM -->
 
     
-    let yourCredits = readJSONSync('./package.json',{encoding:'utf-8'})
+    let yourCredits = readJSONSync('./package.json',{encoding:'utf-8'}) as PackageJSON;
 
     spinner2.spinner = cliSpinners.dots11;
     spinner2.start();
@@ -226,7 +233,7 @@ export async function createStarPackage (resolvedPath:string,CLI?:CLI){
  * @param {Bundle[]} bundleObjects Bundle Code Objects outputed by Compiler
  */
 
-async function terserPackage(outputFilename:string,yourCredits,bundleObjects:Array<Bundle>){
+async function terserPackage(outputFilename:string,yourCredits:PackageJSON,bundleObjects:Array<Bundle>){
     if(ControlPanel.isLibrary){
         let credits = `/*NEUTRON-STAR*/ \n /*COMMON JS IIFE */ \n /*BUNDLED BY VORTEX RTDE*/ \n /*${yourCredits.name} ${yourCredits.version} _MINIFIED_ \n ${yourCredits.author} \n License: ${yourCredits.license} \n ${yourCredits.description} */ \n`
 
@@ -274,7 +281,7 @@ async function terserPackage(outputFilename:string,yourCredits,bundleObjects:Arr
 
 }
 
-async function regularPackage(outputFilename:string,yourCredits,bundleObjects:Array<Bundle>){
+async function regularPackage(outputFilename:string,yourCredits:PackageJSON,bundleObjects:Array<Bundle>){
         if(ControlPanel.isLibrary){
             let finBund
 
