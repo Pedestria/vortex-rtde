@@ -776,6 +776,7 @@ function TraverseAndTransform(entry:LPEntry,currentBranch:LiveBranch&LiveAddress
             }
         },
         ExportNamedDeclaration: function(path){
+            console.log("FILE: "+entry.name);
             if(path.node.specifiers.length > 0){
                 for(let specifier of path.node.specifiers){
                     if(specifier.type === "ExportSpecifier"){
@@ -1994,6 +1995,7 @@ function removeImportsAndExportsFromAST(ast:t.File,currentFile:string){
             }
         }, 
         ExportNamedDeclaration: function(path){
+            console.log("FILE: "+currentFile);
             if(path.node.specifiers.length > 0){
                 for(let specifier of path.node.specifiers){
                     if(specifier.type === "ExportSpecifier"){
