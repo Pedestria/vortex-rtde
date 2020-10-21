@@ -780,7 +780,7 @@ function TraverseAndTransform(entry:LPEntry,currentBranch:LiveBranch&LiveAddress
             if(path.node.specifiers.length > 0){
                 for(let specifier of path.node.specifiers){
                     if(specifier.type === "ExportSpecifier"){
-                        rolledExports.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(specifier.exported)),t.identifier(specifier.local))));
+                        rolledExports.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),specifier.exported),t.identifier(specifier.local.name))));
                     }
                 }
                 path.remove();
@@ -1999,14 +1999,14 @@ function removeImportsAndExportsFromAST(ast:t.File,currentFile:string){
             if(path.node.specifiers.length > 0){
                 for(let specifier of path.node.specifiers){
                     if(specifier.type === "ExportSpecifier"){
-                        exportsToBeRolled.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(specifier.exported.name)),t.identifier(specifier.local.name))));
+                        exportsToBeRolled.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),specifier.exported),t.identifier(specifier.local.name))));
                     }
                 }
                 path.remove();
             }
             else {
                 if(path.node.declaration.type === "ClassDeclaration"){
-                    exportsToBeRolled.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),t.identifier(path.node.declaration.id.name))))
+                    exportsToBeRolled.push(t.expressionStatement(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),path.node.declaration.id),t.identifier(path.node.declaration.id.name))))
                     path.replaceWith(path.node.declaration)
                 } else if(path.node.declaration.type === "FunctionDeclaration"){
                     path.replaceWith(t.assignmentExpression("=",t.memberExpression(t.identifier("exports"),t.identifier(path.node.declaration.id.name)),
