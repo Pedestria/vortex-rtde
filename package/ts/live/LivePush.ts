@@ -556,10 +556,11 @@ function ResolveRelative(from:string,to:string){
     return './'+path.join(path.dirname(from),to)
 }
 function addJSExtIfPossible(filename:string){
-    let regexp = /\.[m|c]?jsx?$/g
+    let regexp = /\.\w+$/g
     let filejsexts = [".js",".jsx",".mjs",".cjs"];
     if(!regexp.test(filename)){
         for(let ext of filejsexts){
+            console.log("Testing:" + filename + ext)
             if(FSEXTRA.existsSync(filename + ext)){
                 filename += ext
                 break;
@@ -600,7 +601,7 @@ async function RelayFetch(index:string){
             if(path.node.left.type === "MemberExpression" && path.node.left.object.type === 'Identifier' 
             && path.node.left.object.name === 'module' && path.node.left.property.name === 'exports' 
             && path.node.right.type === 'CallExpression' && path.node.right.callee.type === 'Identifier' && path.node.right.callee.name === 'require'){
-                exports.push(GLOBAL_RESOLVE(DIRNAME(index),addJSExtIfPossible((path.node.right.arguments[0] as t.StringLiteral).value)))
+                exports.push(addJSExtIfPossible(GLOBAL_RESOLVE(DIRNAME(index),(path.node.right.arguments[0] as t.StringLiteral).value)))
             }
         }
     })
@@ -654,7 +655,6 @@ function TreeBuilder(name:string,currentBranch:LiveAddress&LiveBranch|LiveTree,t
             let module:LiveBranch
 
             if(isModule(name)){
-                name = name.includes('./')? addJSExtIfPossible(name) : name
                 module = new LiveModule(name);
             } else if(name.includes('.css')) {
                 module = new LiveCSS(name);
@@ -744,7 +744,7 @@ function TraverseAndTransform(entry:LPEntry,currentBranch:LiveBranch&LiveAddress
     traverse(entry.ast, {
         // ES6 Imports
         ImportDeclaration: function(path) {
-            let name = path.node.source.value.includes('./')? ResolveRelative(entry.name,path.node.source.value) : path.node.source.value
+            let name = path.node.source.value.includes('./')? addJSExtIfPossible(ResolveRelative(entry.name,path.node.source.value)) : addJSExtIfPossible(path.node.source.value)
             if(fileRegex.test(name)){
                 path.replaceWith(t.variableDeclaration("var",[t.variableDeclarator(t.identifier(path.node.specifiers[0].local.name),t.stringLiteral(resolveAssetToHTMLPage(name)))]));
                 return;
@@ -756,14 +756,14 @@ function TraverseAndTransform(entry:LPEntry,currentBranch:LiveBranch&LiveAddress
         //CommonJS Requires!
         VariableDeclarator: function(path){
             if(path.node.init !== null && path.node.init.type === 'CallExpression' && path.node.init.callee.type === 'Identifier' && path.node.init.callee.name === 'require'){
-                let name = path.node.init.arguments[0].value.includes('./') && entry.name.includes('./')? ResolveRelative(entry.name,path.node.init.arguments[0].value) : path.node.init.arguments[0].value
+                let name = path.node.init.arguments[0].value.includes('./') && entry.name.includes('./')? addJSExtIfPossible(ResolveRelative(entry.name,path.node.init.arguments[0].value)) : addJSExtIfPossible(path.node.init.arguments[0].value)
                 TreeBuilder(name,currentBranch,tree,isTree,path)
                 path.remove();
                 // Interop Require Wildcard!!
             } else if(path.node.init !== null && path.node.init.type === "CallExpression" && path.node.init.callee.type === "Identifier" 
             && path.node.init.callee.name.includes("_interop") && path.node.init.arguments[0].type === "CallExpression" 
             && path.node.init.arguments[0].callee.type === "Identifier" && path.node.init.arguments[0].callee.name === "require") {
-                let name = path.node.init.arguments[0].arguments[0].value.includes('./') && entry.name.includes('./')? ResolveRelative(entry.name,path.node.init.arguments[0].arguments[0].value) : path.node.init.arguments[0].arguments[0].value
+                let name = path.node.init.arguments[0].arguments[0].value.includes('./') && entry.name.includes('./')? addJSExtIfPossible(ResolveRelative(entry.name,path.node.init.arguments[0].arguments[0].value)) : addJSExtIfPossible(path.node.init.arguments[0].arguments[0].value)
                 TreeBuilder(name,currentBranch,tree,isTree,path);
                 path.remove();
             }
@@ -820,7 +820,7 @@ async function RecursiveTraverse(branch:LiveModule,liveTree:LiveTree,queue:LPEnt
         if(subBranch instanceof LiveModule){
             if(!loadedModules.includes(subBranch.main)) {
                 if(subBranch.main.includes('./')){
-                    let location = branch.libLoc? path.join(path.dirname(branch.libLoc),subBranch.main) : ResolveRelative(branch.main,subBranch.main);
+                    let location = branch.libLoc? addJSExtIfPossible(path.join(path.dirname(branch.libLoc),subBranch.main)) : addJSExtIfPossible(ResolveRelative(branch.main,subBranch.main));
                     let transformed:string
                     if(isNotNative(location)){
                         transformed = await resolveCompilerForNonNativeBranch(location)
@@ -1562,7 +1562,7 @@ async function updateTree(filename:string,liveTree:LiveTree,preProcessQueue:Arra
                     await buildImports(AST,cntRqt,context,NEWMEMORYIMPORTS);
 
                 } else {
-                    let NAME = reqDiff.source.includes('./')? ResolveRelative(filename,reqDiff.source) : reqDiff.source;
+                    let NAME = reqDiff.source.includes('./')? addJSExtIfPossible(ResolveRelative(filename,reqDiff.source)) : addJSExtIfPossible(reqDiff.source);
 
                     let newModule;
 
@@ -1902,17 +1902,17 @@ async function diffRequests(changes:Change[],filename:string): Promise<RequestDi
     for(let node of ADDED_AST.program.body){
         if(node.type === "ImportDeclaration"){
             if(node.specifiers.length > 0){
-                possibleRequests.push({source:node.source.value,resolvedSource:node.source.value.includes('./')? ResolveRelative(filename,node.source.value) : node.source.value,
+                possibleRequests.push({source:node.source.value,resolvedSource:node.source.value.includes('./')? addJSExtIfPossible(ResolveRelative(filename,node.source.value)) : addJSExtIfPossible(node.source.value),
                 added:true,removed:undefined,newRequests:node.specifiers.map(specifier => specifier.local.name),
                     namespace:node.specifiers.find(specifier => specifier.type === "ImportDefaultSpecifier")? node.specifiers.find(specifier => specifier.type === "ImportDefaultSpecifier").local.name : undefined});
             } else {
-                possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:["NONE"],resolvedSource:node.source.value.includes('./')? ResolveRelative(filename,node.source.value) : node.source.value});
+                possibleRequests.push({source:node.source.value,added:true,removed:undefined,newRequests:["NONE"],resolvedSource:node.source.value.includes('./')? addJSExtIfPossible(ResolveRelative(filename,node.source.value)) : addJSExtIfPossible(node.source.value)});
             }
         } else if(node.type === "VariableDeclaration"){
             for(let declarator of node.declarations){
                 if(declarator.init.type === "CallExpression"&& declarator.id.type === "Identifier" && declarator.init.callee.type === "Identifier" && declarator.init.callee.name === "require"){
                     possibleRequests.push({source:declarator.init.arguments[0].value,
-                        resolvedSource:declarator.init.arguments[0].value.includes('./')? ResolveRelative(filename,declarator.init.arguments[0].value) : declarator.init.arguments[0].value,added:true,removed:undefined,
+                        resolvedSource:declarator.init.arguments[0].value.includes('./')? addJSExtIfPossible(ResolveRelative(filename,declarator.init.arguments[0].value)) : addJSExtIfPossible(declarator.init.arguments[0].value),added:true,removed:undefined,
                         newRequests:[declarator.id.name],namespace:declarator.id.name})
                 }
             }
@@ -1927,14 +1927,14 @@ async function diffRequests(changes:Change[],filename:string): Promise<RequestDi
 
             if(node.specifiers.length > 0){
                 if(possibleRequests.findIndex(request => request.source === NODE.source.value) === -1){
-                    possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:node.specifiers.map(specifier => specifier.local.name),resolvedSource:node.source.value.includes('./')? ResolveRelative(filename,node.source.value) : node.source.value});
+                    possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:node.specifiers.map(specifier => specifier.local.name),resolvedSource:node.source.value.includes('./')? addJSExtIfPossible(ResolveRelative(filename,node.source.value)) : addJSExtIfPossible(node.source.value)});
                 } else {
                     let request = possibleRequests.find(request => request.source === NODE.source.value)
                     request.removedRequests = node.specifiers.map(specifier => specifier.local.name);
                     request.added = undefined;
                 }
             } else {
-                possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:["NONE"],resolvedSource:node.source.value.includes('./')? ResolveRelative(filename,node.source.value) : node.source.value});
+                possibleRequests.push({source:node.source.value,added:undefined,removed:true,removedRequests:["NONE"],resolvedSource:node.source.value.includes('./')? addJSExtIfPossible(ResolveRelative(filename,node.source.value)) : addJSExtIfPossible(node.source.value)});
             }
         } else if(node.type === "VariableDeclaration"){
 
@@ -1982,7 +1982,7 @@ function removeImportsAndExportsFromAST(ast:t.File,currentFile:string){
     traverse(ast,{
         ImportDeclaration: function(path) {
             if(fileRegex.test(path.node.source.value)){
-                path.replaceWith(t.variableDeclaration("var",[t.variableDeclarator(t.identifier(path.node.specifiers[0].local.name),t.stringLiteral(resolveAssetToHTMLPage(ResolveRelative(currentFile,path.node.source.value))))]))
+                path.replaceWith(t.variableDeclaration("var",[t.variableDeclarator(t.identifier(path.node.specifiers[0].local.name),t.stringLiteral(resolveAssetToHTMLPage(addJSExtIfPossible(ResolveRelative(currentFile,path.node.source.value)))))]))
             }
             else {
                 path.remove();

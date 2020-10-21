@@ -1,2 +1,2 @@
 @ECHO off
-yarn tsc && node run.js
+yarn tsc && yarn tsc -p tsconfig-fold.json && node ./scripts/run.js
