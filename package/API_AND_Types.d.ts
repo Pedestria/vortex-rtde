@@ -24,7 +24,7 @@ declare class FileImportLocation extends ImportLocation {
 /**
  * An Exported Function, Class, or Variable from a specific file or library.
  */
-declare class Module<T extends keyof typeof ModuleTypes> {
+declare class Module {
     /**
      * Name of Module
      */
@@ -38,7 +38,7 @@ declare class Module<T extends keyof typeof ModuleTypes> {
      * @param {string} name Name of Module
      * @param {ModuleTypes} type Type of Module
      */
-    constructor(name: string, type: T);
+    constructor(name: string, type: ModuleTypes);
 }
 /**
  * The Standardized System For Vortex Module Types
@@ -80,10 +80,10 @@ declare enum ModuleTypes {
 }
 
 declare class MDImportLocation extends ImportLocation {
-    modules: Array<Module<keyof typeof ModuleTypes>>;
+    modules: Array<Module>;
     relativePathToDep: string;
-    constructor(name: string, line: number, modules: Array<Module<keyof typeof ModuleTypes>>, relativePath: string);
-    testForModule(module: Module<keyof typeof ModuleTypes>): boolean;
+    constructor(name: string, line: number, modules: Array<Module>, relativePath: string);
+    testForModule(module: Module): boolean;
     indexOfModuleByName(name: string): number;
 }
 /** 
@@ -356,9 +356,8 @@ interface Grapher {
 
 }
 
-declare function BabelCompile(code: string) {
-    return transformAsync(code, BabelSettings)
-}
+declare function BabelCompile(code: string) : void;
+/* return transformAsync(code, BabelSettings) */
 
 declare class VortexAddon {
 
@@ -370,6 +369,95 @@ declare class VortexAddon {
      */
     constructor(name:string, handler:ExportsHandler)
 } 
+
+interface CDNImport{
+    libraryName:string
+    namespace:string
+}
+
+interface LivePushOptions {
+    /**
+     * Entry point for program!
+     * (Multiple Entry Point Support will come eventually!)
+     */
+    entry:string
+    /**
+     * Resolved Directory to Html
+     * @example
+     * path.resolve(__dirname,"./client/index.html")
+     */
+    dirToHTML:string
+    /**
+     * Externals!
+     */
+
+    CDNImports:Array<CDNImport>
+}
+
+
+interface ControlPanel {
+    /**
+           * Type of program to bundle for
+           */
+    type:'app'|'library'
+    /**
+     * LivePush Config!
+     */
+    livePushOptions:LivePushOptions
+    /**
+     * The Mode of which to bundle the program in.
+     */
+    bundleMode:'star'|'neutronstar'
+    /**
+     * Whether Vortex should use terser to extra minify your neutron star solar system. (Uses babel core compilier on neutronstar library!!!)
+     */
+    useTerser:boolean
+    /**
+     * The entry point for your program.
+     */
+    start:string
+    /**
+     * The output file (If using async imports, Planets will be outputed to same directory)
+     */
+    output:string
+    /**
+     * The __Non-JS__ resolvable extensions
+     */
+    extensions:Array<string>
+    /**
+     * Whether Vortex should encode filenames with uuids.
+     */
+    encodeFilenames:boolean
+  
+    /**
+     * Whether Vortex should polyfill the es6 promise. __(Used with Planet imports!)__
+     */
+    polyfillPromise:boolean
+  
+    /**
+     * Addon Objects to Add to Vortex RTDE
+     */
+    addons:VortexAddon[]
+  
+    /**
+     * Libraries to NOT include in bundle. Links browser global to shuttle_exports.
+     */
+  
+    outBundle:Array<string>
+  
+    /**
+     * Whether Vortex should pipe all CSS Dependencies into one file.
+     */
+  
+    cssPlanet:boolean
+  
+    /**
+     * Whether Vortex should minify the CSS Planet (If it gets created.)
+     */
+  
+    minifyCssPlanet:boolean
+  
+  }
 
 interface CustomGraphDependencyMapObject {
     extension:string

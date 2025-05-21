@@ -11,6 +11,7 @@ import {transformSync} from "@babel/core";
 import { BabelSettings } from "./Options.js";
 import { ModuleTypes } from "./Module.js";
 import { searchForDefaultNamespace } from "./dependencies/NamespaceSearch.js";
+import { VTXPanel } from "./API.js";
 //import MDImportLocation from "./MDImportLocation.js";
 
 /**Transports the given dependency to given Graph.
@@ -41,11 +42,9 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
             Graph.addToPlanet(Dependency,planetName);
         }
     }
-
-    return;
 }
 
-function verifyModules(Dependency:Dependency,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,ControlPanel,ASTQueue){
+function verifyModules(Dependency:Dependency,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,ControlPanel: VTXPanel,ASTQueue:ASTQueue){
 
     let str = './'
 

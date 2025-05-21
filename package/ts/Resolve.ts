@@ -45,7 +45,7 @@ export function resolveLibBundle(nodeLibName:string,ControlPanel:ControlPanel):s
 
     let bundleREGEXP = /\.(?:min|prod|slim)/g
     //GraphDepsAndModsForCurrentFile(ResolveLibrary(nodeLibName),Graph)
-    let STD_NODE_LIBS = ['path','fs','module','os','fs/promises']
+    let STD_NODE_LIBS = ['path','fs','module','os','fs/promises','http']
 
     if(STD_NODE_LIBS.includes(nodeLibName)){
         return 'node.js'
@@ -98,11 +98,13 @@ export function ResolveLibrary(packageName:string){
         return DefaultQuarkTable.QuarkLibs[DefaultQuarkTable.findEntryByName(packageName)].bundleLocs
     }
 
-    if  (LibraryRelayVerify(packageIndexDirname).length == 0){
+    let libsToVerify = LibraryRelayVerify(packageIndexDirname);
+
+    if  (libsToVerify.length == 0){
         return packageIndexDirname
     }
 
-    for(let bundle of LibraryRelayVerify(packageIndexDirname)){
+    for(let bundle of libsToVerify){
         testOutput.push(LocalizedResolve(packageIndexDirname,bundle))
     }
 

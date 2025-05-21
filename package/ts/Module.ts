@@ -1,7 +1,7 @@
 /**
  * An Exported Function, Class, or Variable from a specific file or library.
  */
-export default class Module<T extends keyof typeof ModuleTypes> {
+export default class Module{
     /**
      * Name of Module
      */
@@ -16,11 +16,11 @@ export default class Module<T extends keyof typeof ModuleTypes> {
      * @param {ModuleTypes} type Type of Module
      */
 
-    constructor(name:string,type:T)
+    constructor(name:string,type:ModuleTypes)
     {
         this.name = name
         let TYPE = type
-        this.type = ModuleTypes[TYPE]
+        this.type = type;
 
     }
 

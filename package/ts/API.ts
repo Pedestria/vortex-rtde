@@ -2,7 +2,8 @@ import Dependency from './Dependency'
 import ImportLocation from './ImportLocation'
 import ModuleDependency from './dependencies/ModuleDependency'
 import MDImportLocation from './importlocations/MDImportLocation'
-import { QueueEntry, addEntryToQueue, loadEntryFromQueue, GraphDepsAndModsForCurrentFile } from './GraphGenerator'
+import * as css from 'css'
+import {GraphDepsAndModsForCurrentFile } from './GraphGenerator'
 import traverse from '@babel/traverse'
 import { VortexGraph } from './Graph'
 import { transformAsync} from '@babel/core'
@@ -20,6 +21,34 @@ function BabelCompile(code: string) {
 
 import * as t from '@babel/types'
 import * as _ from 'lodash'
+import { ControlPanel } from '../API_AND_Types'
+
+export type GrapherResult = Promise<void>[];
+
+export type GrapherFileResult = GrapherResult[];
+
+
+
+export async function graphFileResultAwait(graphResult : GrapherFileResult){
+    for(let gr of graphResult){
+        for(let r of gr)
+            try{
+                await r;
+            }catch{
+                
+            }
+    }
+}
+
+export class EnsuredPath {
+    file:string
+    isOkay:Promise<void>
+
+    constructor(file:string,isOkay:Promise<void>){
+        this.file = file
+        this.isOkay = isOkay
+    }
+}
 /**
  * Vortex Addon Interface
  */
@@ -173,45 +202,14 @@ interface ExportHandlerMap {
 
 }
 
-interface ControlPanel {
 
-    /**
-     * If checked True, then Vortex will bundle with NO debug tools.
-     * If checked False, then Vortex will bundle with debug tools.
-     */
-    isProduction:boolean
-    /**
-     * If checked true, Vortex will consider your program a library instead of a web application.
-     */
-    isLibrary:boolean
-    /**
-     * If checked true, Terser will be used to minify production bundle. (Can NOT be used on development bundles.) (Labels it Neutron Star)
-     */
-    usingTerser:boolean
+export type VTXPanel = ControlPanel;
 
-    outputFile:string
-
-    /**If checked true, Vortex will encode File Dependency names with uuids.
-     */
-      encodeFilenames:boolean
-
-      useDebug:boolean;
-
-      startingPoint:string
-
-      extensions:Array<string>
-
-      polyfillPromise:boolean
-
-      externalLibs:Array<string>
-
-      InstalledAddons:InternalVortexAddons
-
-      cssPlanet:boolean
-
-      minifyCssPlanet:boolean
-
+export interface VTXInternalPanel {
+    ext:VTXPanel,
+    addons:VortexAddon[]
 }
+
 
 
 interface Grapher {
@@ -224,6 +222,53 @@ interface Grapher {
      * Construct Grapher with Queue Entry Input
      */
     // (QueueEntry:QueueEntry,Graph:VortexGraph):void
+
+}
+
+export class QueueEntry {
+    name:string
+    ast:t.File| css.Stylesheet
+    external?:boolean = false
+
+    constructor(name:string,parsedCode:t.File|css.Stylesheet){
+        this.name = name
+        this.ast = parsedCode
+    }
+
+}
+
+export class ASTQueue {
+
+   
+    queue : QueueEntry[]
+    QueueEntry:QueueEntry
+
+    constructor(){
+        this.queue = []
+        this.QueueEntry = null;
+    }
+   
+    isInQueue(entryName:string){
+        for(let ent of this.queue){
+            if(ent.name === entryName){
+                return true
+            }
+        }
+        return false
+    }
+    
+    addEntryToQueue(entry:QueueEntry){
+        this.queue.push(entry)
+        return;
+    }
+    loadEntryFromQueue(entryName:string){
+        for(let ent of this.queue){
+            if(ent.name === entryName){
+                return ent
+            }
+        }
+    }
+
 
 }
 
@@ -267,9 +312,7 @@ declare namespace VortexAPI {
         TransformImportsFromAST as TransformNativeImports,
         TransformExportsFromAST as TransformNativeExports,
         CSSInjector as InjectCSS,
-        addEntryToQueue as addQueueEntry,
         EsModuleDependency,
-        loadEntryFromQueue as loadQueueEntry,
         FileImportLocation,
         pipeCSSContentToBuffer,
         Addons,
@@ -293,9 +336,7 @@ export var VortexRTDEAPI:typeof VortexAPI = {
         TransformNativeImports:TransformImportsFromAST,
         TransformNativeExports:TransformExportsFromAST,
         InjectCSS:CSSInjector,
-        addQueueEntry:addEntryToQueue,
         EsModuleDependency:EsModuleDependency,
-        loadQueueEntry:loadEntryFromQueue,
         FileImportLocation:FileImportLocation,
         pipeCSSContentToBuffer:pipeCSSContentToBuffer,
         Addons:Addons,

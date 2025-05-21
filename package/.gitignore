@@ -20,4 +20,6 @@ dist/
 
 debug/
 
+.DS_STORE
+
 

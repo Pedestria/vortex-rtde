@@ -1,11 +1,12 @@
-import traverse from '@babel/traverse'
+import traverse , {NodePath} from '@babel/traverse'
 import * as t from '@babel/types'
-import { QueueEntry } from '../GraphGenerator';
+import { QueueEntry, VTXPanel } from '../API';
 import { VortexGraph } from '../Graph';
 import { Planet, PlanetClusterMapObject, PlanetImportLocation } from '../Planet';
 import { LocalizedResolve, resolveLibBundle } from '../Resolve';
 import { ParseResult } from '@babel/core';
-import { ControlPanel } from '../types/ControlPanel';
+import { GrapherResult} from '../API';
+
 
 function namePlanet(Graph:VortexGraph){
     return `planet_${Graph.Planets.length}.js`
@@ -17,10 +18,9 @@ function namePlanet(Graph:VortexGraph){
  * @param {VortexGraph} Graph 
  */
 
-export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph,ControlPanel:ControlPanel){
+export function SearchAndGraph(entry:QueueEntry,path:NodePath<babel.types.CallExpression>, Graph:VortexGraph,ControlPanel:VTXPanel){
 
-    traverse(entry.ast as ParseResult, {
-        CallExpression: function(path){
+ 
             //Dynamic Import Grapher
             if(path.node.callee.type === "Import"){
                 let name = (path.node.arguments[0] as t.StringLiteral).value
@@ -42,8 +42,8 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph,ControlPanel:
                     let planet = new Planet(namePlanet(Graph),ent)
                     planet.originalName = (path.node.arguments[0] as t.StringLiteral).value
                     planet.entryModuleIsLibrary = isLib
+                    planet.importedAt.push(new PlanetImportLocation(entry.name,false))
                     Graph.Planets.push(planet)
-                    Graph.Planets[Graph.indexOfPlanet(ent)].importedAt.push(new PlanetImportLocation(entry.name,false))
                 }
             }// AMD Define Grapher
              else if(path.node.callee.type === "Identifier" && path.node.callee.name === 'define' && path.node.arguments[0].type === 'ArrayExpression') {
@@ -73,8 +73,9 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph,ControlPanel:
                                 originalNames.push(planet.originalName)
                                 newNames.push(planet.name)
                                 planet.entryModuleIsLibrary = isLib
+                                planet.importedAt.push(new PlanetImportLocation(entry.name,true))
                                 Graph.Planets.push(planet)
-                                Graph.Planets[Graph.indexOfPlanet(ent)].importedAt.push(new PlanetImportLocation(entry.name,true))
+                                
                             }
                     }
                 }
@@ -84,7 +85,4 @@ export function SearchAndGraph(entry:QueueEntry, Graph:VortexGraph,ControlPanel:
                 PlanetClusterMapObj.planetsByNewName = newNames;
                 Graph.PlanetClusterMap.push(PlanetClusterMapObj)
             }
-        }
-    })
-
 }

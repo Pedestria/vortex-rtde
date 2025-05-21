@@ -11,7 +11,7 @@ export default class Dependency {
     /**
      * ALL Import Locations of this Dependency
      */
-    importLocations:Array<ImportLocation>
+    importLocations:ImportLocation[]
     /**
      * 
      * @param {string} name Name of Dependency
@@ -46,11 +46,6 @@ export default class Dependency {
     }
 
     isLibraryDependency() : boolean{
-        if(this.name.includes('./')){
-            return false
-        }
-        else{
-            return true
-        }
+        return !(this.name.includes('./'))
     }
 }

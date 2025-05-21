@@ -5,13 +5,16 @@ import { CSSDependency } from '../dependencies/CSSDependency'
 
 export function SearchAndGraph(ast:css.Stylesheet,Dep:CSSDependency){
     for(let rule of ast.stylesheet.rules){
+        if(rule.type){
         //Font Dependencies
-        if(rule.type === 'font-face'){
-            for(let dec of rule.declarations){
-                if(dec.property === 'src'){
-                    let depname = parseDependencyFromValue(dec.value)
-                    let impLoc = new FileImportLocation(Dep.name,null,depname,null);
-                    Dep.dependencies.push(resolveDependencyType(depname,impLoc,Dep.name))
+            let r = rule as css.Rule;
+            if(r.type === 'font-face'){
+                for(let dec of r.declarations){
+                    if(dec.property === 'src'){
+                        let depname = parseDependencyFromValue(dec.value)
+                        let impLoc = new FileImportLocation(Dep.name,null,depname,null);
+                        Dep.dependencies.push(resolveDependencyType(depname,impLoc,Dep.name))
+                    }
                 }
             }
         }

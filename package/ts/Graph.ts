@@ -1,3 +1,4 @@
+import { ASTQueue } from './API';
 import Dependency from './Dependency'
 import { Planet, PlanetClusterMapObject } from "./Planet.js";
 
@@ -21,12 +22,15 @@ export class VortexGraph {
         Planets:Array<Planet> = []
         PlanetClusterMap:Array<PlanetClusterMapObject> = []
 
+        queue:ASTQueue
+
     /**
      * @param {string} entrypoint Entry point 
      */
 
     constructor(entrypoint?:string){
         this.entryPoint = entrypoint
+        this.queue = null;
     }
 
     /**

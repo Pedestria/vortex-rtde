@@ -12,7 +12,9 @@ import { resolveDependencyType, notNativeDependency, resolveNonNativeDependency 
 import { FileImportLocation } from "../importlocations/FileImportLocation.js";
 import {isJs, LocalizedResolve} from '../Resolve'
 import {ControlPanel} from '../types/ControlPanel'
+import { ASTQueue, GrapherResult } from "../API.js";
 import { ParseResult } from "@babel/core";
+import { ImportDeclaration } from "@babel/types";
 
 /**Searchs and Graphs JS code for ECMAScript Module Dependencies
  * 
@@ -21,45 +23,44 @@ import { ParseResult } from "@babel/core";
  */
 
 
-export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName:string,ControlPanel:ControlPanel,ASTQueue:any){
+export function SearchAndGraphImportDecl(entry:QueueEntry,node:babel.types.ImportDeclaration,Graph:VortexGraph,planetName:string,ControlPanel:ControlPanel,ASTQueue:ASTQueue){
 
-    traverse(entry.ast as ParseResult,{
-        ImportDeclaration:function(path) {
-            if(isJs(path.node.source.value,ControlPanel)){
+            if(isJs(node.source.value,ControlPanel)){
                 let modules = []
-                //console.log(path.node);
-                for (let ImportType of path.node.specifiers){
+                //console.log(node);
+                for (let ImportType of node.specifiers){
                     if (ImportType.type === 'ImportDefaultSpecifier'){
                         let mod
-                        mod= new Module(ImportType.local.name,"EsDefaultModule")
+                        mod= new Module(ImportType.local.name,ModuleTypes.EsDefaultModule)
                         // else{
                         //     mod = new Module(ImportType.local.name,ModuleTypes.CjsNamespaceProvider)
                         // }
                         modules.push(mod)
                     }
                     else if (ImportType.type === 'ImportSpecifier') {
-                        let mod= new Module(ImportType.local.name,"EsModule")
+                        let mod= new Module(ImportType.local.name,ModuleTypes.EsModule)
                         modules.push(mod)
                     }
                     else {
-                        let mod = new Module(ImportType.local.name,"EsNamespaceProvider")
+                        let mod = new Module(ImportType.local.name,ModuleTypes.EsNamespaceProvider)
                         modules.push(mod)
                     }
                 }
                 //console.log(modules)
-                let currentImpLoc = new MDImportLocation(entry.name,path.node.loc.start.line,modules,path.node.source.value)
+                let currentImpLoc = new MDImportLocation(entry.name,node.loc.start.line,modules,node.source.value)
 
-                let name = path.node.source.value
+                let name = node.source.value
 
                 //If the Module dependency is NOT Built in to Vortex.
 
                 if(notNativeDependency(name,ControlPanel)){
-                    Transport(resolveNonNativeDependency(LocalizedResolve(entry.name,name),currentImpLoc,ControlPanel),Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
+                    Transport(resolveNonNativeDependency(LocalizedResolve(entry.name,name),currentImpLoc,ControlPanel),
+                    Graph,entry.name,currentImpLoc,planetName,ControlPanel,ASTQueue)
                 } 
                 else {
                     let dep = new EsModuleDependency(name,currentImpLoc)
-                    if(path.node.trailingComments !== undefined){
-                        if(path.node.trailingComments[0].value === 'vortexRetain'){
+                    if(node.trailingComments !== undefined){
+                        if(node.trailingComments[0].value === 'vortexRetain'){
                             dep.outBundle = true
                         }
                     }
@@ -74,15 +75,15 @@ export function SearchAndGraph(entry:QueueEntry,Graph:VortexGraph,planetName:str
 
         } else{
             //For Non-Module Dependencies.
-            let impLoc = new FileImportLocation(entry.name,path.node.loc.start.line,path.node.source.value,path.node.specifiers[0] !== undefined? path.node.specifiers[0].local.name : null);
+            let impLoc = new FileImportLocation(entry.name,node.loc.start.line,node.source.value,node.specifiers[0] !== undefined? node.specifiers[0].local.name : null);
 
-            if(notNativeDependency(path.node.source.value,ControlPanel)){
-                Transport(resolveNonNativeDependency(LocalizedResolve(entry.name,path.node.source.value),impLoc,ControlPanel),Graph,entry.name,null,planetName,ControlPanel,ASTQueue)
+            if(notNativeDependency(node.source.value,ControlPanel)){
+                Transport(resolveNonNativeDependency(LocalizedResolve(entry.name,node.source.value),
+                impLoc,ControlPanel),Graph,entry.name,null,planetName,ControlPanel,ASTQueue)
             } 
             
-            let dep = resolveDependencyType(path.node.source.value,impLoc,entry.name)
+            let dep = resolveDependencyType(node.source.value,impLoc,entry.name)
             Transport(dep,Graph,entry.name,null,planetName,ControlPanel,ASTQueue);
         }
-    }
-    })
+
 }

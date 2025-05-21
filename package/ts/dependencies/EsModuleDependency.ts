@@ -16,7 +16,7 @@ export default class EsModuleDependency extends ModuleDependency {
 
     verifyImportedModules(entry:QueueEntry,currentImpLoc:MDImportLocation){
 
-        let modBuffer:Array<Module<keyof typeof ModuleTypes>> = []
+        let modBuffer:Module[] = []
 
         //let VDefImport = new RegExp('_VDefaultImport_')
         //let VNamImport = new RegExp('_VNamedImport_')
@@ -27,15 +27,15 @@ export default class EsModuleDependency extends ModuleDependency {
             ExportDefaultDeclaration : function(path) {
                     let defaultMod = path.node.declaration
                     let modid =  defaultMod.id.name
-                    modBuffer.push(new Module(modid,"EsDefaultModule"))
+                    modBuffer.push(new Module(modid,ModuleTypes.EsDefaultModule))
 
                     if(path.node.declaration.type === 'ClassDeclaration'){
                         let mod = path.node.declaration.id.name
-                        modBuffer.push(new Module(mod,"EsDefaultModule"))
+                        modBuffer.push(new Module(mod,ModuleTypes.EsDefaultModule))
                     }
                     if(path.node.declaration.type === 'FunctionDeclaration'){
                         let mod = path.node.declaration.id.name
-                        modBuffer.push(new Module(mod,"EsDefaultModule"))
+                        modBuffer.push(new Module(mod,ModuleTypes.EsDefaultModule))
                     }
 
                 },
@@ -44,9 +44,9 @@ export default class EsModuleDependency extends ModuleDependency {
                     for (let ExportType of path.node.specifiers){
                         if (ExportType.type === 'ExportSpecifier'){
                             let mod = ExportType.exported.name
-                            modBuffer.push(new Module(mod,"EsModule"))
+                            modBuffer.push(new Module(mod,ModuleTypes.EsModule))
                         } else if(ExportType.type === "ExportDefaultSpecifier"){
-                            modBuffer.push(new Module(ExportType.exported.name,"EsDefaultModule"))
+                            modBuffer.push(new Module(ExportType.exported.name,ModuleTypes.EsDefaultModule))
                         }
                     }
                     verify(currentImpLoc,modBuffer,entry);
@@ -54,26 +54,26 @@ export default class EsModuleDependency extends ModuleDependency {
                 }
                 if(path.node.declaration.type === 'VariableDeclaration'){
                     let mod = path.node.declaration.declarations[0].id.name
-                    modBuffer.push(new Module(mod,"EsModule"))
+                    modBuffer.push(new Module(mod,ModuleTypes.EsModule))
                 }
                 else if(path.node.declaration.type === 'ClassDeclaration'){
                     let mod = path.node.declaration.id.name
-                    modBuffer.push(new Module(mod,"EsModule"))
+                    modBuffer.push(new Module(mod,ModuleTypes.EsModule))
                 }
                 else if(path.node.declaration.type === 'FunctionDeclaration'){
                     let mod = path.node.declaration.id.name
-                    modBuffer.push(new Module(mod,"EsModule"))
+                    modBuffer.push(new Module(mod,ModuleTypes.EsModule))
                 }
                 else{
                         for (let ExportType of path.node.specifiers){
                             if (ExportType.type === 'ExportSpecifier'){
                                 let mod = ExportType.exported.name
-                                modBuffer.push(new Module(mod,"EsModule"))
+                                modBuffer.push(new Module(mod,ModuleTypes.EsModule))
                             }
                         }
                             
                         let mod = path.node.declaration.id.name
-                        modBuffer.push(new Module(mod,"EsModule"))
+                        modBuffer.push(new Module(mod,ModuleTypes.EsModule))
                         }
 
                         verify(currentImpLoc,modBuffer,entry);
@@ -87,7 +87,7 @@ export default class EsModuleDependency extends ModuleDependency {
 
 }
 
-function verify(currentImpLoc:MDImportLocation,modBuffer:Module<keyof typeof ModuleTypes>[],entry:QueueEntry){
+function verify(currentImpLoc:MDImportLocation,modBuffer:Module[],entry:QueueEntry){
 
     let dummyImpLoc = new MDImportLocation('buffer',0,modBuffer,'')
 

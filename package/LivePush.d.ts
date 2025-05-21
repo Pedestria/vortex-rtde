@@ -22,7 +22,7 @@ export declare class LivePush {
      * @param {number} portNum Port num for given node.js server to listen on.
      * @param {boolean} preLoadHTMLPage Option to load from already prepared HTML page.
      */
-    constructor(dirToControlPanel: string, expressRouter: e.Express, server: Server, portNum: number, preLoadHTMLPage: boolean);
+    constructor(dirToControlPanel: string, expressRouter: e.Express, server: io.Server, portNum: number, preLoadHTMLPage: boolean);
     /**
      * Intializes live interpreter.
      * @param {string} dirToHTML

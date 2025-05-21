@@ -21,9 +21,9 @@ import * as path from 'path'
 import * as css from 'css'
 import { Planet, PlanetClusterMapObject } from "./Planet.js";
 import * as _ from 'lodash';
-import {addEntryToQueue,loadEntryFromQueue, QueueEntry, queue, isInQueue} from "./GraphGenerator.js";
 import { notNativeDependency, resolveTransformersForNonNativeDependency, CustomDependencyIsBundlable } from "./DependencyFactory.js";
 import { v4 } from "uuid";
+import VTPanel = require("../vortex.panel.js");
 
 var CSS_PLANET_ID = v4();
 
@@ -37,6 +37,8 @@ export interface Bundle {
     code:string
     value:string
 }
+
+type VTXPanel = typeof VTPanel;
 
 
 function fixDependencyName(name:string){
@@ -52,17 +54,16 @@ function fixDependencyName(name:string){
  * @param {VortexGraph} Graph The Dependency Graph created by the Graph Generator 
  * @returns {Promise<Bundle[]>} An Array of Bundle Code Objects
  */
-export async function Compile(Graph:VortexGraph,ControlPanel){
-
+export async function Compile(Graph:VortexGraph,ControlPanel:VTXPanel) : Promise<Bundle[]>{
     let final
 
     if(ControlPanel.isLibrary){
         //Returns a single bundle code object
-        final = await LibCompile(Graph,ControlPanel)
+        final = LibCompile(Graph,ControlPanel)
     }
     else{
         //Returns single/many bundle code object/s.
-        final = await WebAppCompile(Graph,ControlPanel)
+        final = WebAppCompile(Graph,ControlPanel)
     }
 
     return final;
@@ -73,7 +74,7 @@ export async function Compile(Graph:VortexGraph,ControlPanel){
  * @param {VortexGraph} Graph 
  */
 
-async function LibCompile(Graph:VortexGraph,ControlPanel){
+function LibCompile(Graph:VortexGraph,ControlPanel){
 
     let libB = new LibBundle
 
@@ -82,17 +83,21 @@ async function LibCompile(Graph:VortexGraph,ControlPanel){
         if(dep instanceof ModuleDependency){
             for(let impLoc of dep.importLocations){
                 if(impLoc instanceof MDImportLocation){
-                    await convertImportsFromAST(loadEntryFromQueue(impLoc.name).ast,impLoc,dep,libB)
+                    let ast = Graph.queue.loadEntryFromQueue(impLoc.name).ast as t.File
+
+                    convertImportsFromAST(Graph.queue.loadEntryFromQueue(impLoc.name).ast as t.File,impLoc,dep,libB)
 
                     if(impLoc.name === Graph.entryPoint){
-                        await convertExportsFromAST(loadEntryFromQueue(impLoc.name).ast,dep,libB)
+                        convertExportsFromAST(Graph.queue.loadEntryFromQueue(impLoc.name).ast as t.File,dep,libB)
                     }
                 }
             }
-            if(dep.outBundle !== true){
+            if(!dep.outBundle){
+
+                let ast = Graph.queue.loadEntryFromQueue(dep.name).ast as t.File
                     //Libraries are skipped completely in Lib Bundle
-                if(dep.name.includes('./')){
-                    await convertExportsFromAST(loadEntryFromQueue(dep.name).ast,dep,libB)
+                if(!dep.isLibraryDependency()){
+                    convertExportsFromAST(ast,dep,libB)
                 }
             }
         }
@@ -133,7 +138,7 @@ async function LibCompile(Graph:VortexGraph,ControlPanel){
 
     let entryFuncArgs = libB.namespaceLibNames.map(arg => t.identifier(arg))
 
-    for (let entry of queue){
+    for (let entry of Graph.queue.queue){
         localFileIIFEBuffer.push(t.objectProperty(t.stringLiteral(entry.name),t.callExpression(t.identifier(""),[t.functionExpression(null,[t.identifier("_localRequire"),t.identifier("_localExports")].concat(entryFuncArgs),t.blockStatement(entry.ast.program.body))])))
     }
 
@@ -294,7 +299,7 @@ function buildImportsFromImportLocation(currentMDImpLoc:MDImportLocation,current
 
 }
 
-async function convertExportsFromAST(ast:t.File,dep:ModuleDependency,libbund:LibBundle){
+function convertExportsFromAST(ast:t.File,dep:ModuleDependency,libbund:LibBundle){
 
     if(dep instanceof CjsModuleDependency){
 
@@ -501,7 +506,7 @@ class BundleEntry{
     }
 }
 
-function mangleVariableNamesFromAst(ast:t.File,impLocModules:Array<Module>){
+function mangleVariableNamesFromAst(ast:t.File,impLocModules:Module[]){
     traverse(ast,{
         Identifier: function(path){
             for(let mod of impLocModules){
