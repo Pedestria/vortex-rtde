@@ -11,7 +11,7 @@ import {transformSync} from "@babel/core";
 import { BabelSettings } from "./Options.js";
 import { ModuleTypes } from "./Module.js";
 import { searchForDefaultNamespace } from "./dependencies/NamespaceSearch.js";
-import { VTXPanel } from "./API.js";
+import { VTXPanel, QueueEntry, ASTQueue } from "./API.js";
 //import MDImportLocation from "./MDImportLocation.js";
 
 /**Transports the given dependency to given Graph.
@@ -21,9 +21,9 @@ import { VTXPanel } from "./API.js";
  * @param {string} CurrentFile Current file being loading from. 
  * @param {MDImportLocation} CurrentMDImpLoc Curret Module Dependency Import Location
  */
-export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,planetName?:string,ControlPanel,ASTQueue){
+export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,planetName?:string,ControlPanel,queue:ASTQueue){
 
-    verifyModules(Dependency,CurrentFile,CurrentMDImpLoc,ControlPanel,ASTQueue);
+    verifyModules(Dependency,CurrentFile,CurrentMDImpLoc,ControlPanel,queue);
 
     //If transporting to Star 
     if(planetName === undefined){
@@ -44,7 +44,7 @@ export function Transport(Dependency:Dependency,Graph:VortexGraph,CurrentFile:st
     }
 }
 
-function verifyModules(Dependency:Dependency,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,ControlPanel: VTXPanel,ASTQueue:ASTQueue){
+function verifyModules(Dependency:Dependency,CurrentFile:string,CurrentMDImpLoc?:MDImportLocation,ControlPanel: VTXPanel,queue:ASTQueue){
 
     let str = './'
 
@@ -54,9 +54,9 @@ function verifyModules(Dependency:Dependency,CurrentFile:string,CurrentMDImpLoc?
                 //If local file, then resolve it to root dir.
                 Dependency.updateName(LocalizedResolve(CurrentFile,addJsExtensionIfNecessary(Dependency.name)))
                     if(Dependency instanceof EsModuleDependency || Dependency instanceof CjsModuleDependency){
-                        if(ASTQueue.isInQueue(Dependency.name)){
+                        if(queue.isInQueue(Dependency.name)){
                             if(CurrentMDImpLoc.modules.length > 0){
-                                Dependency.verifyImportedModules(ASTQueue.loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
+                                Dependency.verifyImportedModules(queue.loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
                             }
                         }
                         else{
@@ -64,9 +64,9 @@ function verifyModules(Dependency:Dependency,CurrentFile:string,CurrentMDImpLoc?
                             if(!ControlPanel.isLibrary){
                                 file = transformSync(file,BabelSettings).code
                             }
-                            ASTQueue.addEntryToQueue(new ASTQueue.QueueEntry(Dependency.name,Babel.parse(file,{"sourceType":'module'})))
+                            queue.addEntryToQueue(new QueueEntry(Dependency.name,Babel.parse(file,{"sourceType":'module'})))
                             if(CurrentMDImpLoc.modules.length > 0){
-                                Dependency.verifyImportedModules(ASTQueue.loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
+                                Dependency.verifyImportedModules(queue.loadEntryFromQueue(Dependency.name),CurrentMDImpLoc)
                             }
                         }
                     }

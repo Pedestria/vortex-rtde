@@ -2,13 +2,13 @@ build: tscompile
 	node ./scripts/run.js
 
 tscompile:
-	./scripts/foldup.sh
+	sh ./scripts/foldup.sh
 
 live:
-	./scripts/live.sh
+	sh ./scripts/live.sh
 
 run:
-	./scripts/run.sh
+	node ./scripts/run.js
 
 final: tscompile
 	node ./scripts/final.js
@@ -22,4 +22,3 @@ addons:
 		yarn types; \
 		cd ../../package; \
 	done
-

@@ -1,7 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VortexMoreStylesAddon = void 0;
-const package_1 = require("../../package");
+function loadVortexCoreAPI() {
+    try {
+        return require("../../package/lib/API.js");
+    }
+    catch (err) {
+        if (err && err.code !== "MODULE_NOT_FOUND") {
+            throw err;
+        }
+        return require("../../package");
+    }
+}
+const package_1 = loadVortexCoreAPI();
 const node_sass_1 = require("node-sass");
 const util_1 = require("util");
 const promises_1 = require("fs/promises");

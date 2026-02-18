@@ -1,7 +1,12 @@
-const {VortexMoreStylesAddon} = require("../addons/more-styles-addon")
+const path = require("path");
 
-
-const path =require('path')
+const addons = [];
+try {
+    const { VortexMoreStylesAddon } = require("../addons/more-styles-addon");
+    addons.push(VortexMoreStylesAddon);
+} catch (err) {
+    console.warn("[vortex-rtde] MoreStylesAddon disabled:", err.message);
+}
 
 module.exports = {
     type:'library',
@@ -17,7 +22,7 @@ module.exports = {
     extensions: ['.css','.png','.otf'],
     encodeFilenames:true,
     polyfillPromise:false,
-    addons:[VortexMoreStylesAddon],
+    addons:addons,
     outBundle:['aws-sdk'],
     cssPlanet:true,
     minifyCssPlanet:true

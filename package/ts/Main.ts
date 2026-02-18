@@ -17,19 +17,47 @@ import { VortexError, VortexErrorType } from './VortexError';
 import VortexAPI = require('../API_AND_Types');
 
 function ParseAddons(panel:VTXPanel){
+    let addons = Array.isArray(panel.addons) ? panel.addons : [];
 
     var INTERALS:InternalVortexAddons = {
         extensions:{
-            js:_.flatten(panel.addons.map(addon => addon.handler.exports.extend.jsExtensions)),
-            other:_.flatten(panel.addons.map(addon => addon.handler.exports.extend.extensions))
+            js:_.flatten(addons.map(addon => addon.handler.exports.extend.jsExtensions)),
+            other:_.flatten(addons.map(addon => addon.handler.exports.extend.extensions))
         },
-        importedDependencies:_.flatten(panel.addons.map(addon => addon.handler.exports.extend.custom.graph.dependenciesMap)),
-        importedGraphers:_.flatten(panel.addons.map(addon => addon.handler.exports.extend.custom.graph.graphers)),
-        importedCompilers:_.flatten(panel.addons.map(addon => addon.handler.exports.extend.custom.compiler.dependencyMapCompiler))
+        importedDependencies:_.flatten(addons.map(addon => addon.handler.exports.extend.custom.graph.dependenciesMap)),
+        importedGraphers:_.flatten(addons.map(addon => addon.handler.exports.extend.custom.graph.graphers)),
+        importedCompilers:_.flatten(addons.map(addon => addon.handler.exports.extend.custom.compiler.dependencyMapCompiler))
     }
 
 
     return INTERALS;
+}
+
+function NormalizePanel(panel:any):VTXPanel{
+    let normalized:any = panel || {};
+
+    normalized.addons = Array.isArray(normalized.addons) ? normalized.addons : [];
+    normalized.extensions = Array.isArray(normalized.extensions) ? normalized.extensions : [];
+    normalized.externalLibs = Array.isArray(normalized.externalLibs) ? normalized.externalLibs :
+        Array.isArray(normalized.outBundle) ? normalized.outBundle : [];
+
+    normalized.isLibrary = typeof normalized.isLibrary === "boolean" ? normalized.isLibrary : normalized.type === "library";
+    normalized.isProduction = typeof normalized.isProduction === "boolean" ? normalized.isProduction : normalized.bundleMode === "neutronstar";
+    normalized.usingTerser = typeof normalized.usingTerser === "boolean" ? normalized.usingTerser : !!normalized.useTerser;
+
+    normalized.start = normalized.start || normalized.startingPoint;
+    normalized.output = normalized.output || normalized.outputFile;
+    normalized.outputFile = normalized.outputFile || normalized.output;
+    normalized.type = normalized.type || (normalized.isLibrary ? "library" : "app");
+    normalized.bundleMode = normalized.bundleMode || (normalized.isProduction ? "neutronstar" : "star");
+
+    normalized.encodeFilenames = typeof normalized.encodeFilenames === "boolean" ? normalized.encodeFilenames : false;
+    normalized.polyfillPromise = typeof normalized.polyfillPromise === "boolean" ? normalized.polyfillPromise : false;
+    normalized.cssPlanet = typeof normalized.cssPlanet === "boolean" ? normalized.cssPlanet : false;
+    normalized.minifyCssPlanet = typeof normalized.minifyCssPlanet === "boolean" ? normalized.minifyCssPlanet : false;
+
+    normalized.InstalledAddons = ParseAddons(normalized);
+    return normalized;
 }
 
 
@@ -69,6 +97,8 @@ export async function createStarPackage (resolvedPath:string,CLI?:VTXPanel){
     } else {
         Panel = CLI
     }
+
+    Panel = NormalizePanel(Panel);
 
     
     
@@ -118,8 +148,12 @@ export async function createStarPackage (resolvedPath:string,CLI?:VTXPanel){
         });
     let check = DependencyCircularCheck(Graph);
     if(check.size > 0){
-        spinner2.fail();
-        errorCircularDependencies(check);
+        if((Panel as any).strictCircularDependencies === true){
+            spinner2.fail();
+            errorCircularDependencies(check);
+        } else {
+            warnCircularDependencies(check);
+        }
     }
     spinner2.succeed();
     spinner3.start();
@@ -128,7 +162,7 @@ export async function createStarPackage (resolvedPath:string,CLI?:VTXPanel){
     //Assign Entry Dependency For Planets
     for(let planet of Graph.Planets){
         if(!notNativeDependency(planet.entryModule,Panel)){
-            planet = assignDependencyType(planet,queue)
+            planet = assignDependencyType(planet,Graph.queue)
         } else{
             planet.entryDependency = new Dependency(planet.entryModule);
         }
@@ -282,6 +316,13 @@ function errorCircularDependencies(set:Set<string[]>){
 
     var error:VortexError = new VortexError(`Error! Circular Reference${chains.length > 1? 's' : ''}!! \n `+loggedOutput,VortexErrorType.StarSelfImposedError)
     throw error.printOut();
+}
+
+function warnCircularDependencies(set:Set<string[]>){
+    let chains:string[][] = [];
+    set.forEach(value => chains.push(value));
+    let loggedOutput = chains.map(chain => chain.join(' ~> ')).join('\n');
+    console.warn(`Vortex warning: continuing with circular reference${chains.length > 1? 's' : ''}:\n${loggedOutput}`);
 }
 
 function LogVortexError(err:any){

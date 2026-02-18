@@ -83,21 +83,22 @@ function LibCompile(Graph:VortexGraph,ControlPanel){
         if(dep instanceof ModuleDependency){
             for(let impLoc of dep.importLocations){
                 if(impLoc instanceof MDImportLocation){
-                    let ast = Graph.queue.loadEntryFromQueue(impLoc.name).ast as t.File
+                    let impEntry = Graph.queue.loadEntryFromQueue(impLoc.name)
+                    if(!impEntry){
+                        continue;
+                    }
 
-                    convertImportsFromAST(Graph.queue.loadEntryFromQueue(impLoc.name).ast as t.File,impLoc,dep,libB)
+                    convertImportsFromAST(impEntry.ast as t.File,impLoc,dep,libB)
 
                     if(impLoc.name === Graph.entryPoint){
-                        convertExportsFromAST(Graph.queue.loadEntryFromQueue(impLoc.name).ast as t.File,dep,libB)
+                        convertExportsFromAST(impEntry.ast as t.File,dep,libB)
                     }
                 }
             }
-            if(!dep.outBundle){
-
-                let ast = Graph.queue.loadEntryFromQueue(dep.name).ast as t.File
-                    //Libraries are skipped completely in Lib Bundle
-                if(!dep.isLibraryDependency()){
-                    convertExportsFromAST(ast,dep,libB)
+            if(!dep.outBundle && !dep.isLibraryDependency()){
+                let depEntry = Graph.queue.loadEntryFromQueue(dep.name)
+                if(depEntry){
+                    convertExportsFromAST(depEntry.ast as t.File,dep,libB)
                 }
             }
         }
@@ -1604,7 +1605,6 @@ async function minifyCss(styles:string) {
     let regexp = /(\s*|(\n)*|(\r\n)*)/g
     return styles.replace(regexp,"");
 }
-
 
 
 

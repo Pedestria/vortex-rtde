@@ -3,6 +3,8 @@ import traverse from '@babel/traverse'
 
 import EsModuleDependency from "./dependencies/EsModuleDependency"
 import CjsModuleDependency from "./dependencies/CjsModuleDependency"
+import { ASTQueue } from "./API"
+import * as t from "@babel/types"
 
 /**
  * A module container that is loaded asynchronously (via dynamic import or AMD Define)
@@ -28,7 +30,7 @@ export class Planet {
  * @param {Planet} planet 
  */
 
-export function assignDependencyType(planet:Planet,queue) : Planet{
+export function assignDependencyType(planet:Planet,queue: ASTQueue) : Planet{
 
     enum DepTypes {
         CJS = 1,
@@ -38,7 +40,7 @@ export function assignDependencyType(planet:Planet,queue) : Planet{
 
     let entrydepType
 
-    traverse(loadEntryFromSpecificQueue(planet.entryModule,queue).ast,{
+    traverse(loadEntryFromSpecificQueue(planet.entryModule,queue).ast as t.File,{
         enter(path){
             if(path.isExportDefaultDeclaration){
                 entrydepType = DepTypes.ESM
@@ -51,7 +53,7 @@ export function assignDependencyType(planet:Planet,queue) : Planet{
                 if(path.node.object.type === 'Identifier'){
                     if(path.node.object.name === 'exports'){
                         entrydepType = DepTypes.CJS
-                    } else if(path.node.object.name === 'module' && path.node.property.name === 'exports'){
+                    } else if(path.node.object.name === 'module' && (path.node.property as t.Identifier).name === 'exports'){
                         entrydepType = DepTypes.CJS
                     }
                 }
@@ -99,8 +101,8 @@ export class PlanetImportLocation {
     }
 }
 
-function loadEntryFromSpecificQueue(entryName:string,queue){
-    for(let ent of queue){
+function loadEntryFromSpecificQueue(entryName:string,queue:ASTQueue){
+    for(let ent of queue.queue){
         if(ent.name === entryName){
             return ent
         }

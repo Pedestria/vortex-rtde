@@ -8,7 +8,19 @@ MIT License
 */
 
 var {Command} = require("commander")
-var {createStarPackage} = require("../")
+
+function loadVortex() {
+    try {
+        return require("../lib/Index.js");
+    } catch (err) {
+        if (err && err.code !== "MODULE_NOT_FOUND") {
+            throw err;
+        }
+        return require("../dist/vortex.js");
+    }
+}
+
+var {createStarPackage} = loadVortex();
 
 const program = new Command();
 program
@@ -36,11 +48,16 @@ if(!program.config){
         bundleMode:isProduction? "neutronstar": "star"
     }).then(() => {
         process.exit(0);
-    })
+    }).catch((err) => {
+        console.error(err);
+        process.exit(1);
+    });
 
 } else {
     createStarPackage(program.config).then(() => {
         process.exit(0);
+    }).catch((err) => {
+        console.error(err);
+        process.exit(1);
     });
 }
-

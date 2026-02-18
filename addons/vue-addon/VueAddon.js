@@ -1,7 +1,18 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VueVortexAddon = void 0;
-const package_1 = require("../../package");
+function loadVortexCoreAPI() {
+    try {
+        return require("../../package/lib/API.js");
+    }
+    catch (err) {
+        if (err && err.code !== "MODULE_NOT_FOUND") {
+            throw err;
+        }
+        return require("../../package");
+    }
+}
+const package_1 = loadVortexCoreAPI();
 const promises_1 = require("fs/promises");
 const VueUtils = require("@vue/component-compiler-utils");
 const uuid_1 = require("uuid");

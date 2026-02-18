@@ -180,8 +180,8 @@ export function isJs(filename:string,ControlPanel:ControlPanel){
 }
 
 export function DependencyCircularCheck(Graph:VortexGraph):Set<string[]>{
-    let circularDependencies:Set<string[]> = new Set<string[]>();
-    let circdependencyNames:Array<string> = new Array<string>();
+    let circularDependencies = new Set<string[]>();
+    let circdependencyNames = new Array<string>();
 
     function convertSetToArray <T> (set:Set<T>):Array<T> {
         let newArray:Array<T> = []
