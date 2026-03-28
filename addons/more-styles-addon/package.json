@@ -4,7 +4,7 @@
   "main": "./MoreStylesAddon.js",
   "license": "MIT",
   "dependencies": {
-    "node-sass": "^4.14.1"
+    "node-sass": "^7.0.0"
   },
   "scripts": {
     "types": "tsc ./MoreStylesAddon.ts --module commonjs --target ESNext"
