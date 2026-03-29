@@ -10,7 +10,7 @@
   "dependencies": {
     "@vue/component-compiler-utils": "^3.2.0",
     "less": "^3.12.2",
-    "node-sass": "^4.14.1",
+    "node-sass": "^7.0.0",
     "pug": "^3.0.1",
     "vue-template-compiler": "^2.6.11",
     "@vortex-rtde/core": "^0.9.3-beta"
